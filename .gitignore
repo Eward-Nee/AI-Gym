@@ -1,0 +1,26 @@
+# Dependencies (the app has none — this is only for tooling)
+node_modules/
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.idea/
+.vscode/
+
+# Local scratch
+_*.html
+*.log
+tmp/
+scratch/
+
+# Never commit these. The app needs only a project URL and a publishable key,
+# both of which are safe in a client. A service-role key, a Management API
+# token, or the Postgres connection string must never end up in this repo.
+.env
+.env.*
+*.pem
+*.key
+secrets.json

@@ -1,0 +1,714 @@
+/* =============================================================================
+   sync.js — cloud orchestration
+
+   Three storage tiers, in priority order:
+     1. IndexedDB          always authoritative for the current device, works
+                           offline, never expires, needs no account
+     2. Personal Supabase  the user's own project; a full mirror of tier 1
+     3. Hub Supabase       accounts, friendships, and cached stats only
+
+   Nothing here is required for the app to function. If neither cloud is
+   configured every call short-circuits and local storage carries on alone.
+   ============================================================================= */
+(function (App) {
+  'use strict';
+
+  const U = App.U;
+
+  /* The shared hub this build ships against. Both values are public by design:
+     the URL is a hostname and the publishable key is meant to be shipped in a
+     client. All real protection lives in the hub's RLS policies. */
+  const HUB_DEFAULT = {
+    url: 'https://uuljnonlnobsxfutruqq.supabase.co',
+    key: 'sb_publishable_c6NHpP6KTrrWqhoJaIJgXQ_ReRz5pXw'
+  };
+
+  const TABLES = {
+    exercises: 'gym_exercises',
+    workouts: 'gym_workouts',
+    sessions: 'gym_sessions'
+  };
+
+  const cfg = {
+    personal: { url: '', key: '', writeKey: '', verifiedAt: null, schemaVersion: 0 },
+    hub: { url: HUB_DEFAULT.url, key: HUB_DEFAULT.key, enabled: true },
+    account: null,          /* {id, email, handle, display_name} */
+    lastPush: null,
+    lastPull: null,
+    keepaliveDate: null
+  };
+
+  let personal = null;      /* client */
+  let hub = null;           /* client */
+  let pushTimer = null;
+  let busy = false;
+
+  const listeners = [];
+  function onStatus(fn) { listeners.push(fn); return function () {
+    const i = listeners.indexOf(fn); if (i >= 0) listeners.splice(i, 1); }; }
+  function emitStatus() {
+    const s = status();
+    listeners.forEach(function (f) { try { f(s); } catch (e) { console.error(e); } });
+    App.Store.emit('sync', s);
+  }
+
+  /* ---------------------------------------------------------------------------
+     CONFIG
+     ------------------------------------------------------------------------ */
+
+  function load() {
+    return Promise.all([
+      App.DB.getMeta('sync.personal', null),
+      App.DB.getMeta('sync.hub', null),
+      App.DB.getMeta('sync.account', null),
+      App.DB.getMeta('sync.session', null),
+      App.DB.getMeta('sync.marks', null)
+    ]).then(function (r) {
+      if (r[0]) Object.assign(cfg.personal, r[0]);
+      if (r[1]) Object.assign(cfg.hub, r[1]);
+      cfg.account = r[2] || null;
+      const session = r[3] || null;
+      if (r[4]) Object.assign(cfg, r[4]);
+
+      if (cfg.personal.url && cfg.personal.key) buildPersonal();
+      if (cfg.hub.enabled && cfg.hub.url && cfg.hub.key) buildHub(session);
+      emitStatus();
+    });
+  }
+
+  function buildPersonal() {
+    personal = App.Supabase.createClient(cfg.personal.url, cfg.personal.key, {
+      writeKey: cfg.personal.writeKey || null
+    });
+    return personal;
+  }
+
+  function buildHub(session) {
+    hub = App.Supabase.createClient(cfg.hub.url, cfg.hub.key, {
+      accessToken: session ? session.accessToken : null,
+      refreshToken: session ? session.refreshToken : null
+    });
+    return hub;
+  }
+
+  function savePersonalCfg() { return App.DB.setMeta('sync.personal', cfg.personal); }
+  function saveHubCfg() { return App.DB.setMeta('sync.hub', cfg.hub); }
+  function saveAccount() { return App.DB.setMeta('sync.account', cfg.account); }
+  function saveSession() {
+    return App.DB.setMeta('sync.session', hub ? hub.session() : null);
+  }
+  function saveMarks() {
+    return App.DB.setMeta('sync.marks', {
+      lastPush: cfg.lastPush, lastPull: cfg.lastPull, keepaliveDate: cfg.keepaliveDate
+    });
+  }
+
+  function enabled() { return !!(personal && cfg.personal.url && cfg.personal.key); }
+  function signedIn() { return !!(hub && hub.hasSession() && cfg.account); }
+
+  function status() {
+    return {
+      local: App.DB.backend,
+      personal: {
+        configured: !!(cfg.personal.url && cfg.personal.key),
+        verified: !!cfg.personal.verifiedAt,
+        canWrite: !!cfg.personal.writeKey,
+        url: cfg.personal.url,
+        ref: App.Supabase.projectRef(cfg.personal.url)
+      },
+      hub: {
+        enabled: !!cfg.hub.enabled,
+        signedIn: signedIn(),
+        account: cfg.account
+      },
+      lastPush: cfg.lastPush,
+      lastPull: cfg.lastPull,
+      busy: busy
+    };
+  }
+
+  /* ---------------------------------------------------------------------------
+     PERSONAL PROJECT — connect, verify, claim write key
+     ------------------------------------------------------------------------ */
+
+  /**
+   * Verify a personal project: reachable, schema installed, and writable.
+   * Claims the one-time write key on first success.
+   */
+  function testPersonal(url, key) {
+    const client = App.Supabase.createClient(url, key, {
+      writeKey: cfg.personal.writeKey || null
+    });
+    const report = { url: url, steps: [] };
+
+    function step(name, ok, detail) {
+      report.steps.push({ name: name, ok: ok, detail: detail });
+      return ok;
+    }
+
+    return client.rpc('gym_ping', {})
+      .then(function (info) {
+        step('Reached the project', true, App.Supabase.projectRef(url));
+        step('Schema installed', true, 'version ' + (info.schema_version || 1));
+        report.info = info;
+        report.claimed = !!info.write_key_claimed;
+        return info;
+      })
+      .catch(function (err) {
+        if (err.status === 404 || /gym_ping/.test(err.message || '')) {
+          step('Reached the project', true, App.Supabase.projectRef(url));
+          step('Schema installed', false,
+            'The setup SQL has not been run in this project yet.');
+        } else if (err.status === 401 || err.status === 403) {
+          step('Reached the project', false, 'The key was rejected. Check the publishable key.');
+        } else {
+          step('Reached the project', false, err.message);
+        }
+        throw Object.assign(err, { report: report });
+      })
+      .then(function () {
+        /* Claim the write key once; a re-test on an already-claimed project
+           just reuses whatever we stored locally. */
+        if (cfg.personal.writeKey) {
+          step('Write access', true, 'Using the key already stored on this device.');
+          return cfg.personal.writeKey;
+        }
+        return client.rpc('gym_claim_write_key', {})
+          .then(function (k) {
+            const wk = typeof k === 'string' ? k : (k && k[0]) || null;
+            step('Write access', !!wk, wk ? 'Write key claimed for this device.' : 'No key returned.');
+            return wk;
+          })
+          .catch(function (err) {
+            step('Write access', false,
+              /already claimed/i.test(err.message || '')
+                ? 'Already claimed by another device. Run gym_rotate_write_key() there, or re-run the setup SQL to reset.'
+                : err.message);
+            return null;
+          });
+      })
+      .then(function (wk) {
+        report.writeKey = wk;
+        report.ok = report.steps.every(function (s) { return s.ok; });
+        return report;
+      })
+      .catch(function (err) {
+        report.ok = false;
+        report.error = err.message;
+        return report;
+      });
+  }
+
+  /** Persist a verified personal project. */
+  function connectPersonal(url, key, writeKey, info) {
+    cfg.personal.url = String(url).replace(/\/+$/, '');
+    cfg.personal.key = String(key).trim();
+    if (writeKey) cfg.personal.writeKey = writeKey;
+    cfg.personal.verifiedAt = new Date().toISOString();
+    cfg.personal.schemaVersion = (info && info.schema_version) || 1;
+    buildPersonal();
+    return savePersonalCfg().then(function () {
+      emitStatus();
+      return cfg.personal;
+    });
+  }
+
+  function disconnectPersonal() {
+    cfg.personal = { url: '', key: '', writeKey: '', verifiedAt: null, schemaVersion: 0 };
+    personal = null;
+    return savePersonalCfg().then(function () {
+      return App.DB.clear('outbox');
+    }).then(emitStatus);
+  }
+
+  /* ---------------------------------------------------------------------------
+     PUSH / PULL
+     ------------------------------------------------------------------------ */
+
+  function toRow(table, rec) {
+    const base = { id: rec.id, data: rec, updated_at: rec.updatedAt || new Date().toISOString(),
+      deleted: false };
+    if (table === 'exercises') {
+      return Object.assign(base, { name: rec.name, equipment: rec.equipment,
+        pattern: rec.pattern, muscles: rec.muscles || {} });
+    }
+    if (table === 'workouts') {
+      return Object.assign(base, { name: rec.name, item_count: (rec.items || []).length });
+    }
+    return Object.assign(base, {
+      workout_id: rec.workoutId || null,
+      name: rec.name || '',
+      date: rec.date,
+      volume: App.Ranks ? sessionVolume(rec) : 0,
+      duration_sec: rec.durationSec || 0
+    });
+  }
+
+  function sessionVolume(s) {
+    let v = 0;
+    (s.entries || []).forEach(function (en) { v += App.Ranks.volumeOf(en.sets); });
+    return Math.round(v);
+  }
+
+  /** Full upload of everything held locally. Used by first-time migration. */
+  function pushAll(onProgress) {
+    if (!enabled()) return Promise.reject(new Error('No personal project connected.'));
+    if (!cfg.personal.writeKey) {
+      return Promise.reject(new Error('No write key for this project — re-run Test connection.'));
+    }
+    busy = true; emitStatus();
+
+    const jobs = [
+      ['exercises', App.Store.allExercises()],
+      ['workouts', App.Store.allWorkouts()],
+      ['sessions', App.Store.allSessions()]
+    ];
+    let done = 0;
+    const total = jobs.reduce(function (a, j) { return a + j[1].length; }, 0);
+    const summary = { total: total, uploaded: 0, tables: {} };
+
+    return jobs.reduce(function (chain, job) {
+      return chain.then(function () {
+        const table = TABLES[job[0]];
+        const rows = job[1].map(function (r) { return toRow(job[0], r); });
+        if (!rows.length) { summary.tables[job[0]] = 0; return; }
+
+        /* Chunked so a large history does not blow the request size limit. */
+        const CHUNK = 200;
+        let i = 0;
+        function next() {
+          if (i >= rows.length) return Promise.resolve();
+          const slice = rows.slice(i, i + CHUNK);
+          i += CHUNK;
+          return personal.from(table).upsert(slice, 'id').then(function () {
+            done += slice.length;
+            summary.uploaded += slice.length;
+            if (onProgress) onProgress(done, total, job[0]);
+            return next();
+          });
+        }
+        return next().then(function () { summary.tables[job[0]] = rows.length; });
+      });
+    }, Promise.resolve())
+      .then(function () { return pushProfile(); })
+      .then(function () {
+        return App.DB.clear('outbox');
+      })
+      .then(function () {
+        cfg.lastPush = new Date().toISOString();
+        return saveMarks();
+      })
+      .then(function () {
+        busy = false; emitStatus();
+        return summary;
+      })
+      .catch(function (err) {
+        busy = false; emitStatus();
+        throw err;
+      });
+  }
+
+  /** Incremental push of everything in the outbox. */
+  function pushPending() {
+    if (!enabled() || !cfg.personal.writeKey) return Promise.resolve({ uploaded: 0 });
+    return App.DB.getAll('outbox').then(function (queue) {
+      if (!queue.length) return { uploaded: 0 };
+      busy = true; emitStatus();
+
+      const byTable = {};
+      queue.forEach(function (q) { (byTable[q.table] = byTable[q.table] || []).push(q); });
+
+      return Object.keys(byTable).reduce(function (chain, key) {
+        return chain.then(function () {
+          const table = TABLES[key];
+          const items = byTable[key];
+          const live = [], gone = [];
+
+          items.forEach(function (q) {
+            if (q.deleted) { gone.push(q.rowId); return; }
+            const rec = findLocal(key, q.rowId);
+            if (rec) live.push(toRow(key, rec)); else gone.push(q.rowId);
+          });
+
+          let p = Promise.resolve();
+          if (live.length) p = p.then(function () { return personal.from(table).upsert(live, 'id'); });
+          if (gone.length) {
+            p = p.then(function () {
+              return personal.from(table).update({ deleted: true,
+                updated_at: new Date().toISOString() },
+                { id: 'in.(' + gone.map(function (x) { return '"' + x + '"'; }).join(',') + ')' });
+            });
+          }
+          return p;
+        });
+      }, Promise.resolve())
+        .then(function () { return App.DB.clear('outbox'); })
+        .then(function () {
+          cfg.lastPush = new Date().toISOString();
+          return saveMarks();
+        })
+        .then(function () {
+          busy = false; emitStatus();
+          return { uploaded: queue.length };
+        })
+        .catch(function (err) {
+          busy = false; emitStatus();
+          console.warn('[sync] push failed, keeping outbox', err.message);
+          throw err;
+        });
+    });
+  }
+
+  function findLocal(kind, id) {
+    if (kind === 'exercises') return App.Store.getExercise(id);
+    if (kind === 'workouts') return App.Store.getWorkout(id);
+    return App.Store.allSessions().find(function (s) { return s.id === id; }) || null;
+  }
+
+  function schedulePush() {
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(function () {
+      pushPending().catch(function () { /* stays queued for the next attempt */ });
+    }, 2500);
+  }
+
+  /**
+   * Pull the cloud copy down. `mode`:
+   *   'merge'   keep whichever side has the newer updated_at (default)
+   *   'replace' cloud wins outright
+   */
+  function pull(mode) {
+    if (!enabled()) return Promise.reject(new Error('No personal project connected.'));
+    busy = true; emitStatus();
+
+    return Promise.all(Object.keys(TABLES).map(function (kind) {
+      return personal.from(TABLES[kind]).select('id,data,updated_at,deleted', { deleted: 'is.false' })
+        .then(function (rows) { return { kind: kind, rows: rows || [] }; });
+    })).then(function (sets) {
+      const summary = {};
+      const jobs = [];
+
+      sets.forEach(function (set) {
+        const incoming = set.rows.map(function (r) {
+          return Object.assign({}, r.data, { id: r.id, updatedAt: r.updated_at });
+        });
+        const localList = set.kind === 'exercises' ? App.Store.allExercises()
+          : set.kind === 'workouts' ? App.Store.allWorkouts()
+          : App.Store.allSessions();
+
+        const localById = Object.create(null);
+        localList.forEach(function (r) { localById[r.id] = r; });
+
+        const winners = [];
+        incoming.forEach(function (rec) {
+          const mine = localById[rec.id];
+          if (!mine || mode === 'replace') { winners.push(rec); return; }
+          const a = new Date(rec.updatedAt || 0).getTime();
+          const b = new Date(mine.updatedAt || 0).getTime();
+          if (a > b) winners.push(rec);
+        });
+
+        summary[set.kind] = { fetched: incoming.length, applied: winners.length };
+        if (winners.length) jobs.push(App.DB.putMany(set.kind, winners));
+      });
+
+      return Promise.all(jobs).then(function () { return summary; });
+    }).then(function (summary) {
+      cfg.lastPull = new Date().toISOString();
+      return saveMarks().then(function () { return summary; });
+    }).then(function (summary) {
+      return App.Store.load().then(function () {
+        busy = false; emitStatus();
+        return summary;
+      });
+    }).catch(function (err) {
+      busy = false; emitStatus();
+      throw err;
+    });
+  }
+
+  /** Push the profile row + rank so friends can see it without a full read. */
+  function pushProfile() {
+    if (!enabled() || !cfg.personal.writeKey) return Promise.resolve();
+    const s = App.Store.getSettings();
+    const r = App.Store.rank();
+    return personal.from('gym_profile').upsert([{
+      id: 1,
+      display_name: s.name || null,
+      handle: (cfg.account && cfg.account.handle) || s.handle || null,
+      bodyweight: s.bodyweight || null,
+      units: s.units,
+      rank_id: r.rank.id,
+      rank_points: r.points,
+      stats: publicStats(r),
+      updated_at: new Date().toISOString()
+    }], 'id').catch(function (e) {
+      console.warn('[sync] profile push failed', e.message);
+    });
+  }
+
+  /** The small, non-sensitive roll-up shared with friends. */
+  function publicStats(r) {
+    r = r || App.Store.rank();
+    const sessions = App.Store.allSessions();
+    const last28 = App.Store.sessionsBetween(U.daysAgo(28), U.today());
+    return {
+      rank: r.rank.id,
+      points: r.points,
+      indices: r.indices,
+      sessions: sessions.length,
+      sessions28: last28.length,
+      volume28: Math.round(r.recentVolume),
+      totalVolume: Math.round(sessions.reduce(function (a, s) { return a + sessionVolume(s); }, 0)),
+      heat: App.Store.sessionsHeat(last28),
+      groups: r.groupVolume,
+      top: r.scored.slice(0, 8).map(function (s) {
+        return { name: s.name, e1rm: Math.round(s.e1rm), score: Math.round(s.score) };
+      }),
+      lastSession: sessions.length ? sessions[0].date : null,
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  /* ---------------------------------------------------------------------------
+     HUB — account, friends, shared stats
+     ------------------------------------------------------------------------ */
+
+  function hubClient() {
+    if (!hub) buildHub(null);
+    return hub;
+  }
+
+  function signUp(email, password, displayName) {
+    const c = hubClient();
+    return c.auth.signUp(email, password, { display_name: displayName || '' })
+      .then(function (r) {
+        /* Projects with email confirmation on return no session yet. */
+        if (!r.access_token) return { needsConfirmation: true, user: r };
+        return afterAuth();
+      });
+  }
+
+  function signIn(email, password) {
+    return hubClient().auth.signIn(email, password).then(afterAuth);
+  }
+
+  function afterAuth() {
+    return hub.auth.user().then(function (u) {
+      if (!u) throw new Error('Sign-in did not return an account.');
+      return hub.from('profiles').select('*', { id: 'eq.' + u.id }).then(function (rows) {
+        const p = (rows && rows[0]) || null;
+        cfg.account = {
+          id: u.id,
+          email: u.email,
+          handle: p ? p.handle : null,
+          display_name: p ? p.display_name : null,
+          avatar_emoji: p ? p.avatar_emoji : '💪'
+        };
+        return Promise.all([saveAccount(), saveSession()]);
+      });
+    }).then(function () {
+      emitStatus();
+      /* Register where this account's data lives, so friends can find it. */
+      return publishConnection().catch(function () {});
+    }).then(function () { return cfg.account; });
+  }
+
+  function signOut() {
+    const c = hubClient();
+    return c.auth.signOut().then(function () {
+      cfg.account = null;
+      buildHub(null);
+      return Promise.all([saveAccount(), saveSession()]);
+    }).then(emitStatus);
+  }
+
+  /** Tell the hub where this account's personal project is. */
+  function publishConnection() {
+    if (!signedIn() || !cfg.personal.url) return Promise.resolve();
+    return hub.withRetry(function () {
+      return hub.from('connections').upsert([{
+        user_id: cfg.account.id,
+        supabase_url: cfg.personal.url,
+        anon_key: cfg.personal.key,
+        schema_version: cfg.personal.schemaVersion || 1,
+        verified_at: cfg.personal.verifiedAt,
+        updated_at: new Date().toISOString()
+      }], 'user_id');
+    });
+  }
+
+  /** Publish rank + roll-up so friends' VS screens work without a deep read. */
+  function publishStats() {
+    if (!signedIn()) return Promise.resolve();
+    const r = App.Store.rank();
+    const payload = publicStats(r);
+    return hub.withRetry(function () {
+      return hub.from('shared_stats').upsert([{
+        user_id: cfg.account.id, payload: payload, updated_at: new Date().toISOString()
+      }], 'user_id');
+    }).then(function () {
+      return hub.from('profiles').update({
+        rank_id: r.rank.id, rank_points: r.points, updated_at: new Date().toISOString()
+      }, { id: 'eq.' + cfg.account.id });
+    }).catch(function (e) {
+      console.warn('[sync] stats publish failed', e.message);
+    });
+  }
+
+  function searchProfiles(q) {
+    if (!signedIn()) return Promise.reject(new Error('Sign in to search for friends.'));
+    return hub.withRetry(function () { return hub.rpc('search_profiles', { q: q }); });
+  }
+
+  function listFriends() {
+    if (!signedIn()) return Promise.resolve([]);
+    return hub.withRetry(function () { return hub.rpc('list_friends', {}); });
+  }
+
+  function requestFriend(handle) {
+    return hub.withRetry(function () {
+      return hub.rpc('request_friend', { target_handle: handle });
+    });
+  }
+
+  function respondFriend(id, accept) {
+    return hub.withRetry(function () {
+      return hub.rpc('respond_friend', { request_id: id, accept: !!accept });
+    });
+  }
+
+  function removeFriend(id) {
+    return hub.withRetry(function () { return hub.rpc('remove_friend', { other: id }); });
+  }
+
+  function leaderboard() {
+    if (!signedIn()) return Promise.resolve([]);
+    return hub.withRetry(function () { return hub.rpc('friend_leaderboard', {}); });
+  }
+
+  /**
+   * Deep read of a friend's own project. The hub hands over the connection
+   * only when the friendship is accepted, and the key it hands over is
+   * read-only against their data (writes need the write key, which never
+   * leaves their device).
+   */
+  function readFriendData(friendId, opts) {
+    opts = opts || {};
+    if (!signedIn()) return Promise.reject(new Error('Sign in first.'));
+    return hub.withRetry(function () {
+      return hub.rpc('get_friend_connection', { friend: friendId });
+    }).then(function (rows) {
+      const conn = rows && rows[0];
+      if (!conn) throw new Error('That friend has not linked a Supabase project yet.');
+      const c = App.Supabase.createClient(conn.supabase_url, conn.anon_key, {});
+      const since = opts.since || U.daysAgo(180);
+      return Promise.all([
+        c.from('gym_public_summary').select('*').catch(function () { return []; }),
+        c.from('gym_sessions').select('id,date,volume,duration_sec,data',
+          { deleted: 'is.false', date: 'gte.' + since, order: 'date.desc', limit: '400' })
+      ]).then(function (r) {
+        return {
+          profile: (r[0] && r[0][0]) || null,
+          sessions: (r[1] || []).map(function (row) {
+            return Object.assign({}, row.data, { id: row.id, date: row.date });
+          }),
+          handle: conn.handle,
+          displayName: conn.display_name
+        };
+      });
+    });
+  }
+
+  /* ---------------------------------------------------------------------------
+     KEEPALIVE — once per calendar day, per device
+     ------------------------------------------------------------------------ */
+
+  /**
+   * Free Supabase projects are paused after a stretch with no activity. On the
+   * first app open of each day we make one real write to each project.
+   *
+   * The hub call is guarded server-side too: whichever user opens the app first
+   * that day performs the write, and everyone else gets ran = false, so the hub
+   * is touched exactly once per day no matter how many people are using it.
+   */
+  function runKeepalive() {
+    const day = U.today();
+    if (cfg.keepaliveDate === day) return Promise.resolve({ skipped: true });
+
+    const jobs = [];
+    if (enabled()) {
+      jobs.push(personal.rpc('gym_keepalive', {}).then(function (r) {
+        const row = Array.isArray(r) ? r[0] : r;
+        return { target: 'personal', ran: !!(row && row.ran) };
+      }).catch(function (e) {
+        return { target: 'personal', error: e.message };
+      }));
+    }
+    if (hub && cfg.hub.enabled) {
+      jobs.push(hub.rpc('hub_keepalive', {}).then(function (r) {
+        const row = Array.isArray(r) ? r[0] : r;
+        return { target: 'hub', ran: !!(row && row.ran) };
+      }).catch(function (e) {
+        return { target: 'hub', error: e.message };
+      }));
+    }
+    if (!jobs.length) return Promise.resolve({ skipped: true });
+
+    return Promise.all(jobs).then(function (results) {
+      cfg.keepaliveDate = day;
+      return saveMarks().then(function () {
+        console.info('[sync] keepalive', results);
+        return { results: results };
+      });
+    });
+  }
+
+  /* ---------------------------------------------------------------------------
+     BOOT
+     ------------------------------------------------------------------------ */
+
+  /** Called once after the store is ready. Never rejects — cloud is optional. */
+  function boot() {
+    return load().then(function () {
+      if (!navigator.onLine) return;
+      return runKeepalive()
+        .then(function () { return pushPending().catch(function () {}); })
+        .then(function () { if (signedIn()) return publishStats(); })
+        .catch(function (e) { console.warn('[sync] boot', e.message); });
+    }).catch(function (e) {
+      console.warn('[sync] boot failed', e.message);
+    });
+  }
+
+  window.addEventListener('online', function () {
+    if (enabled()) schedulePush();
+  });
+
+  App.Sync = {
+    HUB_DEFAULT: HUB_DEFAULT,
+    cfg: cfg,
+    load: load, boot: boot,
+    status: status, onStatus: onStatus, enabled: enabled, signedIn: signedIn,
+
+    testPersonal: testPersonal, connectPersonal: connectPersonal,
+    disconnectPersonal: disconnectPersonal,
+    pushAll: pushAll, pushPending: pushPending, schedulePush: schedulePush,
+    pull: pull, pushProfile: pushProfile, publicStats: publicStats,
+
+    signUp: signUp, signIn: signIn, signOut: signOut,
+    publishConnection: publishConnection, publishStats: publishStats,
+    searchProfiles: searchProfiles, listFriends: listFriends,
+    requestFriend: requestFriend, respondFriend: respondFriend, removeFriend: removeFriend,
+    leaderboard: leaderboard, readFriendData: readFriendData,
+
+    runKeepalive: runKeepalive,
+    setHub: function (url, key, on) {
+      cfg.hub.url = url || HUB_DEFAULT.url;
+      cfg.hub.key = key || HUB_DEFAULT.key;
+      cfg.hub.enabled = on !== false;
+      buildHub(hub ? hub.session() : null);
+      return saveHubCfg().then(emitStatus);
+    }
+  };
+})(window.App = window.App || {});

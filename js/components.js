@@ -1,0 +1,572 @@
+/* =============================================================================
+   components.js — shared UI pieces used by more than one page
+   ============================================================================= */
+(function (App) {
+  'use strict';
+
+  const U = App.U;
+
+  /* ---------------------------------------------------------------------------
+     SMALL BUILDING BLOCKS
+     ------------------------------------------------------------------------ */
+
+  function statTile(label, value, unit, delta) {
+    return U.h('.stat-tile', [
+      U.h('.stat', [
+        U.h('.stat-label', { text: label }),
+        U.h('.stat-value.is-sm', [
+          String(value),
+          unit ? U.h('span.stat-unit', { text: unit }) : null
+        ]),
+        delta ? U.h('.stat-delta.is-' + delta.dir, { text: delta.text }) : null
+      ])
+    ]);
+  }
+
+  /** Compact 6-cell heat preview for dense list rows. */
+  function heatStrip(muscles) {
+    const groups = App.Muscles.groupTotals(muscles || {});
+    const order = ['chest', 'back', 'shoulders', 'arms', 'legs', 'core'];
+    let max = 0;
+    order.forEach(function (g) { max = Math.max(max, groups[g] || 0); });
+    const wrap = U.h('.heat-strip', { title: order.map(function (g) {
+      return App.Muscles.GROUPS[g].name + ' ' + Math.round(groups[g] || 0) + '%';
+    }).join('  ·  ') });
+    order.forEach(function (g) {
+      const v = groups[g] || 0;
+      wrap.appendChild(U.h('i.heat-cell', {
+        style: { background: max ? App.Anatomy.heatColor(v / max) : 'var(--anat-idle)' }
+      }));
+    });
+    return wrap;
+  }
+
+  /** Ranked muscle list with bars — the text companion to the figure. */
+  function muscleList(heat, limit) {
+    const rows = Object.keys(heat || {})
+      .map(function (k) { return { id: k, v: heat[k] }; })
+      .sort(function (a, b) { return b.v - a.v; })
+      .slice(0, limit || 10);
+
+    if (!rows.length) return U.h('.empty', [U.h('p', 'No muscle data yet.')]);
+
+    const max = rows[0].v || 1;
+    const list = U.h('.mlist');
+    rows.forEach(function (r) {
+      list.appendChild(U.h('.mlist-row', [
+        U.h('span.mlist-name', { text: App.Muscles.label(r.id, true) }),
+        U.h('span.mlist-pct', { text: U.num(r.v, 0) + '%' }),
+        U.h('span.mlist-bar', [
+          U.h('i.mlist-fill', {
+            style: { width: ((r.v / max) * 100) + '%',
+              background: App.Anatomy.heatColor(r.v / max) }
+          })
+        ])
+      ]));
+    });
+    return list;
+  }
+
+  /** Rank medal + progress bar. */
+  function rankCard(r, opts) {
+    opts = opts || {};
+    const next = r.next;
+    const prevColor = (App.Ranks.RANKS[App.Ranks.RANKS.indexOf(r.rank) - 1] || r.rank).color;
+
+    return U.h('.stack', { style: { '--rank-color': r.rank.color, '--rank-color-prev': prevColor } }, [
+      U.h('.rank-card', [
+        U.h('.rank-medal' + (opts.large ? '.is-lg' : ''), { text: App.Ranks.initials(r.rank) }),
+        U.h('div', { style: { minWidth: '0', flex: '1' } }, [
+          U.h('.rank-tier', { text: 'Rank ' + (App.Ranks.RANKS.indexOf(r.rank) + 1) + ' of 8' }),
+          U.h('.rank-name', { text: r.rank.name + (r.rank.elite ? ' · Elite' : '') }),
+          U.h('.u-xs.u-muted', {
+            text: next
+              ? U.num(r.toNext, 0) + ' points to ' + next.name
+              : 'Top rank reached'
+          })
+        ]),
+        opts.hidePoints ? null : U.h('div', { style: { textAlign: 'right' } }, [
+          U.h('.stat-value.is-sm', { text: U.num(r.points, 0) }),
+          U.h('.stat-label', 'points')
+        ])
+      ]),
+      U.h('.rank-bar', [
+        U.h('i.rank-fill', { style: { width: (r.progress * 100).toFixed(1) + '%' } })
+      ]),
+      U.h('.rank-scale', [
+        U.h('span', { text: r.rank.name }),
+        U.h('span', { text: next ? next.name : 'Max' })
+      ]),
+      opts.showLadder === false ? null : rankLadder(r),
+      opts.showIndices === false ? null : U.h('.grid.grid-4', { style: { marginTop: '4px' } }, [
+        statTile('Strength', r.indices.strength, '/100'),
+        statTile('Consistency', r.indices.consistency, '/100'),
+        statTile('Volume', r.indices.volume, '/100'),
+        statTile('Balance', r.indices.balance, '/100')
+      ]),
+      (opts.showGate !== false && r.next && r.next.elite) ? eliteGateNote(r) : null
+    ]);
+  }
+
+  function rankLadder(r) {
+    const idx = App.Ranks.RANKS.indexOf(r.rank);
+    const bar = U.h('.rank-ladder', { title: App.Ranks.RANKS.map(function (x) {
+      return x.name + ' (' + x.min + ')'; }).join('  ·  ') });
+    App.Ranks.RANKS.forEach(function (x, i) {
+      bar.appendChild(U.h('i.rank-step' + (i <= idx ? '.is-done' : ''), {
+        style: { '--rank-color': x.color }
+      }));
+    });
+    return bar;
+  }
+
+  /** Explains why Diamond is still locked, when it is. */
+  function eliteGateNote(r) {
+    if (r.eliteGate) return null;
+    const missing = [];
+    if (r.breadth < 12) missing.push((12 - r.breadth) + ' more distinct movements logged');
+    if (r.weakestGroupScore < 70) missing.push('weakest muscle group at ' + r.weakestGroupScore +
+      '/70 strength score');
+    if (!missing.length) return null;
+    return U.h('.callout', [
+      U.h('.callout-bar'),
+      U.h('div', [
+        U.h('div', [U.h('strong', 'Diamond is elite across everything.'),
+          ' Beyond points, it needs:']),
+        U.h('ul.u-xs.u-muted', { style: { margin: '6px 0 0', paddingLeft: '18px' } },
+          missing.map(function (m) { return U.h('li', { text: m }); }))
+      ])
+    ]);
+  }
+
+  /* ---------------------------------------------------------------------------
+     ANATOMY PANEL
+     ------------------------------------------------------------------------ */
+
+  /** Figure + ranked list side by side, the app's standard "how hard" panel. */
+  function heatPanel(heat, opts) {
+    opts = opts || {};
+    const fig = U.h('.anat-wrap');
+    const wrap = U.h('.grid', {
+      style: { gridTemplateColumns: opts.stack ? '1fr' : 'minmax(0,1fr) 210px', alignItems: 'start' }
+    }, [
+      fig,
+      opts.list === false ? null : U.h('div', [
+        U.h('.label', { text: opts.listLabel || 'Muscle load' }),
+        muscleList(heat, opts.limit || 9)
+      ])
+    ]);
+    /* render after the node exists so measurements are correct */
+    setTimeout(function () {
+      App.Anatomy.render(fig, heat, { compact: opts.compact, legend: opts.legend });
+    }, 0);
+    return wrap;
+  }
+
+  /* ---------------------------------------------------------------------------
+     EXERCISE PICKER
+     ------------------------------------------------------------------------ */
+
+  /**
+   * pickExercise({multi, onPick(exOrArray), allowCreate})
+   * Filterable list with a "create new" shortcut, used by the workout builder.
+   */
+  function pickExercise(opts) {
+    opts = opts || {};
+    const selected = new Set();
+    let query = '', group = 'all', equip = 'all';
+
+    const listEl = U.h('.stack-sm.list-scroll');
+    const countEl = U.h('.u-xs.u-muted');
+
+    function matches(ex) {
+      if (query) {
+        const q = query.toLowerCase();
+        if (ex.name.toLowerCase().indexOf(q) < 0 &&
+            String(ex.equipment).toLowerCase().indexOf(q) < 0) return false;
+      }
+      if (equip !== 'all' && ex.equipment !== equip) return false;
+      if (group !== 'all') {
+        const groups = App.Muscles.groupTotals(ex.muscles);
+        if (!groups[group] || groups[group] < 15) return false;
+      }
+      return true;
+    }
+
+    function draw() {
+      const all = App.Store.allExercises().filter(matches)
+        .sort(function (a, b) { return a.name.localeCompare(b.name); });
+      U.clear(listEl);
+      countEl.textContent = all.length + ' of ' + App.Store.allExercises().length;
+
+      if (!all.length) {
+        listEl.appendChild(U.h('.empty', [
+          U.h('p', 'No movement matches those filters.')
+        ]));
+        return;
+      }
+      all.slice(0, 300).forEach(function (ex) {
+        const row = U.h('.ex-row' + (selected.has(ex.id) ? '.is-sel' : ''), {
+          dataset: { id: ex.id }, tabindex: '0', role: 'button'
+        }, [
+          exThumb(ex),
+          U.h('div', { style: { minWidth: 0 } }, [
+            U.h('.ex-name', { text: ex.name }),
+            U.h('.ex-meta', [
+              U.h('span', { text: App.Equipment[ex.equipment] || ex.equipment }),
+              U.h('span', { text: topMuscleLabel(ex) })
+            ])
+          ]),
+          heatStrip(ex.muscles)
+        ]);
+        function choose() {
+          if (opts.multi) {
+            if (selected.has(ex.id)) selected.delete(ex.id); else selected.add(ex.id);
+            row.classList.toggle('is-sel', selected.has(ex.id));
+            updateFoot();
+          } else {
+            m.close();
+            opts.onPick(ex);
+          }
+        }
+        row.addEventListener('click', choose);
+        row.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(); }
+        });
+        listEl.appendChild(row);
+      });
+      if (all.length > 300) {
+        listEl.appendChild(U.h('.u-xs.u-muted.u-center', {
+          style: { padding: '10px' },
+          text: 'Showing the first 300 — refine the search to narrow it down.'
+        }));
+      }
+    }
+
+    const groupSel = U.h('select.select.input-sm', {
+      onchange: function () { group = this.value; draw(); }
+    }, [U.h('option', { value: 'all' }, 'All muscle groups')].concat(
+      Object.keys(App.Muscles.GROUPS).map(function (g) {
+        return U.h('option', { value: g }, App.Muscles.GROUPS[g].name);
+      })
+    ));
+
+    const equipSel = U.h('select.select.input-sm', {
+      onchange: function () { equip = this.value; draw(); }
+    }, [U.h('option', { value: 'all' }, 'All equipment')].concat(
+      Object.keys(App.Equipment).map(function (k) {
+        return U.h('option', { value: k }, App.Equipment[k]);
+      })
+    ));
+
+    const searchInput = U.h('input.input', {
+      type: 'search', placeholder: 'Search movements…', autocomplete: 'off',
+      oninput: U.debounce(function () { query = this.value; draw(); }, 140)
+    });
+
+    let footInfo = null;
+    function updateFoot() {
+      if (footInfo) footInfo.textContent = selected.size + ' selected';
+    }
+
+    const m = U.modal({
+      title: opts.title || (opts.multi ? 'Add exercises' : 'Choose an exercise'),
+      wide: true,
+      body: function (body) {
+        body.appendChild(U.h('.stack', [
+          U.h('.search', { html: U.icon('search') }),
+          U.h('.row.row-wrap', [groupSel, equipSel, U.h('.spacer'), countEl])
+        ]));
+        body.firstChild.firstChild.appendChild(searchInput);
+        body.appendChild(listEl);
+
+        if (opts.allowCreate !== false) {
+          body.appendChild(U.h('button.btn.btn-block', {
+            type: 'button',
+            html: U.icon('plus') + '<span>Create a new exercise</span>',
+            onclick: function () {
+              editExercise(null, function (ex) {
+                if (opts.multi) { selected.add(ex.id); draw(); updateFoot(); }
+                else { m.close(); opts.onPick(ex); }
+              });
+            }
+          }));
+        }
+        draw();
+      },
+      actions: opts.multi ? [
+        { label: 'Cancel' },
+        { label: 'Add selected', kind: 'primary', onClick: function (close) {
+          const list = App.Store.allExercises().filter(function (e) { return selected.has(e.id); });
+          close();
+          opts.onPick(list);
+        } }
+      ] : null
+    });
+
+    if (opts.multi) {
+      footInfo = U.h('.u-xs.u-muted', { style: { marginRight: 'auto', alignSelf: 'center' } });
+      const foot = m.root.querySelector('.modal-foot');
+      if (foot) foot.insertBefore(footInfo, foot.firstChild);
+      updateFoot();
+    }
+    return m;
+  }
+
+  function topMuscleLabel(ex) {
+    const keys = Object.keys(ex.muscles || {});
+    if (!keys.length) return '—';
+    keys.sort(function (a, b) { return ex.muscles[b] - ex.muscles[a]; });
+    return App.Muscles.label(keys[0]) + ' ' + Math.round(ex.muscles[keys[0]]) + '%';
+  }
+
+  function exThumb(ex) {
+    if (ex.image) {
+      return U.h('.ex-thumb', [U.h('img', { src: ex.image, alt: '', loading: 'lazy' })]);
+    }
+    return U.h('.ex-thumb', { html: U.icon('dumbbell') });
+  }
+
+  /* ---------------------------------------------------------------------------
+     EXERCISE EDITOR
+     ------------------------------------------------------------------------ */
+
+  /**
+   * editExercise(exercise|null, onSaved)
+   * Muscle percentages are edited as raw weights and normalised on save, so the
+   * numbers never have to add to exactly 100 while you are typing.
+   */
+  function editExercise(ex, onSaved) {
+    const isNew = !ex;
+    const draft = Object.assign({
+      name: '', equipment: 'barbell', pattern: 'other', unilateral: false,
+      muscles: {}, image: null, notes: ''
+    }, ex || {});
+    draft.muscles = Object.assign({}, draft.muscles);
+
+    const figWrap = U.h('.anat-wrap');
+    const sumEl = U.h('.u-xs.u-muted');
+
+    function redrawFigure() {
+      App.Anatomy.render(figWrap, App.Muscles.normalise(draft.muscles),
+        { compact: true, legend: false, interactive: false });
+      const total = Object.keys(draft.muscles)
+        .reduce(function (a, k) { return a + (Number(draft.muscles[k]) || 0); }, 0);
+      sumEl.textContent = total ? 'Raw total ' + U.num(total, 0) +
+        ' — normalised to 100% on save' : 'Add at least one muscle';
+    }
+
+    const nameInput = U.h('input.input', {
+      value: draft.name, placeholder: 'e.g. Incline Dumbbell Press',
+      oninput: function () { draft.name = this.value; }
+    });
+
+    const equipSel = U.h('select.select', {
+      onchange: function () { draft.equipment = this.value; }
+    }, Object.keys(App.Equipment).map(function (k) {
+      return U.h('option', { value: k, selected: draft.equipment === k }, App.Equipment[k]);
+    }));
+
+    const PATTERNS = ['horizontal-push', 'incline-push', 'vertical-push', 'horizontal-pull',
+      'vertical-pull', 'squat', 'hinge', 'lunge', 'olympic', 'carry', 'core',
+      'chest-isolation', 'back-isolation', 'shoulder-isolation', 'biceps-isolation',
+      'triceps-isolation', 'forearm-isolation', 'quad-isolation', 'ham-isolation',
+      'glute-isolation', 'leg-isolation', 'calf-isolation', 'neck-isolation', 'other'];
+
+    const patternSel = U.h('select.select', {
+      onchange: function () { draft.pattern = this.value; }
+    }, PATTERNS.map(function (p) {
+      return U.h('option', { value: p, selected: draft.pattern === p },
+        p.replace(/-/g, ' ').replace(/^./, function (c) { return c.toUpperCase(); }));
+    }));
+
+    /* --- image --- */
+    const imgPreview = U.h('.ex-thumb', { style: { width: '64px', height: '64px' } });
+    function drawImg() {
+      U.clear(imgPreview);
+      if (draft.image) imgPreview.appendChild(U.h('img', { src: draft.image, alt: '' }));
+      else imgPreview.innerHTML = U.icon('image');
+    }
+    drawImg();
+
+    /* --- muscle rows --- */
+    const musclesWrap = U.h('.stack-sm');
+
+    function drawMuscles() {
+      U.clear(musclesWrap);
+      const ids = Object.keys(draft.muscles);
+      if (!ids.length) {
+        musclesWrap.appendChild(U.h('.u-xs.u-muted', 'No muscles assigned yet.'));
+      }
+      ids.forEach(function (id) {
+        musclesWrap.appendChild(U.h('.row', [
+          U.h('span.u-sm', { style: { flex: '1', minWidth: 0 },
+            class: 'u-truncate', text: App.Muscles.label(id, true) }),
+          U.h('input.input.input-sm.input-num', {
+            type: 'number', min: '0', max: '100', step: '1',
+            value: draft.muscles[id], style: { width: '76px' },
+            oninput: function () {
+              draft.muscles[id] = Number(this.value) || 0;
+              redrawFigure();
+            }
+          }),
+          U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+            type: 'button', 'aria-label': 'Remove', html: U.icon('x'),
+            onclick: function () { delete draft.muscles[id]; drawMuscles(); redrawFigure(); }
+          })
+        ]));
+      });
+    }
+
+    const addMuscleSel = U.h('select.select.input-sm', {
+      onchange: function () {
+        if (!this.value) return;
+        draft.muscles[this.value] = draft.muscles[this.value] || 10;
+        this.value = '';
+        drawMuscles(); redrawFigure();
+      }
+    }, [U.h('option', { value: '' }, '+ Add a muscle')].concat(
+      Object.keys(App.Muscles.GROUPS).map(function (g) {
+        return U.h('optgroup', { label: App.Muscles.GROUPS[g].name },
+          App.Muscles.MUSCLES.filter(function (m) { return m.group === g; })
+            .map(function (m) { return U.h('option', { value: m.id }, m.name); }));
+      })
+    ));
+
+    U.modal({
+      title: isNew ? 'New exercise' : 'Edit exercise',
+      wide: true,
+      body: function (body) {
+        body.appendChild(U.h('.grid.grid-2', [
+          U.h('.field', [U.h('label.label', 'Name'), nameInput]),
+          U.h('.field', [U.h('label.label', 'Equipment'), equipSel])
+        ]));
+        body.appendChild(U.h('.grid.grid-2', [
+          U.h('.field', [U.h('label.label', 'Movement pattern'), patternSel,
+            U.h('.hint', 'Drives push / pull grouping and strength standards.')]),
+          U.h('.field', [
+            U.h('label.label', 'Options'),
+            U.h('label.switch', [
+              U.h('input', { type: 'checkbox', checked: draft.unilateral,
+                onchange: function () { draft.unilateral = this.checked; } }),
+              U.h('i.switch-track'),
+              U.h('span.u-sm', 'One side at a time')
+            ])
+          ])
+        ]));
+
+        body.appendChild(U.h('.field', [
+          U.h('label.label', 'Image or GIF'),
+          U.h('.row', [
+            imgPreview,
+            U.h('button.btn.btn-sm', {
+              type: 'button', html: U.icon('upload') + '<span>Upload</span>',
+              onclick: function () {
+                U.readFile('image/*').then(function (f) {
+                  return U.shrinkImage(f.data, 360);
+                }).then(function (small) {
+                  draft.image = small; drawImg();
+                }).catch(function () {});
+              }
+            }),
+            draft.image ? U.h('button.btn.btn-sm.btn-ghost', {
+              type: 'button', text: 'Remove',
+              onclick: function () { draft.image = null; drawImg(); this.remove(); }
+            }) : null
+          ]),
+          U.h('.hint', 'Stored on this device and synced to your own Supabase. ' +
+            'Large images are resized automatically.')
+        ]));
+
+        body.appendChild(U.h('.grid', {
+          style: { gridTemplateColumns: 'minmax(0,1fr) 240px', alignItems: 'start' }
+        }, [
+          U.h('div', [
+            U.h('.label', { style: { marginBottom: '8px' } }, 'Muscle involvement'),
+            musclesWrap,
+            U.h('.row', { style: { marginTop: '10px' } }, [addMuscleSel, U.h('.spacer'), sumEl])
+          ]),
+          U.h('div', [
+            U.h('.label', { style: { marginBottom: '8px' } }, 'Preview'),
+            figWrap
+          ])
+        ]));
+
+        body.appendChild(U.h('.field', [
+          U.h('label.label', 'Notes'),
+          U.h('textarea.textarea', {
+            placeholder: 'Cues, setup, machine number…', value: draft.notes,
+            oninput: function () { draft.notes = this.value; }
+          })
+        ]));
+
+        drawMuscles();
+        redrawFigure();
+      },
+      actions: [
+        { label: 'Cancel' },
+        { label: isNew ? 'Create exercise' : 'Save changes', kind: 'primary',
+          onClick: function (close) {
+            if (!draft.name.trim()) { U.toast('Name required', 'Give the exercise a name.', 'bad'); return; }
+            if (!Object.keys(draft.muscles).length) {
+              U.toast('Muscles required', 'Assign at least one muscle.', 'bad'); return;
+            }
+            draft.name = draft.name.trim();
+            App.Store.saveExercise(draft).then(function (saved) {
+              close();
+              U.toast(isNew ? 'Exercise created' : 'Exercise saved', saved.name, 'good');
+              if (onSaved) onSaved(saved);
+            });
+          } }
+      ]
+    });
+  }
+
+  /* ---------------------------------------------------------------------------
+     DATE RANGE PICKER
+     ------------------------------------------------------------------------ */
+
+  const RANGES = [
+    { id: '7', label: '7d', days: 7 },
+    { id: '30', label: '30d', days: 30 },
+    { id: '90', label: '90d', days: 90 },
+    { id: '180', label: '6m', days: 180 },
+    { id: '365', label: '1y', days: 365 },
+    { id: 'all', label: 'All', days: 3650 }
+  ];
+
+  function rangePicker(value, onChange) {
+    const group = U.h('.btn-group', { role: 'group', 'aria-label': 'Time range' });
+    RANGES.forEach(function (r) {
+      group.appendChild(U.h('button.btn.btn-sm' + (r.id === value ? '.is-active' : ''), {
+        type: 'button', text: r.label, dataset: { range: r.id },
+        onclick: function () {
+          group.querySelectorAll('.btn').forEach(function (b) { b.classList.remove('is-active'); });
+          this.classList.add('is-active');
+          onChange(r);
+        }
+      }));
+    });
+    return group;
+  }
+
+  function rangeById(id) {
+    return RANGES.find(function (r) { return r.id === id; }) || RANGES[1];
+  }
+
+  App.C = {
+    statTile: statTile,
+    heatStrip: heatStrip,
+    muscleList: muscleList,
+    rankCard: rankCard,
+    rankLadder: rankLadder,
+    heatPanel: heatPanel,
+    pickExercise: pickExercise,
+    editExercise: editExercise,
+    exThumb: exThumb,
+    topMuscleLabel: topMuscleLabel,
+    rangePicker: rangePicker,
+    rangeById: rangeById,
+    RANGES: RANGES
+  };
+})(window.App = window.App || {});

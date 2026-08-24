@@ -1,0 +1,218 @@
+/* =============================================================================
+   theme.css — design tokens, colour schemes, light / dark / AMOLED
+
+   Structure
+   ---------
+   :root                       neutral scale + light surfaces (the base layer)
+   [data-mode="dark"]          dark surfaces
+   [data-mode="amoled"]        dark surfaces pushed to true black for OLED
+   [data-scheme="…"]           accent + 5-stop heat ramp, 8 options
+
+   Only the heat ramp and a thin accent are chromatic. Chrome, charts, axes and
+   the anatomy outlines stay black / white / grey by design, so a non-zero
+   muscle load is the only saturated thing on screen.
+   ============================================================================= */
+
+:root {
+  /* ---- typography ------------------------------------------------------- */
+  --font-sans: 'Inter var', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+               Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Mono', Consolas, monospace;
+
+  --fs-xs: 0.6875rem;
+  --fs-sm: 0.8125rem;
+  --fs-md: 0.9375rem;
+  --fs-lg: 1.0625rem;
+  --fs-xl: 1.375rem;
+  --fs-2xl: 1.875rem;
+  --fs-3xl: 2.5rem;
+
+  /* ---- spacing / geometry ----------------------------------------------- */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px;
+
+  --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --r-full: 999px;
+
+  --nav-w: 232px;
+  --maxw: 1400px;
+
+  --dur: 160ms;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- LIGHT surfaces (default) ----------------------------------------- */
+  --bg:          #f6f7f9;
+  --bg-2:        #ffffff;
+  --surface:     #ffffff;
+  --surface-2:   #f2f4f7;
+  --surface-3:   #e9ecf1;
+  --overlay:     rgba(255, 255, 255, 0.86);
+  --scrim:       rgba(16, 18, 22, 0.44);
+
+  --line:        #dfe3ea;
+  --line-strong: #c3cad6;
+
+  --text:        #12151a;
+  --text-2:      #4d5663;
+  --text-3:      #7b8494;
+  --text-inv:    #ffffff;
+
+  --ink:         #101318;   /* chart / anatomy outline */
+  --ink-soft:    #8b95a3;   /* chart gridlines, striations */
+
+  --anat-body:   #dfe3ea;
+  --anat-idle:   #cbd2dc;
+
+  --good:        #1f9254;
+  --warn:        #b7791f;
+  --bad:         #c0392b;
+
+  --shadow-1: 0 1px 2px rgba(16, 18, 22, 0.06), 0 1px 3px rgba(16, 18, 22, 0.05);
+  --shadow-2: 0 4px 12px rgba(16, 18, 22, 0.08), 0 2px 4px rgba(16, 18, 22, 0.04);
+  --shadow-3: 0 16px 48px rgba(16, 18, 22, 0.16), 0 4px 12px rgba(16, 18, 22, 0.08);
+}
+
+/* ---- DARK ---------------------------------------------------------------- */
+[data-mode='dark'] {
+  --bg:          #0f1216;
+  --bg-2:        #14181e;
+  --surface:     #171c23;
+  --surface-2:   #1d232b;
+  --surface-3:   #252c36;
+  --overlay:     rgba(15, 18, 22, 0.88);
+  --scrim:       rgba(0, 0, 0, 0.62);
+
+  --line:        #262d37;
+  --line-strong: #38414e;
+
+  --text:        #eef1f5;
+  --text-2:      #a7b0bd;
+  --text-3:      #6f7987;
+  --text-inv:    #0f1216;
+
+  --ink:         #e8ecf1;
+  --ink-soft:    #5b6472;
+
+  --anat-body:   #232932;
+  --anat-idle:   #2e3641;
+
+  --good:        #3ecf8e;
+  --warn:        #e0a33a;
+  --bad:         #f0685c;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 4px 14px rgba(0, 0, 0, 0.5);
+  --shadow-3: 0 20px 56px rgba(0, 0, 0, 0.66);
+}
+
+/* ---- AMOLED: true black, minimal light emission -------------------------- */
+[data-mode='amoled'] {
+  --bg:          #000000;
+  --bg-2:        #000000;
+  --surface:     #070809;
+  --surface-2:   #0d0f12;
+  --surface-3:   #14171b;
+  --overlay:     rgba(0, 0, 0, 0.92);
+  --scrim:       rgba(0, 0, 0, 0.78);
+
+  --line:        #1a1d22;
+  --line-strong: #2b3039;
+
+  --text:        #f2f5f8;
+  --text-2:      #9aa3b0;
+  --text-3:      #626b78;
+  --text-inv:    #000000;
+
+  --ink:         #eef1f5;
+  --ink-soft:    #4d545f;
+
+  --anat-body:   #121519;
+  --anat-idle:   #1c2027;
+
+  --good:        #3ecf8e;
+  --warn:        #e0a33a;
+  --bad:         #f0685c;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.9);
+  --shadow-2: 0 4px 14px rgba(0, 0, 0, 0.9);
+  --shadow-3: 0 20px 56px rgba(0, 0, 0, 0.95);
+}
+
+/* =============================================================================
+   COLOUR SCHEMES
+
+   Each scheme declares a five-stop palette --c1 (deepest) .. --c5 (palest),
+   plus the thin accent used for controls. The palette is then MAPPED onto
+   --heat-1..5 differently per mode, because "hot" is not the same colour on
+   both backgrounds:
+
+     dark  / amoled   low = deep, high = bright   (glow against a dark ground)
+     light            low = pale, high = deep     (ink density on white)
+
+   Reversing on light is what keeps a heavily-worked muscle looking heavier
+   than an untrained one; without it the ramp inverts against the page and the
+   hardest-worked muscle reads as the faintest.
+   ============================================================================= */
+
+[data-scheme='ember'] {
+  --accent: #ff6b35;  --accent-ink: #1a0d05;
+  --c1: #4a1e0c; --c2: #8c3410; --c3: #cc5418; --c4: #ff7a3d; --c5: #ffc4a4;
+}
+[data-scheme='flux'] {
+  --accent: #22b8d4;  --accent-ink: #04161b;
+  --c1: #0b2f3d; --c2: #115a72; --c3: #1a8aab; --c4: #2fbcd8; --c5: #a5ecf8;
+}
+[data-scheme='verdant'] {
+  --accent: #34c56d;  --accent-ink: #04170c;
+  --c1: #103322; --c2: #185f37; --c3: #23924f; --c4: #37c56d; --c5: #a8eec2;
+}
+[data-scheme='violet'] {
+  --accent: #8b5cf6;  --accent-ink: #120a26;
+  --c1: #241a4d; --c2: #422a8f; --c3: #6440c9; --c4: #8f63f7; --c5: #d0bcfd;
+}
+[data-scheme='rose'] {
+  --accent: #f43f7f;  --accent-ink: #24060f;
+  --c1: #43101f; --c2: #7d1c3a; --c3: #bd2c58; --c4: #f4548a; --c5: #fdbdd3;
+}
+[data-scheme='amber'] {
+  --accent: #f0a726;  --accent-ink: #201502;
+  --c1: #3d2a06; --c2: #74500c; --c3: #b07813; --c4: #eda52a; --c5: #fae0a6;
+}
+[data-scheme='ice'] {
+  --accent: #6f9fd8;  --accent-ink: #0a1420;
+  --c1: #1b2b3d; --c2: #2f4a68; --c3: #4a719b; --c4: #6d9dd6; --c5: #c6dbf2;
+}
+[data-scheme='crimson'] {
+  --accent: #e03131;  --accent-ink: #220505;
+  --c1: #3f0f10; --c2: #771c1d; --c3: #b02a2b; --c4: #e04141; --c5: #f7b8b8;
+}
+
+/* --- palette -> heat ramp, light (default): pale for low, deep for high ---- */
+:root {
+  --heat-1: var(--c5);
+  --heat-2: var(--c4);
+  --heat-3: var(--c3);
+  --heat-4: var(--c2);
+  --heat-5: var(--c1);
+}
+
+/* --- dark and AMOLED: deep for low, bright for high ------------------------ */
+[data-mode='dark'],
+[data-mode='amoled'] {
+  --heat-1: var(--c1);
+  --heat-2: var(--c2);
+  --heat-3: var(--c3);
+  --heat-4: var(--c4);
+  --heat-5: var(--c5);
+}
+
+/* =============================================================================
+   MOTION
+   ============================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

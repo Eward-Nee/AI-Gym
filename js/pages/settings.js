@@ -1,0 +1,959 @@
+/* =============================================================================
+   pages/settings.js — Control Panel
+
+   Sections: profile · appearance · your Supabase (setup wizard) · account ·
+             friends · data management · diagnostics
+   ============================================================================= */
+(function (App) {
+  'use strict';
+
+  const U = App.U, C = App.C;
+  let root = null;
+
+  function render(el) { root = el; draw(); }
+  function onDataChange() { /* rebuilt on demand; avoid clobbering form input */ }
+
+  function draw() {
+    U.clear(root);
+    App.Shell.setTopActions([]);
+    root.appendChild(profileCard());
+    root.appendChild(appearanceCard());
+    root.appendChild(supabaseCard());
+    root.appendChild(accountCard());
+    root.appendChild(friendsCard());
+    root.appendChild(dataCard());
+    root.appendChild(diagnosticsCard());
+  }
+
+  /* ===========================================================================
+     PROFILE
+     ======================================================================== */
+
+  function profileCard() {
+    const s = App.Store.getSettings();
+    return U.h('.card', [
+      U.h('.card-head', [
+        U.h('div', [
+          U.h('h2', 'Profile'),
+          U.h('.card-sub', 'Used for strength standards and for what friends see.')
+        ])
+      ]),
+      U.h('.grid.grid-3', [
+        U.h('.field', [
+          U.h('label.label', 'Display name'),
+          U.h('input.input', { value: s.name, placeholder: 'Your name',
+            onchange: function () { App.Store.saveSettings({ name: this.value }); } })
+        ]),
+        U.h('.field', [
+          U.h('label.label', 'Bodyweight'),
+          U.h('input.input.input-num', { type: 'number', min: '20', max: '400', step: '0.5',
+            value: s.bodyweight,
+            onchange: function () {
+              App.Store.saveSettings({ bodyweight: Number(this.value) || 80 });
+              U.toast('Saved', 'Strength scores recalculated.');
+            } }),
+          U.h('.hint', 'Rank scores are relative to bodyweight.')
+        ]),
+        U.h('.field', [
+          U.h('label.label', 'Units'),
+          U.h('select.select', {
+            onchange: function () { App.Store.saveSettings({ units: this.value }); }
+          }, [
+            U.h('option', { value: 'kg', selected: s.units === 'kg' }, 'Kilograms (kg)'),
+            U.h('option', { value: 'lb', selected: s.units === 'lb' }, 'Pounds (lb)')
+          ])
+        ])
+      ]),
+      U.h('.grid.grid-2', [
+        U.h('.field', [
+          U.h('label.label', 'Default rest between sets'),
+          U.h('input.input.input-num', { type: 'number', min: '0', step: '5',
+            value: s.restDefault,
+            onchange: function () {
+              App.Store.saveSettings({ restDefault: Number(this.value) || 90 }); } })
+        ]),
+        U.h('.field', [
+          U.h('label.label', 'Default rest between exercises'),
+          U.h('input.input.input-num', { type: 'number', min: '0', step: '15',
+            value: s.restBetweenExercises,
+            onchange: function () {
+              App.Store.saveSettings({ restBetweenExercises: Number(this.value) || 150 }); } })
+        ])
+      ])
+    ]);
+  }
+
+  /* ===========================================================================
+     APPEARANCE
+     ======================================================================== */
+
+  function appearanceCard() {
+    const s = App.Store.getSettings();
+
+    const modes = [
+      { id: 'light', label: 'Light', icon: 'sun' },
+      { id: 'dark', label: 'Dark', icon: 'moon' },
+      { id: 'amoled', label: 'AMOLED', icon: 'moon' }
+    ];
+
+    const modeGrid = U.h('.mode-grid', modes.map(function (m) {
+      return U.h('button.mode-opt' + (s.mode === m.id ? '.is-active' : ''), {
+        type: 'button', dataset: { mode: m.id },
+        onclick: function () {
+          App.Store.saveSettings({ mode: m.id });
+          U.$$('.mode-opt', root).forEach(function (b) {
+            b.classList.toggle('is-active', b.dataset.mode === m.id);
+          });
+        }
+      }, [
+        U.h('i.mode-swatch', { style: {
+          background: m.id === 'light' ? '#f6f7f9' : m.id === 'dark' ? '#171c23' : '#000',
+          borderColor: m.id === 'light' ? '#c3cad6' : '#2b3039'
+        } }),
+        U.h('span', { html: U.icon(m.icon) + ' ' + U.esc(m.label) })
+      ]);
+    }));
+
+    const schemeGrid = U.h('.scheme-grid', App.Shell.SCHEMES.map(function (sc) {
+      return U.h('button.scheme-opt' + (s.scheme === sc.id ? '.is-active' : ''), {
+        type: 'button', dataset: { scheme: sc.id },
+        onclick: function () {
+          App.Store.saveSettings({ scheme: sc.id });
+          U.$$('.scheme-opt', root).forEach(function (b) {
+            b.classList.toggle('is-active', b.dataset.scheme === sc.id);
+          });
+        }
+      }, [
+        U.h('i.scheme-ramp', { dataset: { scheme: sc.id } }),
+        U.h('span.scheme-name', { text: sc.name })
+      ]);
+    }));
+
+    /* Paint each swatch with its OWN scheme's ramp rather than the active one.
+       The probe has to be read through --c1..--c5, not --heat-*: a custom
+       property whose value contains var() is resolved on the element that
+       declares it, so --heat-* inherited from <html> would still carry the
+       currently selected scheme's colours. */
+    setTimeout(function () {
+      const reversed = App.Store.getSettings().mode === 'light';
+      U.$$('.scheme-ramp', schemeGrid).forEach(function (el) {
+        const probe = document.createElement('div');
+        probe.setAttribute('data-scheme', el.dataset.scheme);
+        probe.style.display = 'none';
+        document.body.appendChild(probe);
+        const cs = getComputedStyle(probe);
+        let stops = [1, 2, 3, 4, 5].map(function (i) {
+          return cs.getPropertyValue('--c' + i).trim();
+        });
+        probe.remove();
+        if (reversed) stops.reverse();
+        el.style.background = 'linear-gradient(90deg,' + stops.join(',') + ')';
+      });
+    }, 0);
+
+    return U.h('.card', [
+      U.h('.card-head', [
+        U.h('div', [
+          U.h('h2', 'Appearance'),
+          U.h('.card-sub', 'The colour scheme also sets the heat gradient used by every ' +
+            'graph and the anatomy figures.')
+        ])
+      ]),
+      U.h('.field', [U.h('label.label', 'Mode'), modeGrid,
+        U.h('.hint', 'AMOLED pushes the background to true black so unlit pixels stay off.')]),
+      U.h('.field', { style: { marginTop: '20px' } },
+        [U.h('label.label', 'Colour scheme'), schemeGrid])
+    ]);
+  }
+
+  /* ===========================================================================
+     YOUR SUPABASE — the setup wizard
+     ======================================================================== */
+
+  function supabaseCard() {
+    const st = App.Sync.status();
+    const card = U.h('.card');
+    const body = U.h('div');
+
+    card.appendChild(U.h('.card-head', [
+      U.h('div', [
+        U.h('h2', 'Your Supabase project'),
+        U.h('.card-sub', 'Optional. Local storage already keeps everything forever on ' +
+          'this device — a project adds backup, multi-device sync and friend sharing.')
+      ]),
+      U.h('.spacer'),
+      st.personal.verified
+        ? U.h('span.chip.chip-accent', { text: 'Connected · ' + st.personal.ref })
+        : U.h('span.chip', 'Not connected')
+    ]));
+    card.appendChild(body);
+
+    if (st.personal.verified) drawConnected(body, st);
+    else drawWizard(body);
+
+    return card;
+  }
+
+  function drawConnected(body, st) {
+    U.clear(body);
+    body.appendChild(U.h('.callout.is-good', [
+      U.h('.callout-bar'),
+      U.h('div', [
+        U.h('div', [U.h('strong', 'Connected to '), st.personal.url]),
+        U.h('.u-xs.u-muted', { text: 'Last upload ' +
+          (st.lastPush ? U.relDate(st.lastPush) : 'never') + ' · last download ' +
+          (st.lastPull ? U.relDate(st.lastPull) : 'never') +
+          (st.personal.canWrite ? ' · write access held' : ' · READ ONLY on this device') })
+      ])
+    ]));
+
+    body.appendChild(U.h('.row.row-wrap', { style: { marginTop: '16px' } }, [
+      U.h('button.btn.btn-primary.btn-sm', {
+        type: 'button', html: U.icon('upload') + '<span>Upload everything now</span>',
+        onclick: function () { runUpload(this); }
+      }),
+      U.h('button.btn.btn-sm', {
+        type: 'button', html: U.icon('download') + '<span>Download from cloud</span>',
+        onclick: function () { runDownload(); }
+      }),
+      U.h('button.btn.btn-sm', {
+        type: 'button', html: U.icon('refresh') + '<span>Re-test</span>',
+        onclick: function () { draw(); }
+      }),
+      U.h('.spacer'),
+      U.h('a.btn.btn-sm.btn-ghost', {
+        href: 'https://supabase.com/dashboard/project/' + st.personal.ref,
+        target: '_blank', rel: 'noopener noreferrer',
+        html: U.icon('link') + '<span>Open dashboard</span>'
+      }),
+      U.h('button.btn.btn-sm.btn-danger', {
+        type: 'button', text: 'Disconnect',
+        onclick: function () {
+          U.confirm({ title: 'Disconnect this project?',
+            message: 'Your local data stays exactly where it is. The cloud copy is left ' +
+              'untouched and you can reconnect any time.',
+            confirmLabel: 'Disconnect', danger: true }).then(function (ok) {
+            if (ok) App.Sync.disconnectPersonal().then(function () {
+              U.toast('Disconnected', 'Running local-only again.');
+              draw();
+            });
+          });
+        }
+      })
+    ]));
+  }
+
+  function runUpload(btn) {
+    const original = btn.innerHTML;
+    btn.innerHTML = '<i class="spinner"></i><span>Uploading…</span>';
+    btn.disabled = true;
+    App.Sync.pushAll(function (done, total) {
+      btn.innerHTML = '<i class="spinner"></i><span>' + done + ' / ' + total + '</span>';
+    }).then(function (sum) {
+      U.toast('Upload complete',
+        sum.uploaded + ' records synced to your project.', 'good');
+      btn.innerHTML = original; btn.disabled = false;
+      draw();
+    }).catch(function (err) {
+      U.toast('Upload failed', err.message, 'bad');
+      btn.innerHTML = original; btn.disabled = false;
+    });
+  }
+
+  function runDownload() {
+    U.confirm({
+      title: 'Download from the cloud?',
+      message: 'Records that are newer in the cloud will replace the copies on this ' +
+        'device. Anything newer here is kept.',
+      confirmLabel: 'Download'
+    }).then(function (ok) {
+      if (!ok) return;
+      App.Sync.pull('merge').then(function (sum) {
+        const n = Object.keys(sum).reduce(function (a, k) { return a + sum[k].applied; }, 0);
+        U.toast('Download complete', n + ' records updated locally.', 'good');
+        draw();
+      }).catch(function (err) {
+        U.toast('Download failed', err.message, 'bad');
+      });
+    });
+  }
+
+  /* --- the wizard ---------------------------------------------------------- */
+
+  function drawWizard(body) {
+    U.clear(body);
+    const state = { url: App.Sync.cfg.personal.url || '', key: App.Sync.cfg.personal.key || '' };
+    const resultWrap = U.h('div');
+
+    const urlInput = U.h('input.input', {
+      placeholder: 'https://your-project.supabase.co', value: state.url, spellcheck: 'false',
+      oninput: function () { state.url = this.value.trim(); }
+    });
+    const keyInput = U.h('input.input', {
+      placeholder: 'sb_publishable_… (or the legacy anon key)', value: state.key,
+      spellcheck: 'false', autocomplete: 'off',
+      oninput: function () { state.key = this.value.trim(); }
+    });
+
+    body.appendChild(U.h('.steps', [
+      /* 1 */
+      U.h('.step', [
+        U.h('.step-num', '1'),
+        U.h('div', [
+          U.h('.step-title', 'Create a free Supabase project'),
+          U.h('.step-body', [
+            U.h('p', 'One project per person. The free tier is plenty — a lifetime of ' +
+              'training history is a few megabytes.'),
+            U.h('a.btn.btn-sm', { href: 'https://supabase.com/dashboard/projects',
+              target: '_blank', rel: 'noopener noreferrer',
+              html: U.icon('link') + '<span>Open Supabase</span>' })
+          ])
+        ])
+      ]),
+
+      /* 2 */
+      U.h('.step', [
+        U.h('.step-num', '2'),
+        U.h('div', [
+          U.h('.step-title', 'Run the setup SQL'),
+          U.h('.step-body', [
+            U.h('p', 'In your project: SQL Editor → New query → paste → Run. ' +
+              'It creates the tables, the security rules and the daily keep-alive. ' +
+              'Safe to run more than once.'),
+            sqlBlock()
+          ])
+        ])
+      ]),
+
+      /* 3 */
+      U.h('.step', [
+        U.h('.step-num', '3'),
+        U.h('div', [
+          U.h('.step-title', 'Paste your project details'),
+          U.h('.step-body', [
+            U.h('p', 'Both values are on Project Settings → API. The publishable key is ' +
+              'designed to be public — the SQL you just ran is what stops anyone using it ' +
+              'to change your data.'),
+            U.h('.grid.grid-2', [
+              U.h('.field', [U.h('label.label', 'Project URL'), urlInput]),
+              U.h('.field', [U.h('label.label', 'Publishable / anon key'), keyInput])
+            ])
+          ])
+        ])
+      ]),
+
+      /* 4 */
+      U.h('.step', [
+        U.h('.step-num', '4'),
+        U.h('div', [
+          U.h('.step-title', 'Test the connection'),
+          U.h('.step-body', [
+            U.h('p', 'This checks the project is reachable, confirms the schema is ' +
+              'installed, and claims this device\'s write key. If it passes, you can ' +
+              'upload everything already stored here.'),
+            U.h('button.btn.btn-primary', {
+              type: 'button', html: U.icon('zap') + '<span>Test connection</span>',
+              onclick: function () { runTest(this, state, resultWrap); }
+            }),
+            resultWrap
+          ])
+        ])
+      ])
+    ]));
+  }
+
+  function sqlBlock() {
+    const wrap = U.h('.code.is-tall');
+    const pre = U.h('pre', { text: 'Loading sql/user-schema.sql…' });
+
+    wrap.appendChild(U.h('.code-head', [
+      U.h('span', 'sql/user-schema.sql'),
+      U.h('.spacer'),
+      U.h('button.btn.btn-sm.btn-ghost', {
+        type: 'button', html: U.icon('copy') + '<span>Copy</span>',
+        onclick: function () {
+          U.copy(pre.textContent).then(function () {
+            U.toast('Copied', 'Paste it into the Supabase SQL editor.', 'good');
+          }).catch(function () {
+            U.toast('Copy failed', 'Select the text and copy manually.', 'bad');
+          });
+        }
+      }),
+      U.h('button.btn.btn-sm.btn-ghost', {
+        type: 'button', html: U.icon('download') + '<span>Download</span>',
+        onclick: function () {
+          U.download('ai-gym-user-schema.sql', pre.textContent, 'text/plain');
+        }
+      })
+    ]));
+    wrap.appendChild(pre);
+
+    fetch('sql/user-schema.sql')
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function (t) { pre.textContent = t; })
+      .catch(function () {
+        pre.textContent =
+          'Could not load sql/user-schema.sql from this page.\n\n' +
+          'Open the file directly from the app folder:\n' +
+          '  AI-Gym/sql/user-schema.sql\n\n' +
+          'Copy its whole contents into the Supabase SQL editor and run it.\n' +
+          '(This usually happens when the app is opened straight from the file\n' +
+          'system instead of through a local server.)';
+      });
+
+    return wrap;
+  }
+
+  function runTest(btn, state, resultWrap) {
+    if (!App.Supabase.validUrl(state.url)) {
+      U.toast('Check the URL', 'It should look like https://abcd1234.supabase.co', 'bad');
+      return;
+    }
+    if (!App.Supabase.validKey(state.key)) {
+      U.toast('Check the key', 'Paste the publishable (or anon) key from Project Settings → API.', 'bad');
+      return;
+    }
+
+    const original = btn.innerHTML;
+    btn.innerHTML = '<i class="spinner"></i><span>Testing…</span>';
+    btn.disabled = true;
+    U.clear(resultWrap);
+
+    App.Sync.testPersonal(state.url, state.key).then(function (report) {
+      btn.innerHTML = original; btn.disabled = false;
+
+      resultWrap.appendChild(U.h('.stack-sm', { style: { marginTop: '14px' } },
+        report.steps.map(function (s) {
+          return U.h('.callout' + (s.ok ? '.is-good' : '.is-bad'), [
+            U.h('.callout-bar'),
+            U.h('div', [
+              U.h('div', [U.h('strong', s.ok ? '✓ ' : '✕ '), s.name]),
+              s.detail ? U.h('.u-xs.u-muted', { text: s.detail }) : null
+            ])
+          ]);
+        })));
+
+      if (!report.ok) {
+        resultWrap.appendChild(U.h('.callout.is-warn', { style: { marginTop: '10px' } }, [
+          U.h('.callout-bar'),
+          U.h('div', 'Fix the failing step above and test again. The most common cause is ' +
+            'the setup SQL not having been run in this project yet.')
+        ]));
+        return;
+      }
+
+      App.Sync.connectPersonal(state.url, state.key, report.writeKey, report.info)
+        .then(function () {
+          U.toast('Connected', 'Your project is ready.', 'good');
+          offerMigration(resultWrap);
+        });
+    }).catch(function (err) {
+      btn.innerHTML = original; btn.disabled = false;
+      resultWrap.appendChild(U.h('.callout.is-bad', { style: { marginTop: '14px' } }, [
+        U.h('.callout-bar'), U.h('div', { text: err.message })
+      ]));
+    });
+  }
+
+  /** Step 5: the "test passed, now fill the tables" flow the spec asks for. */
+  function offerMigration(resultWrap) {
+    const counts = {
+      exercises: App.Store.allExercises().length,
+      workouts: App.Store.allWorkouts().length,
+      sessions: App.Store.allSessions().length
+    };
+    const total = counts.exercises + counts.workouts + counts.sessions;
+
+    const btn = U.h('button.btn.btn-primary', {
+      type: 'button', html: U.icon('upload') + '<span>Upload ' + total + ' records</span>',
+      onclick: function () { runUpload(this); }
+    });
+
+    resultWrap.appendChild(U.h('.callout.is-good', { style: { marginTop: '14px' } }, [
+      U.h('.callout-bar'),
+      U.h('div', [
+        U.h('div', [U.h('strong', 'Connected.'),
+          ' Everything on this device can go up now: ' +
+          counts.exercises + ' exercises, ' + counts.workouts + ' workouts, ' +
+          counts.sessions + ' sessions.']),
+        U.h('div', { style: { marginTop: '10px' } }, [btn])
+      ])
+    ]));
+  }
+
+  /* ===========================================================================
+     ACCOUNT (hub)
+     ======================================================================== */
+
+  function accountCard() {
+    const st = App.Sync.status();
+    const card = U.h('.card');
+    const body = U.h('div');
+
+    card.appendChild(U.h('.card-head', [
+      U.h('div', [
+        U.h('h2', 'Account'),
+        U.h('.card-sub', 'Only needed for friends. Everything else works without one.')
+      ]),
+      U.h('.spacer'),
+      st.hub.signedIn
+        ? U.h('span.chip.chip-accent', { text: '@' + (st.hub.account.handle || '…') })
+        : U.h('span.chip', 'Signed out')
+    ]));
+    card.appendChild(body);
+
+    if (st.hub.signedIn) {
+      body.appendChild(U.h('.row.row-wrap', [
+        U.h('div', [
+          U.h('div', { style: { fontWeight: '600' },
+            text: st.hub.account.display_name || st.hub.account.handle }),
+          U.h('.u-xs.u-muted', { text: st.hub.account.email })
+        ]),
+        U.h('.spacer'),
+        U.h('button.btn.btn-sm', {
+          type: 'button', html: U.icon('cloud') + '<span>Publish my stats</span>',
+          onclick: function () {
+            App.Sync.publishStats().then(function () {
+              U.toast('Published', 'Friends can see your latest rank.', 'good');
+            });
+          }
+        }),
+        U.h('button.btn.btn-sm', {
+          type: 'button', text: 'Sign out',
+          onclick: function () { App.Sync.signOut().then(draw); }
+        })
+      ]));
+
+      if (!st.personal.verified) {
+        body.appendChild(U.h('.callout.is-warn', { style: { marginTop: '14px' } }, [
+          U.h('.callout-bar'),
+          U.h('div', 'You are signed in but have no Supabase project connected, so ' +
+            'friends cannot read your training data yet. Complete the section above.')
+        ]));
+      }
+      return card;
+    }
+
+    const form = { email: '', password: '', name: '', mode: 'signin' };
+    const msg = U.h('div');
+
+    function submit(btn) {
+      if (!form.email || !form.password) {
+        U.toast('Missing details', 'Email and password are both required.', 'bad');
+        return;
+      }
+      const original = btn.innerHTML;
+      btn.innerHTML = '<i class="spinner"></i><span>Working…</span>';
+      btn.disabled = true;
+
+      const p = form.mode === 'signup'
+        ? App.Sync.signUp(form.email, form.password, form.name)
+        : App.Sync.signIn(form.email, form.password);
+
+      p.then(function (r) {
+        btn.innerHTML = original; btn.disabled = false;
+        if (r && r.needsConfirmation) {
+          U.clear(msg);
+          msg.appendChild(U.h('.callout.is-good', [
+            U.h('.callout-bar'),
+            U.h('div', 'Account created. Check your email for the confirmation link, ' +
+              'then sign in here.')
+          ]));
+          return;
+        }
+        U.toast('Signed in', 'Welcome back.', 'good');
+        draw();
+      }).catch(function (err) {
+        btn.innerHTML = original; btn.disabled = false;
+        U.clear(msg);
+        msg.appendChild(U.h('.callout.is-bad', [
+          U.h('.callout-bar'), U.h('div', { text: err.message })
+        ]));
+      });
+    }
+
+    body.appendChild(U.h('.btn-group', { style: { marginBottom: '16px' } }, [
+      U.h('button.btn.btn-sm.is-active', { type: 'button', text: 'Sign in',
+        onclick: function () {
+          form.mode = 'signin';
+          this.classList.add('is-active');
+          this.nextSibling.classList.remove('is-active');
+          U.$('#nameField', body).classList.add('u-hide');
+        } }),
+      U.h('button.btn.btn-sm', { type: 'button', text: 'Create account',
+        onclick: function () {
+          form.mode = 'signup';
+          this.classList.add('is-active');
+          this.previousSibling.classList.remove('is-active');
+          U.$('#nameField', body).classList.remove('u-hide');
+        } })
+    ]));
+
+    body.appendChild(U.h('.grid.grid-3', [
+      U.h('.field#nameField.u-hide', [
+        U.h('label.label', 'Display name'),
+        U.h('input.input', { oninput: function () { form.name = this.value; } })
+      ]),
+      U.h('.field', [
+        U.h('label.label', 'Email'),
+        U.h('input.input', { type: 'email', autocomplete: 'email',
+          oninput: function () { form.email = this.value.trim(); } })
+      ]),
+      U.h('.field', [
+        U.h('label.label', 'Password'),
+        U.h('input.input', { type: 'password', autocomplete: 'current-password',
+          oninput: function () { form.password = this.value; },
+          onkeydown: function (e) {
+            if (e.key === 'Enter') submit(U.$('#authBtn', body));
+          } })
+      ])
+    ]));
+
+    body.appendChild(U.h('.row', { style: { marginTop: '14px' } }, [
+      U.h('button.btn.btn-primary#authBtn', {
+        type: 'button', html: U.icon('users') + '<span>Continue</span>',
+        onclick: function () { submit(this); }
+      }),
+      U.h('.spacer'),
+      U.h('span.u-xs.u-muted', { text: 'Hub: ' +
+        App.Supabase.projectRef(App.Sync.cfg.hub.url) })
+    ]));
+    body.appendChild(msg);
+
+    return card;
+  }
+
+  /* ===========================================================================
+     FRIENDS
+     ======================================================================== */
+
+  function friendsCard() {
+    const card = U.h('.card');
+    const body = U.h('div');
+
+    card.appendChild(U.h('.card-head', [
+      U.h('div', [
+        U.h('h2', 'Friends'),
+        U.h('.card-sub', 'Accepting a friend lets their app read your training data ' +
+          '— never write to it.')
+      ])
+    ]));
+    card.appendChild(body);
+
+    if (!App.Sync.signedIn()) {
+      body.appendChild(U.h('.empty', [
+        U.h('div', { html: U.icon('users') }),
+        U.h('.empty-title', 'Sign in first'),
+        U.h('p', 'Friends need an account so the two apps can find each other.')
+      ]));
+      return card;
+    }
+
+    const handleInput = U.h('input.input', {
+      placeholder: 'their handle, e.g. eward', spellcheck: 'false'
+    });
+
+    body.appendChild(U.h('.row.row-wrap', [
+      U.h('.field', { style: { flex: 1, minWidth: '220px' } },
+        [U.h('label.label', 'Add by handle'), handleInput]),
+      U.h('button.btn.btn-primary.btn-sm', {
+        type: 'button', style: { alignSelf: 'flex-end' },
+        html: U.icon('plus') + '<span>Send request</span>',
+        onclick: function () {
+          const h = handleInput.value.trim();
+          if (!h) return;
+          const btn = this;
+          btn.disabled = true;
+          App.Sync.requestFriend(h).then(function (res) {
+            btn.disabled = false;
+            handleInput.value = '';
+            U.toast(res === 'accepted' ? 'Friends!' :
+              res === 'already_friends' ? 'Already connected' : 'Request sent',
+              '@' + h, 'good');
+            loadList();
+          }).catch(function (err) {
+            btn.disabled = false;
+            U.toast('Could not send', err.message, 'bad');
+          });
+        }
+      })
+    ]));
+
+    const listWrap = U.h('div', { style: { marginTop: '18px' } });
+    body.appendChild(listWrap);
+
+    function loadList() {
+      U.clear(listWrap);
+      listWrap.appendChild(U.h('.row', [U.h('.spinner'),
+        U.h('span.u-sm.u-muted', 'Loading…')]));
+
+      App.Sync.listFriends().then(function (rows) {
+        U.clear(listWrap);
+        if (!rows || !rows.length) {
+          listWrap.appendChild(U.h('.empty', [
+            U.h('p', 'No friends yet. Share your handle: ') ,
+            U.h('span.chip.chip-accent', { text: '@' +
+              (App.Sync.cfg.account.handle || '') })
+          ]));
+          return;
+        }
+        const incoming = rows.filter(function (r) {
+          return r.status === 'pending' && r.direction === 'incoming'; });
+        const outgoing = rows.filter(function (r) {
+          return r.status === 'pending' && r.direction === 'outgoing'; });
+        const accepted = rows.filter(function (r) { return r.status === 'accepted'; });
+
+        if (incoming.length) {
+          listWrap.appendChild(U.h('.group-head', [U.h('span', 'Requests for you')]));
+          incoming.forEach(function (f) { listWrap.appendChild(friendRow(f, loadList, true)); });
+        }
+        if (accepted.length) {
+          listWrap.appendChild(U.h('.group-head', [U.h('span', 'Connected')]));
+          accepted.forEach(function (f) { listWrap.appendChild(friendRow(f, loadList, false)); });
+        }
+        if (outgoing.length) {
+          listWrap.appendChild(U.h('.group-head', [U.h('span', 'Waiting on them')]));
+          outgoing.forEach(function (f) { listWrap.appendChild(friendRow(f, loadList, false)); });
+        }
+      }).catch(function (err) {
+        U.clear(listWrap);
+        listWrap.appendChild(U.h('.callout.is-bad', [
+          U.h('.callout-bar'), U.h('div', { text: err.message })
+        ]));
+      });
+    }
+    loadList();
+
+    return card;
+  }
+
+  function friendRow(f, reload, isIncoming) {
+    const rk = App.Ranks.RANKS.find(function (x) { return x.id === f.rank_id; })
+      || App.Ranks.RANKS[0];
+    return U.h('.ex-row', [
+      U.h('.ex-thumb', { style: { fontSize: '20px' }, text: f.avatar_emoji || '💪' }),
+      U.h('div', { style: { minWidth: 0 } }, [
+        U.h('.ex-name', { text: f.display_name || f.handle }),
+        U.h('.ex-meta', [
+          U.h('span', { text: '@' + f.handle }),
+          U.h('span', { style: { color: rk.color }, text: rk.name }),
+          U.h('span', { text: U.num(f.rank_points, 0) + ' pts' }),
+          f.has_connection ? null : U.h('span', { text: 'no project linked' })
+        ])
+      ]),
+      U.h('.row', { style: { gap: '6px' } }, [
+        isIncoming ? U.h('button.btn.btn-primary.btn-sm', {
+          type: 'button', text: 'Accept',
+          onclick: function () {
+            /* respond_friend keys off the friendship row, not the account. */
+            App.Sync.respondFriend(f.friendship_id, true)
+              .then(function () { U.toast('Connected', '@' + f.handle, 'good'); reload(); })
+              .catch(function (e) { U.toast('Failed', e.message, 'bad'); });
+          }
+        }) : null,
+        U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+          type: 'button', 'aria-label': 'Remove', title: 'Remove', html: U.icon('trash'),
+          onclick: function () {
+            U.confirm({ title: 'Remove @' + f.handle + '?',
+              message: 'They will no longer be able to read your training data.',
+              confirmLabel: 'Remove', danger: true }).then(function (ok) {
+              if (!ok) return;
+              App.Sync.removeFriend(f.id).then(function () { reload(); });
+            });
+          }
+        })
+      ])
+    ]);
+  }
+
+  /* ===========================================================================
+     DATA
+     ======================================================================== */
+
+  function dataCard() {
+    return U.h('.card', [
+      U.h('.card-head', [
+        U.h('div', [
+          U.h('h2', 'Data'),
+          U.h('.card-sub', 'Backups are plain JSON — yours to keep, move or inspect.')
+        ])
+      ]),
+      U.h('.row.row-wrap', [
+        U.h('button.btn.btn-sm', {
+          type: 'button', html: U.icon('download') + '<span>Export backup</span>',
+          onclick: function () {
+            U.download('ai-gym-backup-' + U.today() + '.json',
+              JSON.stringify(App.Store.exportAll(), null, 2));
+            U.toast('Exported', 'Backup downloaded.');
+          }
+        }),
+        U.h('button.btn.btn-sm', {
+          type: 'button', html: U.icon('upload') + '<span>Import backup</span>',
+          onclick: importBackup
+        }),
+        U.h('.spacer'),
+        U.h('button.btn.btn-sm.btn-danger', {
+          type: 'button', html: U.icon('trash') + '<span>Reset progress…</span>',
+          onclick: resetDialog
+        })
+      ])
+    ]);
+  }
+
+  function importBackup() {
+    U.readFile('application/json,.json').then(function (f) {
+      let data;
+      try { data = JSON.parse(f.data); }
+      catch (e) { U.toast('Not readable', 'That file is not valid JSON.', 'bad'); return; }
+
+      U.modal({
+        title: 'Import backup',
+        body: U.h('.stack', [
+          U.h('p.u-sm', { text: 'From ' + (data.exportedAt
+            ? U.fmtDate(data.exportedAt, 'long') : 'an unknown date') + '.' }),
+          U.h('p.u-sm.u-muted', { text: [
+            (data.exercises || []).length + ' exercises',
+            (data.workouts || []).length + ' workouts',
+            (data.sessions || []).length + ' sessions'
+          ].join(' · ') })
+        ]),
+        actions: [
+          { label: 'Cancel' },
+          { label: 'Merge', onClick: function (close) { doImport(data, 'merge', close); } },
+          { label: 'Replace everything', kind: 'danger',
+            onClick: function (close) { doImport(data, 'replace', close); } }
+        ]
+      });
+    }).catch(function () {});
+  }
+
+  function doImport(data, mode, close) {
+    App.Store.importAll(data, mode).then(function () {
+      close();
+      U.toast('Imported', 'Backup restored.', 'good');
+      draw();
+    }).catch(function (err) {
+      U.toast('Import failed', err.message, 'bad');
+    });
+  }
+
+  function resetDialog() {
+    const opts = { keepLibrary: true, keepFriends: true, resetSettings: false };
+    U.modal({
+      title: 'Reset data',
+      body: function (body) {
+        body.appendChild(U.h('.callout.is-warn', [
+          U.h('.callout-bar'),
+          U.h('div', 'This clears data on THIS DEVICE. If you have a Supabase project ' +
+            'connected, the cloud copy is untouched — you can download it again afterwards.')
+        ]));
+        body.appendChild(U.h('.stack', [
+          toggleRow('Keep the exercise library', 'Otherwise it is reset to the ' +
+            App.SeedExercises.length + ' built-in movements.', opts, 'keepLibrary'),
+          toggleRow('Keep friends', 'Locally cached friend list.', opts, 'keepFriends'),
+          toggleRow('Also reset settings', 'Theme, units, bodyweight and rest defaults.',
+            opts, 'resetSettings')
+        ]));
+        body.appendChild(U.h('p.u-sm.u-muted',
+          'Workouts and every logged session are always removed.'));
+      },
+      actions: [
+        { label: 'Cancel' },
+        { label: 'Reset', kind: 'danger', onClick: function (close) {
+          App.Store.resetData(opts).then(function () {
+            close();
+            U.toast('Reset', 'Workouts and history cleared.', 'good');
+            draw();
+          });
+        } }
+      ]
+    });
+  }
+
+  function toggleRow(title, hint, obj, key) {
+    return U.h('label.switch', { style: { alignItems: 'flex-start' } }, [
+      U.h('input', { type: 'checkbox', checked: obj[key],
+        onchange: function () { obj[key] = this.checked; } }),
+      U.h('i.switch-track'),
+      U.h('div', [
+        U.h('div', { style: { fontWeight: '560' }, text: title }),
+        U.h('.u-xs.u-muted', { text: hint })
+      ])
+    ]);
+  }
+
+  /* ===========================================================================
+     DIAGNOSTICS
+     ======================================================================== */
+
+  function diagnosticsCard() {
+    const card = U.h('.card');
+    const body = U.h('div');
+    card.appendChild(U.h('.card-head', [
+      U.h('div', [
+        U.h('h2', 'Diagnostics'),
+        U.h('.card-sub', 'What is stored where, and whether the daily keep-alive ran.')
+      ]),
+      U.h('.spacer'),
+      U.h('button.btn.btn-sm', {
+        type: 'button', html: U.icon('refresh') + '<span>Run keep-alive now</span>',
+        onclick: function () {
+          const btn = this;
+          btn.disabled = true;
+          App.Sync.cfg.keepaliveDate = null;
+          App.Sync.runKeepalive().then(function (r) {
+            btn.disabled = false;
+            U.toast('Keep-alive', r.skipped ? 'No projects configured.'
+              : (r.results || []).map(function (x) {
+                  return x.target + ': ' + (x.error ? x.error : x.ran ? 'ran' : 'already done today');
+                }).join(' · '), r.skipped ? null : 'good');
+            draw();
+          }).catch(function (e) {
+            btn.disabled = false;
+            U.toast('Keep-alive failed', e.message, 'bad');
+          });
+        }
+      })
+    ]));
+    card.appendChild(body);
+
+    Promise.all([App.DB.stats(), App.DB.usage()]).then(function (r) {
+      const st = r[0], usage = r[1];
+      const sync = App.Sync.status();
+      U.clear(body);
+      body.appendChild(U.h('.table-wrap', [U.h('table.tbl', [
+        U.h('tbody', [
+          diagRow('Local storage engine', st.backend === 'idb'
+            ? 'IndexedDB (recommended)' : 'localStorage fallback'),
+          diagRow('Exercises', st.exercises + ' records'),
+          diagRow('Workouts', st.workouts + ' records'),
+          diagRow('Sessions', st.sessions + ' records'),
+          diagRow('Pending uploads', st.outbox + ' queued'),
+          usage ? diagRow('Disk used', U.compact(usage.used / 1024) + ' KB of ' +
+            U.compact(usage.quota / 1048576) + ' MB') : null,
+          diagRow('Personal project', sync.personal.configured
+            ? (sync.personal.ref + (sync.personal.verified ? ' · verified' : ' · unverified'))
+            : 'not connected'),
+          diagRow('Write access', sync.personal.canWrite ? 'held on this device' : '—'),
+          diagRow('Hub account', sync.hub.signedIn
+            ? '@' + sync.hub.account.handle : 'signed out'),
+          diagRow('Keep-alive last run', App.Sync.cfg.keepaliveDate || 'not yet today'),
+          diagRow('Last upload', sync.lastPush ? U.fmtDate(sync.lastPush, 'long') : 'never'),
+          diagRow('Last download', sync.lastPull ? U.fmtDate(sync.lastPull, 'long') : 'never')
+        ].filter(Boolean))
+      ])]));
+    });
+
+    return card;
+  }
+
+  function diagRow(k, v) {
+    return U.h('tr', [
+      U.h('td.u-muted', { text: k }),
+      U.h('td.u-mono.u-sm', { text: String(v) })
+    ]);
+  }
+
+  App.Pages = App.Pages || {};
+  App.Pages.settings = { render: render, onDataChange: onDataChange };
+})(window.App = window.App || {});
