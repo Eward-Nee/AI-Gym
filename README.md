@@ -1,6 +1,6 @@
 # AI-Gym
 
-**Version 0.5.2**
+**Version 0.5.3**
 
 A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No build step, no framework, no npm install, no CDN — open it and it works.
 
@@ -156,7 +156,11 @@ One gotcha worth recording: `radial-gradient(closest-side …)` anchored at an e
 
 The app checks GitHub releases for a newer version (falling back to the deployed `version.json`, since a build can be live before anyone tags a release) at most four times a day, and offers an update. There is also a manual check in the Control Panel.
 
-**An update never costs you work in progress.** Pages register a snapshot provider; the snapshot is written to IndexedDB on every edit and on `pagehide`/`visibilitychange`, so an OS-initiated kill is survivable too, not just our own reload. Take an update mid-workout and you come back to the same sets ticked, the same weights entered, and the elapsed clock still counting from the original start rather than restarting at zero. The reload carries a cache-busting query so an edge cache hands over the new build rather than the one it already has.
+**An update never costs you work in progress.** Pages register a snapshot provider; the snapshot is written to IndexedDB on every edit and on `pagehide`/`visibilitychange`, so an OS-initiated kill is survivable too, not just our own reload. Take an update mid-workout and you come back to the same sets ticked, the same weights entered, and the elapsed clock still counting from the original start rather than restarting at zero.
+
+**Getting the new code is the hard part, not the reload.** The document reloads against a cache-busting query, but the app *is* the twenty script and stylesheet files `index.html` references by unchanging relative paths. Busting the document alone fetched a fresh page and then filled it with cached JavaScript, so the app came back running the version it had been asked to leave — appearing to update only once those cache entries aged out on their own, several attempts later. Every same-origin asset is now pulled through `fetch(url, {cache: 'reload'})` first, which skips the cache on the way out and writes the fresh response into it, so the reload that follows parses the new files.
+
+If an update still does not take, the app says so on the next boot — naming both versions and pointing at a hard refresh — instead of quietly carrying on as though it had worked.
 
 ### Encryption
 

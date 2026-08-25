@@ -1,5 +1,5 @@
 {
-  "version": "0.5.2",
+  "version": "0.5.3",
   "name": "AI-Gym",
-  "notes": "Exercise list scrolls straight, icons fit, ranking chart, correcter records."
+  "notes": "Updating actually updates: the reload no longer serves cached code."
 }

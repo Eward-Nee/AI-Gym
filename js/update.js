@@ -160,18 +160,127 @@
      ------------------------------------------------------------------------ */
 
   /**
-   * Snapshot, then reload against a fresh URL. The cache-busting query is what
-   * makes a host with an aggressive edge cache (GitHub Pages) hand over the new
-   * document rather than the one it already has; the hash rides along so the
-   * user lands back on the same screen.
+   * Pull every same-origin asset through the network and into the HTTP cache.
+   *
+   * Busting the document URL alone was not enough, and this is exactly why the
+   * update button looked inert: the app's code is the twenty script and
+   * stylesheet files that index.html references by unchanging relative paths.
+   * Reloading `index.html?u=<now>` fetched a fresh document and then served
+   * every one of those from cache, so the app came back running the very
+   * version it had been asked to leave. It only appeared to work once those
+   * cache entries aged out on their own, several attempts later.
+   *
+   * `cache: 'reload'` is the cure: it skips the cache on the way out and writes
+   * what it receives back into the cache, so the reload that follows parses the
+   * new files.
+   */
+  function refreshAssets() {
+    /* Nothing to defeat on file://, where fetch is not usable anyway. */
+    if (typeof fetch !== 'function' || location.protocol === 'file:') {
+      return Promise.resolve(0);
+    }
+
+    const urls = [];
+    const seen = Object.create(null);
+
+    function want(raw) {
+      if (!raw) return;
+      let abs;
+      try { abs = new URL(raw, location.href); } catch (e) { return; }
+      if (abs.origin !== location.origin) return;
+      abs.hash = '';
+      if (seen[abs.href]) return;
+      seen[abs.href] = true;
+      urls.push(abs.href);
+    }
+
+    const nodes = document.querySelectorAll('script[src], link[rel="stylesheet"][href]');
+    Array.prototype.forEach.call(nodes, function (el) {
+      want(el.getAttribute('src') || el.getAttribute('href'));
+    });
+    want('version.json');
+
+    let ok = 0;
+    return Promise.all(urls.map(function (u) {
+      return fetch(u, { cache: 'reload' })
+        .then(function (r) { if (r.ok) ok++; })
+        /* One unreachable asset must not strand the user on the old version. */
+        .catch(function () {});
+    })).then(function () { return ok; });
+  }
+
+  /**
+   * Snapshot, refresh the code, then reload against a fresh URL. The
+   * cache-busting query handles the document; refreshAssets() handles
+   * everything the document pulls in. The hash rides along so the user lands
+   * back on the same screen.
    */
   function apply() {
+    const target = pending ? pending.version : null;
+
     return saveSnapshot().then(function () {
       return App.DB.setMeta('update.skipped', null);
+    }).then(function () {
+      /* Remember what should come back, so an update that does not take can be
+         reported instead of passed off as a success. */
+      return App.DB.setMeta('update.expecting', target);
     }).catch(function () {}).then(function () {
+      return refreshAssets().catch(function () { return 0; });
+    }).then(function () {
       const base = location.origin + location.pathname;
       location.replace(base + '?u=' + Date.now() + (location.hash || ''));
     });
+  }
+
+  /**
+   * Report on the update requested before the last reload.
+   *
+   * Coming back on the old version is the failure the user actually saw, and
+   * saying nothing about it is what made the button look like it did nothing.
+   * If the code is still stale, say so and name the one thing that always
+   * works — a hard refresh, which bypasses the cache for the whole page.
+   */
+  function verifyApplied() {
+    return App.DB.getMeta('update.expecting', null).then(function (want) {
+      if (!want) return null;
+      return App.DB.setMeta('update.expecting', null).then(function () {
+        if (compare(want, App.VERSION) <= 0) {
+          U.toast('Updated', 'Now on ' + App.VERSION + '.', 'good');
+          return null;
+        }
+
+        const mac = /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '');
+        U.modal({
+          title: 'The update did not take',
+          body: function (body) {
+            body.appendChild(U.h('.callout.is-warn', [
+              U.h('.callout-bar'),
+              U.h('div', [
+                U.h('div', [U.h('strong', 'Still on ' + App.VERSION + ', not ' + want + '.')]),
+                U.h('.u-xs.u-muted', { style: { marginTop: '4px' },
+                  text: 'The browser served the old code from its cache. Nothing is ' +
+                    'wrong with your data — only the app files are stale.' })
+              ])
+            ]));
+            body.appendChild(U.h('p.u-sm',
+              'A hard refresh bypasses the cache for the whole page and always works:'));
+            body.appendChild(U.h('ul.u-sm', { style: { paddingLeft: '18px' } }, [
+              U.h('li', mac ? 'Mac: ⌘ + Shift + R' : 'Windows / Linux: Ctrl + Shift + R'),
+              U.h('li', 'Phone: reload from the browser menu')
+            ]));
+          },
+          actions: [
+            { label: 'Dismiss' },
+            { label: 'Try again', kind: 'primary', onClick: function (close) {
+              close();
+              pending = { version: want, source: 'retry', notes: '', url: RELEASES_PAGE };
+              setTimeout(apply, 200);
+            } }
+          ]
+        });
+        return null;
+      });
+    }).catch(function () { return null; });
   }
 
   function skip(version) {
@@ -385,6 +494,12 @@
   /** Never rejects: an update check must not be able to break start-up. */
   function boot() {
     bindLifecycle();
+
+    /* Settle the previous update before looking for the next one, otherwise a
+       failed update is immediately re-offered with no explanation of why the
+       last attempt changed nothing. */
+    verifyApplied();
+
     /* Give the app a moment to settle before spending network on this. */
     setTimeout(function () {
       check(false)
@@ -404,6 +519,8 @@
     prompt: prompt,
     promptSchema: promptSchema,
     apply: apply,
+    refreshAssets: refreshAssets,
+    verifyApplied: verifyApplied,
     skip: skip,
     compare: compare,
     isNewer: isNewer,
