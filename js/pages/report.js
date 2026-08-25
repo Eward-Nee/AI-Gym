@@ -51,7 +51,7 @@
     root.appendChild(U.h('.row.row-wrap', [
       tabs,
       U.h('.spacer'),
-      tab === 'overview' || tab === 'records'
+      tab === 'overview' || tab === 'records' || tab === 'ranks'
         ? C.rangePicker(view.range, function (r) { view.range = r.id; draw(); })
         : null
     ]));
@@ -339,8 +339,173 @@
      RANKS
      ======================================================================== */
 
+  /* ---------------------------------------------------------------------------
+     RANKING OVER TIME
+
+     Points are a function of the sessions logged up to a moment, so a history
+     is produced by recomputing the score with the sessions truncated at each
+     sample date — not by storing a running total, which would be wrong the
+     moment a past session was edited.
+
+     Recomputing is O(sessions) per sample, so the range is sampled at a fixed
+     number of points rather than daily; a year still costs 40 passes, not 365.
+     ------------------------------------------------------------------------ */
+
+  const RANK_SAMPLES = 40;
+
+  /**
+   * @param {Object[]} sessions   all sessions, any order
+   * @param {Object}   exercises  id -> exercise
+   * @param {number[]} stamps     sample times, ascending
+   * @returns {Object[]} [{x, y}] — points at each sample
+   */
+  function pointsHistory(sessions, exercises, stamps, bodyweight, settings) {
+    const dated = (sessions || []).map(function (s) {
+      return { t: new Date(s.date + (s.date.length === 10 ? 'T12:00:00' : '')).getTime(), s: s };
+    }).sort(function (a, b) { return a.t - b.t; });
+
+    const out = [];
+    let i = 0;
+    const upTo = [];
+
+    stamps.forEach(function (t) {
+      while (i < dated.length && dated[i].t <= t) { upTo.push(dated[i].s); i++; }
+      if (!upTo.length) { out.push({ x: t, y: 0 }); return; }
+      const r = App.Ranks.compute({
+        sessions: upTo.slice(),
+        exercises: exercises,
+        bodyweight: bodyweight,
+        settings: settings
+      });
+      out.push({ x: t, y: r.points });
+    });
+
+    return out;
+  }
+
+  function sampleStamps(days) {
+    const end = Date.now();
+    const span = Math.max(1, days) * 86400000;
+    const start = end - span;
+    const n = Math.min(RANK_SAMPLES, Math.max(6, Math.ceil(days / 3)));
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(Math.round(start + (span * i) / (n - 1)));
+    return out;
+  }
+
+  /** Rank thresholds inside the plotted range, as chart rules. */
+  function rankRules(maxPoints) {
+    return App.Ranks.RANKS.filter(function (x) { return x.wr > 0; })
+      .map(function (x) {
+        return { y: App.Ranks.pointsForRank(x), label: x.name, color: x.color };
+      })
+      .filter(function (r) { return r.y <= maxPoints * 1.15; });
+  }
+
+  function rankingCard() {
+    const card = U.h('.card', [
+      U.h('.card-head', [
+        U.h('div', [
+          U.h('h2', 'Ranking over time'),
+          U.h('.card-sub', 'Points across the selected period, with each tier ' +
+            'marked. Friends appear once their data has been read.')
+        ])
+      ])
+    ]);
+
+    const chartEl = U.h('.chart');
+    const note = U.h('.u-xs.u-muted', { style: { marginTop: '8px' } });
+    card.appendChild(chartEl);
+    card.appendChild(note);
+
+    const settings = App.Store.getSettings();
+    const days = C.rangeById(view.range).days;
+    const stamps = sampleStamps(days);
+    const meName = settings.name || 'You';
+
+    const series = [{
+      name: meName,
+      accent: true,
+      points: pointsHistory(App.Store.allSessions(), App.Store.exerciseMap(),
+        stamps, settings.bodyweight, settings)
+    }];
+
+    function paint() {
+      const peak = series.reduce(function (m, s) {
+        return s.points.reduce(function (n, p) { return Math.max(n, p.y); }, m);
+      }, 0);
+      App.Charts.line(chartEl, {
+        xType: 'date',
+        height: 260,
+        yMin: 0,
+        legend: true,
+        yFormat: function (v) { return U.num(v, 0) + ' pts'; },
+        rules: rankRules(peak),
+        series: series.filter(function (s) { return s.points.length; })
+      });
+    }
+
+    setTimeout(paint, 0);
+
+    /* Friends are a network read, so the chart draws immediately with just the
+       user's line and each friend is added as their data lands. One failing
+       friend must not cost the others their line, so each is caught alone. */
+    const load = friendCache ? Promise.resolve(friendCache) : App.Sync.listFriends();
+    load.then(function (rows) {
+      friendCache = rows;
+      const friends = (rows || []).filter(function (f) { return f.status === 'accepted'; });
+      if (!friends.length) {
+        note.textContent = 'Add a friend in the Control Panel to compare rankings.';
+        return;
+      }
+
+      note.textContent = 'Reading ' + friends.length + ' friend' +
+        (friends.length === 1 ? '' : 's') + '…';
+      let failed = 0;
+
+      return Promise.all(friends.map(function (f) {
+        return App.Sync.readFriendData(f.id, { since: U.daysAgo(days) })
+          .then(function (data) {
+            const name = f.display_name || f.handle;
+            if (data && data.sessions && data.sessions.length) {
+              series.push({
+                name: name,
+                points: pointsHistory(data.sessions, App.Store.exerciseMap(),
+                  stamps, settings.bodyweight, settings)
+              });
+              return;
+            }
+            /* Only their published summary is readable — a single current
+               value. Shown as a flat line, and said so, rather than implied
+               to be a history they did not share. */
+            const pts = data && data.profile && data.profile.stats &&
+              data.profile.stats.points;
+            if (pts > 0) {
+              series.push({
+                name: name + ' (now)', dash: true,
+                points: stamps.map(function (t) { return { x: t, y: pts }; })
+              });
+            }
+          })
+          .catch(function () { failed++; });
+      })).then(function () {
+        paint();
+        note.textContent = failed
+          ? failed + ' friend' + (failed === 1 ? '' : 's') +
+            ' could not be read — their data is private or their project is offline.'
+          : '';
+      });
+    }).catch(function (err) {
+      note.textContent = 'Friends could not be listed: ' + err.message;
+    });
+
+    return card;
+  }
+
   function drawRanks() {
     const r = App.Store.rank();
+
+    root.appendChild(rankingCard());
 
     root.appendChild(U.h('.grid.grid-main', [
       U.h('.card', [

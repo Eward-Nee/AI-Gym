@@ -1,5 +1,5 @@
 {
-  "version": "0.5.1",
+  "version": "0.5.2",
   "name": "AI-Gym",
-  "notes": "Body proportions rebalanced: arms down, legs up."
+  "notes": "Exercise list scrolls straight, icons fit, ranking chart, correcter records."
 }

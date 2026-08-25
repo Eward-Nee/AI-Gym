@@ -557,6 +557,26 @@
      ------------------------------------------------------------------------ */
 
   /**
+   * The distance from the top of one row to the top of the next, read from the
+   * stylesheet instead of repeated as a constant in JS.
+   *
+   * Two call sites each carried their own copy of this number, and when the row
+   * grew to fit its thumbnail both copies were left behind. A stride that
+   * disagrees with the layout by a few pixels compounds over hundreds of rows.
+   *
+   * @param {Element} scroller  the list container carrying --ex-row-h / --ex-row-gap
+   * @returns {number} px
+   */
+  function rowStride(scroller) {
+    const cs = getComputedStyle(scroller);
+    const h = parseFloat(cs.getPropertyValue('--ex-row-h'));
+    const gap = parseFloat(cs.getPropertyValue('--ex-row-gap'));
+    /* Fallbacks match the .ex-list defaults, and only apply if the stylesheet
+       has not been applied to this element yet. */
+    return (h > 0 ? h : 64) + (gap > 0 ? gap : 6);
+  }
+
+  /**
    * @param {Element}  scroller  the scrolling container; is emptied
    * @param {Array}    items
    * @param {number}   rowH      row height in px, including its bottom margin
@@ -636,6 +656,6 @@
     copy: copy, copyOrShow: copyOrShow, showManualCopy: showManualCopy,
     openExternal: openExternal, androidIntentUrl: androidIntentUrl,
     download: download, readFile: readFile, shrinkImage: shrinkImage,
-    virtualList: virtualList
+    virtualList: virtualList, rowStride: rowStride
   };
 })(window.App = window.App || {});

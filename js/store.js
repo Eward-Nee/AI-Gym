@@ -24,6 +24,14 @@
        A per-exercise `loadMode` overrides it; see App.Ranks.loadMode(). */
     dumbbellLoad: 'per-hand',  /* per-hand | total */
     restBetweenExercises: 150,
+    /* Muscle-group ordering for "group by muscle group" in the builder. Off by
+       default, in which case groups follow the taxonomy's own `order`.
+       See App.Muscles.orderGroups(). */
+    groupOrder: {
+      enabled: false,
+      general: ['chest', 'back', 'shoulders', 'arms', 'legs', 'core', 'neck'],
+      templates: []
+    },
     autoSync: true,
     firstRun: true
   };
@@ -108,6 +116,10 @@
         muscles: e.muscles,
         image: null,
         notes: '',
+        /* Carried through: a movement whose pattern badly misestimates its
+           record ships with the right one, and dropping it here would put the
+           bad estimate back. */
+        wr: e.wr || null,
         builtin: true,
         favorite: false,
         createdAt: now,
@@ -141,15 +153,36 @@
         return {
           id: e.id, name: e.name, equipment: e.equipment, pattern: e.pattern,
           unilateral: !!e.unilateral, muscles: e.muscles,
-          image: null, notes: '', wr: null, builtin: true, favorite: false,
+          image: null, notes: '', wr: e.wr || null, builtin: true, favorite: false,
           createdAt: now, updatedAt: now
         };
       });
 
-      if (!fresh.length) return 0;
+      /* A record corrected in a later version has to reach devices that seeded
+         the movement before it existed, or those installs keep scoring against
+         the old estimate for good. Only untouched built-ins are backfilled: a
+         record the user set themselves is theirs and is left alone. */
+      const seedById = Object.create(null);
+      seeds.forEach(function (e) { if (e.wr) seedById[e.id] = e.wr; });
+
+      const backfilled = state.exercises.filter(function (ex) {
+        return ex.builtin && !ex.wr && seedById[ex.id];
+      }).map(function (ex) {
+        ex.wr = Object.assign({}, seedById[ex.id]);
+        ex.updatedAt = now;
+        return ex;
+      });
+
+      if (!fresh.length && !backfilled.length) return 0;
       state.exercises = state.exercises.concat(fresh);
-      return App.DB.putMany('exercises', fresh).then(function () {
-        console.info('[store] added ' + fresh.length + ' new built-in exercises');
+      return App.DB.putMany('exercises', fresh.concat(backfilled)).then(function () {
+        if (fresh.length) {
+          console.info('[store] added ' + fresh.length + ' new built-in exercises');
+        }
+        if (backfilled.length) {
+          console.info('[store] applied corrected world records to ' +
+            backfilled.length + ' built-in exercises');
+        }
         return fresh.length;
       });
     }).catch(function () { return 0; });
@@ -176,6 +209,9 @@
 
   function allExercises() { return state.exercises; }
   function getExercise(id) { return state.exerciseById[id] || null; }
+
+  /** The whole id -> exercise index, for scoring a batch of sessions at once. */
+  function exerciseMap() { return state.exerciseById; }
 
   function saveExercise(ex) {
     const now = new Date().toISOString();
@@ -662,7 +698,7 @@
 
     getSettings: getSettings, saveSettings: saveSettings,
 
-    allExercises: allExercises, getExercise: getExercise,
+    allExercises: allExercises, getExercise: getExercise, exerciseMap: exerciseMap,
     saveExercise: saveExercise, deleteExercise: deleteExercise,
 
     allWorkouts: allWorkouts, getWorkout: getWorkout,

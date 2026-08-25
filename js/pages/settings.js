@@ -197,8 +197,277 @@
           (counts.overridden
             ? ', ' + counts.overridden + ' with their own setting'
             : '') + '.' })
-      ])
+      ]),
+      groupOrderField(s)
     ]);
+  }
+
+  /* ---------------------------------------------------------------------------
+     MUSCLE-GROUP ORDER
+
+     "Group by muscle group" in the workout builder listed its groups
+     alphabetically — arms, back, chest, core, legs — which is not an order
+     anybody trains in. The order can now be stated once, with templates for the
+     specific splits the user runs.
+
+     A template applies only when the day's groups are EXACTLY its groups, which
+     is what keeps a Push template from reordering a full-body session that
+     merely happens to include chest. Everything else uses the general order.
+     ------------------------------------------------------------------------ */
+
+  function groupOrderConfig(s) {
+    const raw = (s && s.groupOrder) || {};
+    return {
+      enabled: !!raw.enabled,
+      general: Array.isArray(raw.general) && raw.general.length
+        ? raw.general.slice()
+        : App.Muscles.DEFAULT_GROUP_ORDER.slice(),
+      templates: Array.isArray(raw.templates) ? raw.templates.slice() : []
+    };
+  }
+
+  /**
+   * @param {Object}  cfg
+   * @param {boolean} [redraw]  rebuild the page — needed when the card's shape
+   *                            changes (toggled on/off, a template added or
+   *                            removed), but not for a reorder, where redrawing
+   *                            would replace the button under the user's finger
+   *                            and drop focus between clicks.
+   */
+  function saveGroupOrder(cfg, redraw) {
+    App.Store.saveSettings({ groupOrder: cfg });
+    if (redraw !== false) draw();
+  }
+
+  /**
+   * A reorderable list of muscle groups.
+   *
+   * @param {string[]} order     the groups to show, in their current order
+   * @param {Function} onChange  (nextOrder) -> void
+   */
+  function orderEditor(order, onChange) {
+    const list = order.slice();
+
+    function move(i, delta) {
+      const j = i + delta;
+      if (j < 0 || j >= list.length) return;
+      const copy = list.slice();
+      const tmp = copy[i]; copy[i] = copy[j]; copy[j] = tmp;
+      /* The row that moved is named so the caller can put focus back on it
+         after the repaint — otherwise a keyboard user loses their place on
+         every single press, and a run of moves means re-tabbing each time. */
+      onChange(copy, { group: list[i], dir: delta });
+    }
+
+    return U.h('.group-order', { dataset: { order: '' } }, list.map(function (g, i) {
+      const name = (App.Muscles.GROUPS[g] || {}).name || g;
+      return U.h('.group-order-row', { dataset: { group: g } }, [
+        U.h('span.group-order-n', { text: String(i + 1) }),
+        U.h('span', { style: { flex: '1', minWidth: 0 }, text: name }),
+        U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+          type: 'button', 'aria-label': 'Move ' + name + ' up',
+          dataset: { dir: 'up' },
+          disabled: i === 0, html: U.icon('chevron', 'ico-up'),
+          onclick: function () { move(i, -1); }
+        }),
+        U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+          type: 'button', 'aria-label': 'Move ' + name + ' down',
+          dataset: { dir: 'down' },
+          disabled: i === list.length - 1, html: U.icon('chevron', 'ico-down'),
+          onclick: function () { move(i, 1); }
+        })
+      ]);
+    }));
+  }
+
+  /** Put focus back on the same control of the row that just moved. */
+  function refocusMoved(wrap, moved) {
+    if (!moved || !moved.group) return;
+    const row = wrap.querySelector('.group-order-row[data-group="' + moved.group + '"]');
+    if (!row) return;
+    const btn = row.querySelector('button[data-dir="' + (moved.dir < 0 ? 'up' : 'down') + '"]');
+    /* At either end that button is disabled, so fall back to the other one
+       rather than dropping focus to the body. */
+    const target = btn && !btn.disabled ? btn : row.querySelector('button:not([disabled])');
+    if (target) target.focus();
+  }
+
+  function groupOrderField(s) {
+    const cfg = groupOrderConfig(s);
+    const body = U.h('.stack');
+
+    if (cfg.enabled) {
+      body.appendChild(U.h('.label', { style: { marginTop: '14px' } }, 'General order'));
+      body.appendChild(U.h('.hint',
+        'Used whenever the day does not match a template exactly.'));
+
+      /* Swapped in place on every move so the arrows stay put and keyboard
+         focus survives a run of clicks. */
+      const generalWrap = U.h('div');
+      function paintGeneral(moved) {
+        U.clear(generalWrap);
+        generalWrap.appendChild(orderEditor(cfg.general, function (next, m) {
+          cfg.general = next;
+          saveGroupOrder(cfg, false);
+          paintGeneral(m);
+        }));
+        refocusMoved(generalWrap, moved);
+      }
+      paintGeneral(null);
+      body.appendChild(generalWrap);
+
+      body.appendChild(U.h('.row', { style: { marginTop: '18px', alignItems: 'center' } }, [
+        U.h('.label', { style: { margin: '0', flex: '1' } }, 'Templates'),
+        U.h('button.btn.btn-sm', {
+          type: 'button', html: U.icon('plus') + '<span>Add</span>',
+          onclick: function () { editTemplate(cfg, null); }
+        })
+      ]));
+      body.appendChild(U.h('.hint',
+        'A template is followed only when the groups trained that day are ' +
+        'exactly the ones it lists — no more, no fewer.'));
+
+      if (!cfg.templates.length) {
+        body.appendChild(U.h('.u-xs.u-muted', { style: { marginTop: '8px' },
+          text: 'No templates yet, so everything uses the general order.' }));
+      } else {
+        cfg.templates.forEach(function (t, i) {
+          body.appendChild(U.h('.tpl-row', [
+            U.h('div', { style: { flex: '1', minWidth: 0 } }, [
+              U.h('.ex-name', { text: t.name || 'Untitled' }),
+              U.h('.ex-meta', [
+                U.h('span', { text: (t.groups || []).map(function (g) {
+                  return (App.Muscles.GROUPS[g] || {}).name || g;
+                }).join(' → ') || 'no groups' })
+              ])
+            ]),
+            U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+              type: 'button', 'aria-label': 'Edit ' + (t.name || 'template'),
+              html: U.icon('edit'),
+              onclick: function () { editTemplate(cfg, i); }
+            }),
+            U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+              type: 'button', 'aria-label': 'Delete ' + (t.name || 'template'),
+              html: U.icon('trash'),
+              onclick: function () {
+                U.confirm({
+                  title: 'Delete "' + (t.name || 'Untitled') + '"?',
+                  message: 'Days matching it will fall back to the general order.',
+                  confirmLabel: 'Delete', danger: true
+                }).then(function (ok) {
+                  if (!ok) return;
+                  cfg.templates.splice(i, 1);
+                  saveGroupOrder(cfg);
+                });
+              }
+            })
+          ]));
+        });
+      }
+    }
+
+    return U.h('.field', { style: { marginTop: '18px' } }, [
+      U.h('label.switch', [
+        U.h('input', {
+          type: 'checkbox', checked: cfg.enabled,
+          onchange: function () { cfg.enabled = this.checked; saveGroupOrder(cfg); }
+        }),
+        U.h('i.switch-track'),
+        U.h('span', 'Set my own muscle-group order')
+      ]),
+      U.h('.hint', cfg.enabled
+        ? 'Applied wherever a workout is grouped by muscle group.'
+        : 'Off — grouped workouts follow chest, back, shoulders, arms, legs, core, neck.'),
+      body
+    ]);
+  }
+
+  /** Add or edit one template. */
+  function editTemplate(cfg, index) {
+    const existing = index == null ? null : cfg.templates[index];
+    const draft = {
+      id: (existing && existing.id) || U.uid(),
+      name: (existing && existing.name) || '',
+      groups: (existing && Array.isArray(existing.groups)) ? existing.groups.slice() : []
+    };
+
+    const nameInput = U.h('input.input', {
+      type: 'text', placeholder: 'Push day', value: draft.name, maxlength: '40'
+    });
+    const orderWrap = U.h('div');
+    const warn = U.h('.hint');
+
+    function redrawOrder(moved) {
+      U.clear(orderWrap);
+      if (!draft.groups.length) {
+        orderWrap.appendChild(U.h('.u-xs.u-muted',
+          'Tick the groups this day trains, then arrange them.'));
+      } else {
+        orderWrap.appendChild(orderEditor(draft.groups, function (next, m) {
+          draft.groups = next;
+          redrawOrder(m);
+        }));
+        refocusMoved(orderWrap, moved);
+      }
+
+      /* Two templates covering the same set is not an error, but only the first
+         can ever win, so say so rather than letting the second look active. */
+      const clash = cfg.templates.some(function (t, i) {
+        return i !== index && App.Muscles.matchTemplate(draft.groups, [t]);
+      });
+      warn.textContent = clash
+        ? 'Another template already covers exactly these groups, and it is matched first.'
+        : '';
+    }
+
+    const picks = U.h('.group-picks', App.Muscles.DEFAULT_GROUP_ORDER.map(function (g) {
+      return U.h('label.switch', [
+        U.h('input', {
+          type: 'checkbox', checked: draft.groups.indexOf(g) >= 0,
+          onchange: function () {
+            if (this.checked) {
+              if (draft.groups.indexOf(g) < 0) draft.groups.push(g);
+            } else {
+              draft.groups = draft.groups.filter(function (x) { return x !== g; });
+            }
+            redrawOrder();
+          }
+        }),
+        U.h('i.switch-track'),
+        U.h('span.u-xs', (App.Muscles.GROUPS[g] || {}).name || g)
+      ]);
+    }));
+
+    redrawOrder();
+
+    U.modal({
+      title: index == null ? 'New template' : 'Edit template',
+      body: U.h('.stack', [
+        U.h('.field', [U.h('label.label', 'Name'), nameInput]),
+        U.h('.field', [
+          U.h('label.label', 'Groups this day trains'),
+          picks
+        ]),
+        U.h('.field', [U.h('label.label', 'Order'), orderWrap, warn])
+      ]),
+      actions: [
+        { label: 'Cancel' },
+        {
+          label: 'Save', kind: 'primary',
+          onClick: function (close) {
+            if (!draft.groups.length) {
+              U.toast('Not saved', 'A template needs at least one muscle group.');
+              return;
+            }
+            draft.name = nameInput.value.trim() || 'Untitled';
+            if (index == null) cfg.templates.push(draft);
+            else cfg.templates[index] = draft;
+            close();
+            saveGroupOrder(cfg);
+          }
+        }
+      ]
+    });
   }
 
   /* ===========================================================================

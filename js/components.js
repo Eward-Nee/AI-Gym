@@ -264,9 +264,6 @@
       return true;
     }
 
-    /* Keep in step with .ex-list .ex-row in css/app.css. */
-    const PICK_ROW_H = 62;
-
     function draw() {
       const all = App.Store.allExercises().filter(matches)
         .sort(function (a, b) { return a.name.localeCompare(b.name); });
@@ -283,7 +280,7 @@
       /* Every match is listed. The picker is how an exercise gets added to a
          running session, so a cap here hid movements at the moment they were
          most needed; windowing keeps it cheap instead of keeping it short. */
-      U.virtualList(listEl, all, PICK_ROW_H, function (ex) {
+      U.virtualList(listEl, all, U.rowStride(listEl), function (ex) {
         const row = U.h('.ex-row' + (selected.has(ex.id) ? '.is-sel' : ''), {
           dataset: { id: ex.id }, tabindex: '0', role: 'button'
         }, [

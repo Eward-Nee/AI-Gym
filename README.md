@@ -1,15 +1,15 @@
 # AI-Gym
 
-**Version 0.5.1**
+**Version 0.5.2**
 
 A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No build step, no framework, no npm install, no CDN — open it and it works.
 
 - **Built for the phone**: bottom tab bar, bottom-sheet dialogs, 40px+ touch targets, one column by default, and charts that measure their container instead of being scaled to fit
 - **468 built-in exercises**, each with a weighted muscle split, an equipment tag and its own world record — including wide/close grip variants across the bar movements
 - **Anatomical heat figures** (anterior + posterior) on every exercise, workout, session and report
-- **Workout builder** with sets, reps, load, per-set and per-exercise rest, drag reordering and smart push/pull/legs grouping
+- **Workout builder** with sets, reps, load, per-set and per-exercise rest, drag reordering and smart push/pull/legs grouping, in a **muscle-group order you set** — with templates that apply to the exact splits you run
 - **Session runner** with a rest timer and live volume
-- **Progression reports** with least-squares trend lines and a 60-day forecast band
+- **Progression reports** with least-squares trend lines and a 60-day forecast band, plus a **ranking chart** tracking your points and your friends' against the tier thresholds
 - **Eight ranks scored against world records** for your bodyweight — your rank is the average across everything you train, and Diamond is 99%
 - **In-app update check** against GitHub releases, with an update that never costs you work in progress
 - **End-to-end encryption** of everything written to the cloud — AES-GCM with a key that never leaves your devices in the clear
@@ -121,6 +121,10 @@ The ladder is steep at the top and gentler at the bottom. For an 80 kg lifter:
 Every exercise carries its own world record, entered when you create it and pre-filled from the movement pattern. It is stored alongside the bodyweight it applies to, so it re-scales allometrically exactly like the built-in ratios do — otherwise gaining or losing weight would silently change how close to a record you appear to be.
 
 The pattern table is only a fallback. "The vertical-pull record" is a coarse stand-in for a hundred different movements, and the person doing the lift knows their sport better than a lookup table does, so a record you enter always wins.
+
+Two things sharpen that fallback. **Equipment scales the ceiling**: a Smith bar runs a fixed path and is usually counterweighted, and a machine removes the balance problem entirely, so both allow more load than the free-weight movement the pattern ratio is quoted for. And where one pattern has to cover movements of very different heaviness — `shoulder-isolation` serves both a lateral raise and an upright row — the outliers carry an explicit record in `tools/gen-exercises.js` rather than being averaged into nonsense.
+
+Outside the contested lifts, treat these as **best-effort elite ceilings, not ratified records**: no federation contests a cable upright row or a pec deck, so there is no official number to look up. If you know a movement better, override it — yours wins.
 
 **Not everything is rank-bearing.** A movement counts toward the average only if it carries a recorded external load, or is a bodyweight movement whose whole point is maximal effort (pull-up, dip, push-up, pistol). A plank is scored and shown but cannot set your rank, since holding a position is not a one-rep max and crediting it with full bodyweight would let it outscore a real lift.
 

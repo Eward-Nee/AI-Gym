@@ -453,19 +453,21 @@
   function groupItems(items, mode) {
     if (mode === 'none') return [{ label: null, items: items }];
     const buckets = Object.create(null);
+    /* For muscle-group mode the bucket key is the group id, so the configured
+       order can be applied to it; the display name is resolved on the way out. */
+    const byGroupId = mode === 'group';
 
     items.forEach(function (it) {
       const ex = App.Store.getExercise(it.exerciseId);
-      let key = 'Other';
+      let key = byGroupId ? '' : 'Other';
       if (ex) {
         if (mode === 'chain') {
           const split = App.Store.chainSplit({ items: [it] });
           key = Object.keys(split).sort(function (a, b) { return split[b] - split[a]; })[0];
           key = { push: 'Push', pull: 'Pull', legs: 'Legs', core: 'Core' }[key] || 'Other';
-        } else if (mode === 'group') {
+        } else if (byGroupId) {
           const g = App.Muscles.groupTotals(ex.muscles);
-          const top = Object.keys(g).sort(function (a, b) { return g[b] - g[a]; })[0];
-          key = top ? App.Muscles.GROUPS[top].name : 'Other';
+          key = Object.keys(g).sort(function (a, b) { return g[b] - g[a]; })[0] || '';
         } else {
           key = String(ex.pattern).replace(/-/g, ' ')
             .replace(/^./, function (c) { return c.toUpperCase(); });
@@ -474,8 +476,24 @@
       (buckets[key] = buckets[key] || []).push(it);
     });
 
-    return Object.keys(buckets).sort().map(function (k) {
-      return { label: k, items: buckets[k] };
+    if (!byGroupId) {
+      return Object.keys(buckets).sort().map(function (k) {
+        return { label: k, items: buckets[k] };
+      });
+    }
+
+    /* Muscle groups follow the user's configured order — a matching template
+       if the day's groups are exactly one, the general order otherwise. */
+    const keys = Object.keys(buckets);
+    const known = keys.filter(function (k) { return k && App.Muscles.GROUPS[k]; });
+    const ordered = App.Muscles.orderGroups(known, App.Store.getSettings().groupOrder);
+    const rest = keys.filter(function (k) { return ordered.indexOf(k) < 0; });
+
+    return ordered.concat(rest).map(function (k) {
+      return {
+        label: (App.Muscles.GROUPS[k] && App.Muscles.GROUPS[k].name) || 'Other',
+        items: buckets[k]
+      };
     });
   }
 

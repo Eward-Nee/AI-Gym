@@ -39,10 +39,45 @@ function shift(base, delta) {
   return norm;
 }
 
+/* =============================================================================
+   PER-EXERCISE RECORDS
+
+   A movement pattern is a coarse stand-in. Usually it is close enough, but
+   where one pattern has to cover movements of very different heaviness the
+   estimate is not merely imprecise, it is wrong: `shoulder-isolation` serves
+   both a lateral raise and an upright row, and no single ratio is right for
+   both. Those movements carry their own ceiling here instead.
+
+   Values are TOTAL load in kg at 80 kg bodyweight; the app re-scales them
+   allometrically for the lifter. They are best-effort elite ceilings rather
+   than ratified records — no federation contests an upright row or a pec deck,
+   so there is no official number to look up. Anyone who knows a movement
+   better can override it per exercise in the app.
+   ============================================================================= */
+
+const WR_AT_80KG = {
+  /* Upright rows belong with the heavy pulls, not the raises. The pattern
+     estimate put them at 44 kg — under many ordinary lifters' working sets,
+     never mind a record. */
+  'barbell-upright-row': 134,
+  'ez-bar-upright-row': 134,
+  'cable-upright-row': 130,
+  'wide-grip-upright-row': 125,
+  'dumbbell-upright-row': 120,
+  'smith-machine-upright-row': 145,
+
+  /* Pec decks run off heavy stacks and the machine holds the path, so they sit
+     well above the dumbbell fly the chest-isolation ratio is quoted for. */
+  'machine-pec-deck': 150,
+  'machine-incline-pec-deck': 135,
+  'reverse-pec-deck': 110
+};
+
 function add(name, equipment, pattern, muscles, extra) {
   const id = slug(name);
   if (seen.has(id)) return;
   seen.add(id);
+  const record = WR_AT_80KG[id];
   out.push(Object.assign({
     id: id,
     name: name,
@@ -50,7 +85,7 @@ function add(name, equipment, pattern, muscles, extra) {
     pattern: pattern,
     muscles: muscles,
     builtin: true
-  }, extra || {}));
+  }, record ? { wr: { value: record, bodyweight: 80 } } : null, extra || {}));
 }
 
 /* --- equipment vocabulary ------------------------------------------------- */
@@ -985,6 +1020,15 @@ if (bad.size) {
   process.exit(1);
 }
 
+/* sanity: a record override that matches no exercise is a silent typo — the
+   movement would quietly keep the pattern estimate the override exists to fix */
+const haveIds = new Set(out.map(function (e) { return e.id; }));
+const orphanWr = Object.keys(WR_AT_80KG).filter(function (id) { return !haveIds.has(id); });
+if (orphanWr.length) {
+  console.error('WR_AT_80KG entries match no exercise: ' + orphanWr.join(', '));
+  process.exit(1);
+}
+
 const body = out.map(function (e) {
   const m = Object.keys(e.muscles).sort(function (a, b) { return e.muscles[b] - e.muscles[a]; })
     .map(function (k) { return k + ':' + e.muscles[k]; }).join(', ');
@@ -993,6 +1037,7 @@ const body = out.map(function (e) {
          ', equipment: ' + JSON.stringify(e.equipment) +
          ', pattern: ' + JSON.stringify(e.pattern) +
          (e.unilateral ? ', unilateral: true' : '') +
+         (e.wr ? ', wr: { value: ' + e.wr.value + ', bodyweight: ' + e.wr.bodyweight + ' }' : '') +
          ', muscles: { ' + m + ' } }';
 }).join(',\n');
 

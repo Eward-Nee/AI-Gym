@@ -155,9 +155,6 @@
 
   let listBody = null;
 
-  /* Keep in step with .ex-list .ex-row in css/app.css, which pins the height. */
-  const ROW_H = 62;
-
   function listCard() {
     listBody = U.h('.list-scroll.ex-list');
     const card = U.h('.card', [
@@ -204,7 +201,7 @@
     const sel = view.selected
       ? list.findIndex(function (x) { return x.id === view.selected; }) : -1;
 
-    U.virtualList(listBody, list, ROW_H, function (ex) {
+    U.virtualList(listBody, list, U.rowStride(listBody), function (ex) {
       return exRow(ex, usage);
     }, { scrollTo: sel >= 0 ? sel : null });
   }

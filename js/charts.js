@@ -205,6 +205,28 @@
     }
     svg.appendChild(xAxis);
 
+    /* --- reference rules (drawn under the lines) ---------------------------
+       A labelled horizontal line at a meaningful y — rank thresholds on the
+       ranking chart, so a series crossing one reads as a promotion rather than
+       just a number going up. Rules outside the current y range are dropped
+       rather than clamped to the edge, where they would look like a threshold
+       that had been reached. */
+    (opts.rules || []).filter(function (r) {
+      return r.y >= yScale.min && r.y <= yScale.max;
+    }).forEach(function (r) {
+      const y = sy(r.y);
+      const ln = el('line', { class: 'ch-rule', x1: pad.l, y1: f(y), x2: Wv - pad.r, y2: f(y) });
+      if (r.color) ln.setAttribute('stroke', r.color);
+      svg.appendChild(ln);
+      if (r.label && !narrow) {
+        const t = el('text', { class: 'ch-rule-label', x: Wv - pad.r - 4, y: f(y) - 4,
+          'text-anchor': 'end' });
+        if (r.color) t.setAttribute('fill', r.color);
+        t.textContent = r.label;
+        svg.appendChild(t);
+      }
+    });
+
     /* --- confidence bands (drawn under the lines) --- */
     bands.forEach(function (b) {
       const up = b.points.map(function (p) { return f(sx(p.x)) + ',' + f(sy(p.hi)); });

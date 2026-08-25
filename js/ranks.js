@@ -70,7 +70,12 @@
     'core':              { ext: 1.20, bw: 1.35 },
     'chest-isolation':   { ext: 1.10, bw: 1.45 },
     'back-isolation':    { ext: 1.00, bw: 1.40 },
-    'shoulder-isolation':{ ext: 0.55, bw: 1.20 },
+    /* Quoted for a lateral/front raise — around 30 kg a hand at 80 kg
+       bodyweight. It read 0.55 (44 kg for the pair), which put the "record"
+       under what a keen amateur raises and well under any upright row; the
+       upright rows carry their own record rather than being dragged up by
+       this one, because the two movements are nothing alike. */
+    'shoulder-isolation':{ ext: 0.75, bw: 1.20 },
     'biceps-isolation':  { ext: 1.20, bw: 1.50 },
     'triceps-isolation': { ext: 1.30, bw: 1.55 },
     'forearm-isolation': { ext: 1.00, bw: 1.30 },
@@ -202,13 +207,46 @@
      WORLD-RECORD SCALE
      ------------------------------------------------------------------------ */
 
-  /** The record load for a pattern at a given bodyweight, in kg. */
-  function worldRecord(pattern, bodyweight, isBodyweightMovement) {
+  /**
+   * How much more load a piece of equipment allows for the SAME pattern.
+   *
+   * The pattern ratios above are quoted for the free-weight version of a
+   * movement, and the ceiling moves when the implement does the stabilising.
+   * A Smith bar runs in a fixed path and is usually counterweighted, and a
+   * machine removes the balance problem altogether — both let a lifter handle
+   * more than the barbell they are scored against.
+   *
+   * Without this a Smith bench and a barbell bench shared one record, which
+   * flattered every Smith lift; the numbers below are the ratio of a typical
+   * elite load on each implement, not a claim about any particular athlete.
+   */
+  const EQUIPMENT_WR_FACTOR = {
+    smith: 1.35,
+    machine: 1.45,
+    sled: 1.60
+  };
+
+  function equipmentFactor(equipment) {
+    return EQUIPMENT_WR_FACTOR[equipment] || 1;
+  }
+
+  /**
+   * The record load for a pattern at a given bodyweight, in kg.
+   *
+   * @param {string}  pattern
+   * @param {number}  bodyweight
+   * @param {boolean} isBodyweightMovement
+   * @param {string}  [equipment]  scales the ceiling — see EQUIPMENT_WR_FACTOR
+   */
+  function worldRecord(pattern, bodyweight, isBodyweightMovement, equipment) {
     const rec = WORLD_RECORD[pattern] || DEFAULT_WR;
     const ratio = isBodyweightMovement ? rec.bw : rec.ext;
     const bw = Math.max(30, Number(bodyweight) || REF_BW);
     /* ratio is quoted at REF_BW; absolute record scales with mass^(2/3) */
-    return ratio * REF_BW * Math.pow(bw / REF_BW, ALLOMETRIC);
+    const base = ratio * REF_BW * Math.pow(bw / REF_BW, ALLOMETRIC);
+    /* Bodyweight movements are scored on the athlete's own mass, which no
+       implement changes, so the factor only applies to external load. */
+    return isBodyweightMovement ? base : base * equipmentFactor(equipment);
   }
 
   /**
@@ -232,7 +270,8 @@
     return worldRecord(
       exercise && exercise.pattern,
       bw,
-      !!(exercise && exercise.equipment === 'bodyweight')
+      !!(exercise && exercise.equipment === 'bodyweight'),
+      exercise && exercise.equipment
     );
   }
 
@@ -461,6 +500,22 @@
     return rankFor(pct);
   }
 
+  /**
+   * The points a rank begins at — the inverse of rankForPoints, used to draw
+   * the tier thresholds on the ranking chart.
+   *
+   * @param {Object} rank  an entry from RANKS
+   * @returns {number} points
+   */
+  function pointsForRank(rank) {
+    const top = RANKS[RANKS.length - 1].wr;
+    /* Ceil, not round: the answer has to be the first points value that
+       actually HOLDS the rank. Rounding lands just under the threshold for
+       most tiers — 54% of 3200 is 1745.45, and 1745 points scores 53.99%,
+       which is still Bronze. */
+    return Math.ceil(((Number(rank && rank.wr) || 0) / top) * MAX_POINTS);
+  }
+
   /** Short initials used inside the medal chip. */
   function initials(rank) {
     return rank.name.slice(0, 2).toUpperCase();
@@ -487,6 +542,7 @@
     compute: compute,
     rankFor: rankFor,
     rankForPoints: rankForPoints,
+    pointsForRank: pointsForRank,
     initials: initials
   };
 })(window.App = window.App || {});

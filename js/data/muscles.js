@@ -166,15 +166,89 @@
     return out;
   }
 
+  /* ---------------------------------------------------------------------------
+     GROUP ORDERING
+
+     Which muscle group comes first in a grouped workout is a training decision,
+     not a display detail: someone running a push day wants chest ahead of
+     triceps, and on an arms day they may want exactly the opposite. So the
+     order is configurable, with templates for the splits a person actually runs.
+
+     A template applies only when the groups trained are EXACTLY its groups —
+     not a superset, not a subset. That is what makes a "Push" template safe to
+     define: it orders a real push day and stays out of the way of a full-body
+     session that merely happens to include chest. Anything unmatched falls back
+     to the general order, and with the feature off everything falls back to the
+     taxonomy's own `order`.
+     ------------------------------------------------------------------------ */
+
+  const DEFAULT_ORDER = Object.keys(GROUPS).sort(function (a, b) {
+    return GROUPS[a].order - GROUPS[b].order;
+  });
+
+  function sameSet(a, b) {
+    if (a.length !== b.length) return false;
+    const seen = Object.create(null);
+    a.forEach(function (x) { seen[x] = true; });
+    return b.every(function (x) { return seen[x]; });
+  }
+
+  /**
+   * The template whose groups exactly match the ones trained, if any.
+   *
+   * @param {string[]} groupIds   the groups primarily trained
+   * @param {Object[]} templates  [{id, name, groups:[...]}]
+   * @returns {Object|null}
+   */
+  function matchTemplate(groupIds, templates) {
+    const present = (groupIds || []).filter(function (g) { return GROUPS[g]; });
+    if (!present.length) return null;
+    return (templates || []).find(function (t) {
+      return t && Array.isArray(t.groups) && t.groups.length && sameSet(present, t.groups);
+    }) || null;
+  }
+
+  /**
+   * Order the groups trained, honouring the user's configuration when enabled.
+   *
+   * @param {string[]} groupIds  groups primarily trained, in any order
+   * @param {Object}   [config]  settings.groupOrder
+   * @returns {string[]} the same groups, ordered
+   */
+  function orderGroups(groupIds, config) {
+    const present = (groupIds || []).filter(function (g) { return GROUPS[g]; });
+
+    let order = DEFAULT_ORDER;
+    if (config && config.enabled) {
+      const tpl = matchTemplate(present, config.templates);
+      if (tpl) order = tpl.groups;
+      else if (Array.isArray(config.general) && config.general.length) order = config.general;
+    }
+
+    const rank = Object.create(null);
+    order.forEach(function (g, i) { rank[g] = i; });
+
+    /* A group the order never mentions still has to land somewhere, so it sorts
+       after everything named, in taxonomy order. */
+    return present.slice().sort(function (a, b) {
+      const ra = rank[a] == null ? order.length + GROUPS[a].order : rank[a];
+      const rb = rank[b] == null ? order.length + GROUPS[b].order : rank[b];
+      return ra - rb;
+    });
+  }
+
   App.Muscles = {
     GROUPS: GROUPS,
     MUSCLES: MUSCLES,
     BY_ID: BY_ID,
     PARTS: PARTS,
+    DEFAULT_GROUP_ORDER: DEFAULT_ORDER,
     ids: MUSCLES.map(function (m) { return m.id; }),
     groupTotals: groupTotals,
     expand: expand,
     label: label,
-    normalise: normalise
+    normalise: normalise,
+    orderGroups: orderGroups,
+    matchTemplate: matchTemplate
   };
 })(window.App = window.App || {});
