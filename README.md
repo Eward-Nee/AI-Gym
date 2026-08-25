@@ -87,17 +87,26 @@ The yardstick is the **world record for your bodyweight**, and your rank is set 
 | Rank | Needs, in every exercise you train |
 |---|---|
 | Wood | — |
-| Stone | 8% of a world record |
-| Bronze | 16% |
-| Iron | 26% |
-| Silver | 38% |
-| Gold | 52% |
-| Platinum | 72% |
+| Stone | 30% of a world record |
+| Bronze | 42% |
+| Iron | 54% |
+| Silver | 65% |
+| Gold | 78% |
+| Platinum | 90% — close to complete |
 | **Diamond** | **99% — a world record in all of them** |
 
 Records are stored as a 1RM-to-bodyweight ratio at an 80 kg reference and re-scaled allometrically (strength ≈ mass^⅔), because absolute strength tracks cross-sectional area. A 60 kg lifter is therefore held to a higher bodyweight multiple than a 120 kg lifter for the same rank. 1RM uses Epley up to 10 reps and an Epley/Brzycki average beyond that, where Epley alone starts to overestimate.
 
-For scale: a 80 kg lifter benching 100×5, squatting 140×5, pulling 180×5 and curling 20 kg lands at **Bronze** — held there by the curl at 24% of its record.
+The ladder is deliberately punishing. For an 80 kg lifter, held back by their curl in every case:
+
+| Lifter | Bench / Squat / Deadlift / Curl | Floor | Rank |
+|---|---|---|---|
+| Novice | 40 / 60 / — / 10 | 12% | Wood |
+| Intermediate | 100 / 140 / 180 / 20 | 24% | Wood |
+| Advanced | 150 / 210 / 260 / 45 | 55% | Iron |
+| Near-elite | 200 / 290 / 330 / 75 | 91% | Platinum |
+
+Reaching Stone means 30% of a world record in *everything* you train, so most people sit at Wood for a long time. The percentages look evenly spaced but the difficulty is not — closing 78% → 90% is a far larger job than 30% → 42%.
 
 **Not everything is rank-bearing.** A movement counts toward the floor only if it carries a recorded external load, or is a bodyweight movement whose whole point is maximal effort (pull-up, dip, push-up, pistol). A plank is scored and shown but cannot set your rank, since holding a position is not a one-rep max and crediting it with full bodyweight would let it outscore a real lift.
 

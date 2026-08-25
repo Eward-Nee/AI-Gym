@@ -299,34 +299,41 @@
       }
 
       const block = U.h('.wo-block', { draggable: 'true', dataset: { id: it.id } }, [
-        U.h('.wo-block-head', [
+        /* Floats, not flex: the controls sit in the top-right corner and the
+           name flows beside the thumbnail and then WRAPS UNDER them, so a long
+           exercise name uses the full width of the block instead of being
+           squeezed into whatever the buttons leave behind. Floated elements
+           have to precede the flowing content in the DOM. */
+        U.h('.wo-block-head.is-editable', [
+          U.h('.wo-block-actions', [
+            U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+              type: 'button', 'aria-label': 'Move up', title: 'Move up', html: U.icon('chevron'),
+              style: { transform: 'rotate(-90deg)' },
+              onclick: function () { moveItem(idx, -1); }
+            }),
+            U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+              type: 'button', 'aria-label': 'Move down', title: 'Move down', html: U.icon('chevron'),
+              style: { transform: 'rotate(90deg)' },
+              onclick: function () { moveItem(idx, 1); }
+            }),
+            U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+              type: 'button', 'aria-label': 'Remove exercise', title: 'Remove', html: U.icon('trash'),
+              onclick: function () {
+                draft.items = draft.items.filter(function (x) { return x.id !== it.id; });
+                refreshItems(); scheduleRefresh();
+              }
+            })
+          ]),
           U.h('span.wo-grip', { html: U.icon('grip'), title: 'Drag to reorder' }),
           C.exThumb(ex || {}),
-          U.h('div', { style: { minWidth: 0, flex: 1 } }, [
+          U.h('.wo-block-title', [
             U.h('.ex-name', { text: ex ? ex.name : 'Missing exercise' }),
             U.h('.ex-meta', [
               U.h('span', { text: ex ? (App.Equipment[ex.equipment] || ex.equipment) : '' }),
-              U.h('span', { text: ex ? C.topMuscleLabel(ex) : '' })
+              U.h('span', { text: ex ? C.topMuscleLabel(ex) : '' }),
+              ex ? C.heatStrip(ex.muscles) : null
             ])
-          ]),
-          ex ? C.heatStrip(ex.muscles) : null,
-          U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
-            type: 'button', 'aria-label': 'Move up', title: 'Move up', html: U.icon('chevron'),
-            style: { transform: 'rotate(-90deg)' },
-            onclick: function () { moveItem(idx, -1); }
-          }),
-          U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
-            type: 'button', 'aria-label': 'Move down', title: 'Move down', html: U.icon('chevron'),
-            style: { transform: 'rotate(90deg)' },
-            onclick: function () { moveItem(idx, 1); }
-          }),
-          U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
-            type: 'button', 'aria-label': 'Remove exercise', html: U.icon('trash'),
-            onclick: function () {
-              draft.items = draft.items.filter(function (x) { return x.id !== it.id; });
-              refreshItems(); scheduleRefresh();
-            }
-          })
+          ])
         ]),
         U.h('.wo-block-body', [setsWrap])
       ]);
@@ -631,7 +638,7 @@
       listWrap.appendChild(U.h('.wo-block', [
         U.h('.wo-block-head', [
           C.exThumb(ex || {}),
-          U.h('div', { style: { minWidth: 0, flex: 1 } }, [
+          U.h('.wo-block-title', [
             U.h('.ex-name', { text: ex ? ex.name : 'Missing exercise' }),
             U.h('.ex-meta', [U.h('span', { text: 'Rest ' + U.dur(item.restSets || 0) })])
           ])

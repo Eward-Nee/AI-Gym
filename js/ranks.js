@@ -23,14 +23,18 @@
 
   /* `wr` is the percentage of a world record required in EVERY trained
      movement to hold the rank. */
+  /* Stone starts at 30% and Platinum sits at 90% — "close to complete" — with
+     the middle tiers spread evenly between them. The percentages look linear
+     but the difficulty is not: closing 78% -> 90% of a world record is a far
+     larger job than 30% -> 42%. */
   const RANKS = [
     { id: 'wood',     name: 'Wood',     wr: 0,  color: '#8a6242' },
-    { id: 'stone',    name: 'Stone',    wr: 8,  color: '#8d9299' },
-    { id: 'bronze',   name: 'Bronze',   wr: 16, color: '#c1793a' },
-    { id: 'iron',     name: 'Iron',     wr: 26, color: '#6b7480' },
-    { id: 'silver',   name: 'Silver',   wr: 38, color: '#b9c2cc' },
-    { id: 'gold',     name: 'Gold',     wr: 52, color: '#e0b23c' },
-    { id: 'platinum', name: 'Platinum', wr: 72, color: '#63d3c4' },
+    { id: 'stone',    name: 'Stone',    wr: 30, color: '#8d9299' },
+    { id: 'bronze',   name: 'Bronze',   wr: 42, color: '#c1793a' },
+    { id: 'iron',     name: 'Iron',     wr: 54, color: '#6b7480' },
+    { id: 'silver',   name: 'Silver',   wr: 65, color: '#b9c2cc' },
+    { id: 'gold',     name: 'Gold',     wr: 78, color: '#e0b23c' },
+    { id: 'platinum', name: 'Platinum', wr: 90, color: '#63d3c4' },
     { id: 'diamond',  name: 'Diamond',  wr: 99, color: '#7fc4f5', elite: true }
   ];
 

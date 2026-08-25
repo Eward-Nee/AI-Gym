@@ -716,11 +716,51 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   background: var(--surface-2); overflow: hidden;
 }
 .wo-block + .wo-block { margin-top: var(--sp-3); }
+/* Neither flex nor a plain float. Flex gave the name only the width left over
+   after the reorder/delete controls, which truncated anything long; floating
+   the thumbnail let a third line slide underneath it.
+
+   So: the grip and thumbnail are absolutely positioned in a reserved left
+   gutter, the controls float top-right, and the name flows in the padded box —
+   wrapping UNDER the controls while staying clear of the icon. Long names get
+   as many lines as they need and every line starts at the same left edge. */
 .wo-block-head {
-  display: flex; align-items: center; gap: var(--sp-3);
-  padding: 10px var(--sp-4); background: var(--surface);
+  position: relative;
+  padding: 10px var(--sp-4) 10px 64px;
+  background: var(--surface);
   border-bottom: 1px solid var(--line);
 }
+.wo-block-head::after { content: ''; display: block; clear: both; }
+
+.wo-block-head .ex-thumb { position: absolute; left: var(--sp-3); top: 10px; }
+
+/* Builder rows carry a drag grip as well, so the gutter is wider. */
+.wo-block-head.is-editable { padding-left: 86px; }
+.wo-block-head.is-editable .wo-grip { position: absolute; left: 10px; top: 17px; }
+.wo-block-head.is-editable .ex-thumb { left: 34px; }
+
+.wo-block-actions {
+  float: right;
+  display: flex;
+  gap: 2px;
+  margin: 0 0 var(--sp-1) var(--sp-2);
+}
+
+.wo-block-title { min-width: 0; }
+/* Full name over as many lines as it needs. display and line-clamp both have
+   to be reset here: the narrow-screen rule further down puts .ex-name into a
+   -webkit-box clamped to two lines, which also makes it shrink-wrap instead of
+   filling the row. */
+.wo-block-title .ex-name {
+  display: block;
+  -webkit-line-clamp: none;
+  line-clamp: none;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+.wo-block-title .ex-meta { align-items: center; }
 .wo-block-body { padding: var(--sp-3) var(--sp-4) var(--sp-4); }
 .wo-grip { cursor: grab; color: var(--text-3); display: grid; place-items: center; }
 .wo-grip:active { cursor: grabbing; }
