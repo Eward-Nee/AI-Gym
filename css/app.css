@@ -421,6 +421,12 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   border-radius: var(--r-xl);
   box-shadow: var(--shadow-3);
   width: min(680px, 100%);
+  /* A grid item's automatic minimum size is its CONTENT width, which lets one
+     long unbreakable string drag the dialog wider than the screen. Pinning
+     min-width to 0 makes the declared width authoritative no matter what goes
+     inside. */
+  min-width: 0;
+  max-width: 100%;
   max-height: min(86vh, 900px);
   display: flex; flex-direction: column;
   animation: pop 200ms var(--ease);
@@ -847,8 +853,13 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   border-radius: var(--r-md);
   background: var(--surface-2);
 }
+/* overflow-wrap matters here: a Supabase project ref is a single 20-character
+   token, and uppercased with letter-spacing it forms a ~450px unbreakable word.
+   In a grid item that cannot shrink below its content, that alone pushed the
+   whole dialog wider than the phone. */
 .link-label { font-size: var(--fs-xs); font-weight: 640; color: var(--text-2);
-  letter-spacing: 0.03em; text-transform: uppercase; }
+  letter-spacing: 0.03em; text-transform: uppercase;
+  overflow-wrap: anywhere; min-width: 0; }
 .link-url {
   font-family: var(--font-mono); font-size: var(--fs-xs);
   color: var(--text); background: var(--bg-2);
@@ -860,6 +871,25 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 }
 .link-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 .link-actions .btn { flex: 1 1 auto; }
+
+/* Disclosure for long code: keeps a dialog compact while leaving the text
+   reachable for anyone who wants to read it before running it. */
+.code-details { border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface-2); overflow: hidden; }
+.code-details > summary {
+  cursor: pointer; list-style: none;
+  padding: 10px var(--sp-3);
+  font-size: var(--fs-xs); font-weight: 620; color: var(--text-2);
+  display: flex; align-items: center; gap: var(--sp-2);
+}
+.code-details > summary::-webkit-details-marker { display: none; }
+.code-details > summary::before {
+  content: '▸'; font-size: 10px; color: var(--text-3);
+  transition: transform var(--dur) var(--ease);
+}
+.code-details[open] > summary::before { transform: rotate(90deg); }
+.code-details > summary:hover { color: var(--text); }
+.code-details .code { border: none; border-top: 1px solid var(--line); border-radius: 0; }
 
 .callout {
   display: flex; gap: var(--sp-3);
@@ -1049,7 +1079,11 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   .bg-grid { grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
 
   .step { grid-template-columns: 24px minmax(0, 1fr); gap: var(--sp-2); }
-  .code pre { font-size: 10px; max-height: 240px; }
+  /* .code.is-tall pre sets 60vh and out-specifies a plain `.code pre` rule, so
+     the tall variant has to be named here too — otherwise a script block eats
+     most of the screen inside a bottom sheet. */
+  .code pre,
+  .code.is-tall pre { font-size: 10px; max-height: 200px; }
 
   .rank-medal.is-lg { width: 66px; height: 66px; font-size: var(--fs-xl); }
 }

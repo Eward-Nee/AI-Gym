@@ -345,23 +345,28 @@
           return wrap;
         }
 
+        /**
+         * The script is ~15 000 characters. Nobody reads it on a phone, and
+         * showing it inline turned this dialog into a wall of SQL. Copy is the
+         * action that matters, so that stays in front; the text itself is
+         * behind a disclosure for anyone who wants to check it first.
+         */
         function sqlBlock() {
-          const pre = U.h('pre', { text: 'Loading sql/user-schema.sql…' });
-          const wrap = U.h('.code.is-tall', [
-            U.h('.code-head', [
-              U.h('span', 'sql/user-schema.sql'),
-              U.h('.spacer'),
-              U.h('button.btn.btn-sm.btn-ghost', {
-                type: 'button', html: U.icon('copy') + '<span>Copy</span>',
-                onclick: function () {
-                  U.copyOrShow(pre.textContent, {
-                    label: 'Paste it into the Supabase SQL editor and press Run.',
-                    title: 'Copy the update SQL' });
-                }
-              })
-            ]),
-            pre
+          const pre = U.h('pre', { text: 'Loading…' });
+          const copyBtn = U.h('button.btn.btn-block', {
+            type: 'button', html: U.icon('copy') + '<span>Copy the update script</span>',
+            onclick: function () {
+              U.copyOrShow(pre.textContent, {
+                label: 'Paste it into the Supabase SQL editor and press Run.',
+                title: 'Copy the update SQL' });
+            }
+          });
+
+          const details = U.h('details.code-details', [
+            U.h('summary', 'Show the script'),
+            U.h('.code', [pre])
           ]);
+
           fetch('sql/user-schema.sql')
             .then(function (r) { return r.text(); })
             .then(function (t) { pre.textContent = t; })
@@ -369,7 +374,8 @@
               pre.textContent = 'Could not load sql/user-schema.sql from here.\n' +
                 'Open it from the app folder and paste the whole file.';
             });
-          return wrap;
+
+          return U.h('.stack-sm', [copyBtn, details]);
         }
       },
       actions: [{ label: 'Later' }]
