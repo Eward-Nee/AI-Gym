@@ -232,12 +232,161 @@
      BOOT
      ------------------------------------------------------------------------ */
 
+  /* ---------------------------------------------------------------------------
+     PROJECT SCHEMA
+     A new app version can expect columns the user's own Supabase project does
+     not have yet. Checking the app version alone would leave them with an app
+     that cannot write to its own database, which is exactly the failure this
+     section exists to prevent.
+     ------------------------------------------------------------------------ */
+
+  function checkSchema() {
+    if (!App.Sync || !App.Sync.enabled()) return Promise.resolve(null);
+    return App.Sync.checkPersonalSchema().then(function (st) {
+      return (st && st.needsUpdate) ? st : null;
+    }).catch(function () { return null; });
+  }
+
+  /**
+   * Offer to bring the project up to date. From v2 the project can migrate
+   * itself through gym_migrate(); before that the first step is unavoidably a
+   * copy-paste, because adding a column is DDL and a publishable key cannot run
+   * DDL. Either way the user ends up with a working project.
+   */
+  function promptSchema(st) {
+    const ref = App.Supabase.projectRef(App.Sync.cfg.personal.url);
+    const sqlUrl = 'https://supabase.com/dashboard/project/' + (ref || '_') + '/sql/new';
+
+    U.modal({
+      title: 'Your Supabase project needs updating',
+      body: function (body, close) {
+        body.appendChild(U.h('.callout.is-warn', [
+          U.h('.callout-bar'),
+          U.h('div', [
+            U.h('div', [U.h('strong', 'Project is on schema v' + st.current + ', ' +
+              'this version needs v' + st.required + '.')]),
+            U.h('.u-xs.u-muted', { style: { marginTop: '4px' },
+              text: 'Until it is updated the app keeps working and still uploads — ' +
+                'it just leaves out the newer columns.' })
+          ])
+        ]));
+
+        const result = U.h('div');
+
+        if (st.canSelfMigrate) {
+          body.appendChild(U.h('p.u-sm',
+            'This project can update itself. Nothing is dropped — the migration only ' +
+            'adds what is missing.'));
+          body.appendChild(U.h('button.btn.btn-primary', {
+            type: 'button', html: U.icon('zap') + '<span>Update my project now</span>',
+            onclick: function () {
+              const btn = this;
+              btn.disabled = true;
+              btn.innerHTML = '<i class="spinner"></i><span>Updating…</span>';
+              App.Sync.migratePersonal().then(function (r) {
+                U.clear(result);
+                result.appendChild(U.h('.callout.is-good', [
+                  U.h('.callout-bar'),
+                  U.h('div', [U.h('strong', 'Updated. '),
+                    'Now on schema v' + (r.schema ? r.schema.current : st.required) + '.'])
+                ]));
+                btn.remove();
+                U.toast('Project updated', 'Schema is up to date.', 'good');
+              }).catch(function (e) {
+                btn.disabled = false;
+                btn.innerHTML = U.icon('zap') + '<span>Try again</span>';
+                U.clear(result);
+                result.appendChild(manualBlock(e.message));
+              });
+            }
+          }));
+          body.appendChild(result);
+        } else {
+          body.appendChild(manualBlock(null));
+        }
+
+        function manualBlock(why) {
+          const wrap = U.h('.stack', { style: { marginTop: '12px' } });
+          if (why) {
+            wrap.appendChild(U.h('.callout.is-bad', [
+              U.h('.callout-bar'),
+              U.h('div', [U.h('strong', 'Automatic update failed. '), why,
+                ' Run it by hand instead:'])
+            ]));
+          } else {
+            wrap.appendChild(U.h('p.u-sm',
+              'This project predates the self-update hook, so this one has to be run by ' +
+              'hand. It is the last time — from the next version the app can do it itself.'));
+          }
+          wrap.appendChild(App.C.linkRow(sqlUrl, {
+            label: ref ? 'SQL editor for ' + ref : 'Supabase SQL editor',
+            primary: true,
+            hint: 'Open this, paste the script below, press Run, then come back and ' +
+              'press Re-check.'
+          }));
+          wrap.appendChild(sqlBlock());
+          wrap.appendChild(U.h('button.btn.btn-block', {
+            type: 'button', html: U.icon('refresh') + '<span>Re-check</span>',
+            onclick: function () {
+              const b = this;
+              b.disabled = true;
+              App.Sync.checkPersonalSchema().then(function (s2) {
+                b.disabled = false;
+                if (s2 && !s2.needsUpdate) {
+                  U.toast('Project updated', 'Now on schema v' + s2.current + '.', 'good');
+                  close();
+                } else {
+                  U.toast('Still on v' + (s2 ? s2.current : '?'),
+                    'Make sure the script ran without errors.', 'bad');
+                }
+              });
+            }
+          }));
+          return wrap;
+        }
+
+        function sqlBlock() {
+          const pre = U.h('pre', { text: 'Loading sql/user-schema.sql…' });
+          const wrap = U.h('.code.is-tall', [
+            U.h('.code-head', [
+              U.h('span', 'sql/user-schema.sql'),
+              U.h('.spacer'),
+              U.h('button.btn.btn-sm.btn-ghost', {
+                type: 'button', html: U.icon('copy') + '<span>Copy</span>',
+                onclick: function () {
+                  U.copyOrShow(pre.textContent, {
+                    label: 'Paste it into the Supabase SQL editor and press Run.',
+                    title: 'Copy the update SQL' });
+                }
+              })
+            ]),
+            pre
+          ]);
+          fetch('sql/user-schema.sql')
+            .then(function (r) { return r.text(); })
+            .then(function (t) { pre.textContent = t; })
+            .catch(function () {
+              pre.textContent = 'Could not load sql/user-schema.sql from here.\n' +
+                'Open it from the app folder and paste the whole file.';
+            });
+          return wrap;
+        }
+      },
+      actions: [{ label: 'Later' }]
+    });
+  }
+
   /** Never rejects: an update check must not be able to break start-up. */
   function boot() {
     bindLifecycle();
     /* Give the app a moment to settle before spending network on this. */
     setTimeout(function () {
-      check(false).then(function (found) { if (found) prompt(found); })
+      check(false)
+        .then(function (found) {
+          if (found) { prompt(found); return null; }
+          /* No app update pending — is the project itself behind? */
+          return checkSchema().then(function (st) { if (st) promptSchema(st); });
+        })
         .catch(function () {});
     }, 4000);
   }
@@ -245,7 +394,9 @@
   App.Update = {
     VERSION_URL: RELEASES_PAGE,
     check: check,
+    checkSchema: checkSchema,
     prompt: prompt,
+    promptSchema: promptSchema,
     apply: apply,
     skip: skip,
     compare: compare,

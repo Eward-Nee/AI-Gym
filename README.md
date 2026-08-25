@@ -1,6 +1,6 @@
 # AI-Gym
 
-**Version 0.3.1**
+**Version 0.3.2**
 
 A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No build step, no framework, no npm install, no CDN — open it and it works.
 
@@ -160,9 +160,17 @@ Everything the app writes to a Supabase project is encrypted on your device firs
 
 To let a second device read your data, the key is **wrapped** with a key derived from your account password (PBKDF2-SHA256, 310k iterations, random salt) and the wrapped blob is stored in the hub. The hub therefore holds ciphertext it cannot read. Sign in on a new device, enter the password, and the key comes back — along with your project URL and keys, so the connection restores itself rather than asking you to paste anything.
 
+Credentials stored in the hub are encrypted too. If yours were written by a build that predates this — or before the key had finished loading — the app notices on launch and re-publishes them sealed, so a plaintext key does not sit there indefinitely.
+
 **What is not encrypted, deliberately.** The aggregate stats you publish for friends, and the promoted columns your own project indexes on (name, date, volume). The aggregates are the thing you are explicitly choosing to share, so encrypting them would break the feature they exist for; the promoted columns have to stay readable for the database to sort and filter. Treat those as visible to anyone holding your publishable key — the detail behind them is not.
 
 **The trade-off worth knowing:** lose the account password and the encrypted data is unrecoverable. A password reset through Supabase auth does not help, because the old password was the only thing that could unwrap the key. This is what end-to-end actually means — there is no one who can let you back in.
+
+### Project schema versions
+
+The app declares the project schema version it needs and checks the connected project on launch. When they differ it offers a migration: automatic from v2 onward through `gym_migrate()`, which only ever adds columns; a guided copy-paste from v1, where that hook did not exist yet.
+
+Uploads do not fail in the meantime. If a column the build expects is missing, the upload retries without it rather than rejecting the whole batch — those columns are informational, since encrypted rows are recognised by their payload shape rather than by a flag.
 
 ### Adding friends
 

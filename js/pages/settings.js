@@ -59,9 +59,15 @@
             btn.disabled = true;
             status.textContent = 'Checking…';
             App.Update.check(true).then(function (found) {
-              btn.disabled = false;
-              if (found) { status.textContent = ''; App.Update.prompt(found); }
-              else status.textContent = 'You are on the latest version.';
+              if (found) { btn.disabled = false; status.textContent = '';
+                App.Update.prompt(found); return; }
+              /* An up-to-date app can still be pointing at an out-of-date
+                 project, which is the failure that actually blocks uploads. */
+              return App.Update.checkSchema().then(function (st) {
+                btn.disabled = false;
+                if (st) { status.textContent = ''; App.Update.promptSchema(st); }
+                else status.textContent = 'App and project are both up to date.';
+              });
             }).catch(function (e) {
               btn.disabled = false;
               status.textContent = 'Could not check: ' + e.message;
@@ -311,6 +317,24 @@
           (st.personal.canWrite ? ' · write access held' : ' · READ ONLY on this device') })
       ])
     ]));
+
+    const schemaNote = U.h('div', { style: { marginTop: '12px' } });
+    body.appendChild(schemaNote);
+    App.Sync.checkPersonalSchema().then(function (sc) {
+      if (!sc || !sc.needsUpdate) return;
+      U.clear(schemaNote);
+      schemaNote.appendChild(U.h('.callout.is-warn', [
+        U.h('.callout-bar'),
+        U.h('div', [
+          U.h('div', [U.h('strong', 'This project needs updating. '),
+            'It is on schema v' + sc.current + '; this version expects v' + sc.required +
+            '. Uploads still work, minus the newer columns.']),
+          U.h('button.btn.btn-sm', { style: { marginTop: '8px' },
+            type: 'button', html: U.icon('zap') + '<span>Update project</span>',
+            onclick: function () { App.Update.promptSchema(sc); } })
+        ])
+      ]));
+    });
 
     body.appendChild(U.h('.row.row-wrap', { style: { marginTop: '16px' } }, [
       U.h('button.btn.btn-primary.btn-sm', {

@@ -30,12 +30,16 @@ create table if not exists public.gym_config (
   id            int primary key default 1,
   write_key     uuid not null default gen_random_uuid(),
   claimed_at    timestamptz,
-  schema_version int not null default 1,
+  schema_version int not null default 2,
   created_at    timestamptz not null default now(),
   constraint gym_config_single_row check (id = 1)
 );
 
 insert into public.gym_config (id) values (1) on conflict (id) do nothing;
+
+-- Re-running this file is how a project moves between versions, so the stored
+-- version has to be written every time, not only on first install.
+update public.gym_config set schema_version = 2 where id = 1;
 
 alter table public.gym_config enable row level security;
 
@@ -285,6 +289,50 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
+-- 4b. MIGRATION HOOK
+--
+--     Adding a column is DDL, which a publishable key cannot run — that is why
+--     the very first upgrade has to be a copy-paste. From version 2 onward this
+--     function exists, so the app can carry out later migrations itself and the
+--     user never has to open the SQL editor again.
+--
+--     It only ever ADDS things. It cannot drop a column or a table, so a bug in
+--     a future client cannot be turned into data loss through this door.
+-- -----------------------------------------------------------------------------
+
+create or replace function public.gym_migrate()
+returns table (from_version int, to_version int, applied text[])
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  cur  int;
+  done text[] := '{}';
+begin
+  select schema_version into cur from public.gym_config where id = 1;
+  if cur is null then cur := 1; end if;
+
+  -- v1 -> v2: the `encrypted` marker columns
+  if cur < 2 then
+    alter table public.gym_exercises add column if not exists encrypted boolean not null default false;
+    alter table public.gym_workouts  add column if not exists encrypted boolean not null default false;
+    alter table public.gym_sessions  add column if not exists encrypted boolean not null default false;
+    done := done || 'v2: encrypted columns';
+  end if;
+
+  update public.gym_config set schema_version = greatest(cur, 2) where id = 1;
+
+  -- PostgREST caches the table shape; without this the new columns stay
+  -- invisible to the API until the next schema reload.
+  notify pgrst, 'reload schema';
+
+  return query select cur, greatest(cur, 2), done;
+end;
+$$;
+
+-- -----------------------------------------------------------------------------
 -- 5. HEALTH CHECK + FRIEND-FACING SUMMARY
 -- -----------------------------------------------------------------------------
 
@@ -327,6 +375,7 @@ create or replace view public.gym_public_summary as
 grant select on public.gym_public_summary to anon, authenticated;
 
 grant execute on function public.gym_ping()              to anon, authenticated;
+grant execute on function public.gym_migrate()           to anon, authenticated;
 grant execute on function public.gym_keepalive()         to anon, authenticated;
 grant execute on function public.gym_claim_write_key()   to anon, authenticated;
 grant execute on function public.gym_rotate_write_key()  to anon, authenticated;

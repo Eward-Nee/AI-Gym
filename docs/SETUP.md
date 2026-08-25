@@ -82,6 +82,13 @@ Worth knowing why a previous re-run may have looked fine but silently failed: Po
 
 A different error — one that mentions an expired session or JWT — is not a schema problem. Sign out and back in.
 
+## Part 2c — Keeping the project schema up to date
+
+The app declares which project schema version it needs. If yours is older, the Control Panel says so and the update check offers to fix it — uploads keep working in the meantime, just without the newer columns.
+
+- **From schema v2 onward** the project can update itself. `gym_migrate()` is a `security definer` function that only ever *adds* columns — it cannot drop a column or a table, so a bug in a future client cannot be turned into data loss through it. It also issues `NOTIFY pgrst, 'reload schema'`, without which PostgREST keeps serving the cached table shape and the new columns stay invisible to the API.
+- **From v1 there is no self-update**, because the hook did not exist yet. That first step is a copy-paste: the prompt gives you a direct link to *your* project's SQL editor, the full script with a Copy button, and a Re-check button. It is the last time it will be needed.
+
 ## Part 3 — The daily keep-alive
 
 Supabase pauses free projects after a stretch of inactivity. (For the record: the free-tier behaviour is a **pause after about a week of inactivity**, and your data is retained — it is not the "tables deleted after a month" you were expecting. Either way a periodic write keeps the project awake, so the mechanism you asked for is the right one.)

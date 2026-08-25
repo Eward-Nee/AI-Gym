@@ -29,6 +29,42 @@
     sessions: 'gym_sessions'
   };
 
+  /* The personal-project schema this build expects. Bumping this is what makes
+     the app offer a migration. */
+  const REQUIRED_SCHEMA = 2;
+
+  /* Columns added after v1. If the project has not been migrated yet these do
+     not exist, and PostgREST rejects the whole batch rather than ignoring
+     them — so the upload is retried without them instead of failing outright.
+     They are informational: encrypted rows are recognised by their payload
+     shape, not by this flag, so dropping it costs nothing but the marker. */
+  const OPTIONAL_COLUMNS = ['encrypted'];
+
+  /**
+   * Upsert, and if the project is on an older schema than this build, strip the
+   * column it complained about and try again. Uploading is the first thing a
+   * user does after connecting; making it fail on a cosmetic column would be a
+   * bad trade.
+   */
+  function upsertTolerant(table, rows, dropped) {
+    dropped = dropped || [];
+    return personal.from(table).upsert(rows, 'id').catch(function (err) {
+      const m = /Could not find the '([^']+)' column/i.exec(err.message || '');
+      const col = m && m[1];
+      if (!col || dropped.indexOf(col) >= 0 || OPTIONAL_COLUMNS.indexOf(col) < 0) throw err;
+      console.warn('[sync] project is missing "' + col + '" — retrying without it');
+      const slim = rows.map(function (r) {
+        const c = Object.assign({}, r);
+        delete c[col];
+        return c;
+      });
+      schemaOutdated = true;
+      return upsertTolerant(table, slim, dropped.concat(col));
+    });
+  }
+
+  let schemaOutdated = false;
+
   const cfg = {
     personal: { url: '', key: '', writeKey: '', verifiedAt: null, schemaVersion: 0 },
     hub: { url: HUB_DEFAULT.url, key: HUB_DEFAULT.key, enabled: true },
@@ -218,6 +254,10 @@
     buildPersonal();
     return savePersonalCfg().then(function () {
       emitStatus();
+      /* Register it with the hub now rather than waiting for the next sign-in,
+         so the credentials are stored (encrypted) the moment they exist. */
+      if (signedIn()) return publishConnection().catch(function () {});
+    }).then(function () {
       return cfg.personal;
     });
   }
@@ -229,6 +269,47 @@
       return App.DB.clear('outbox');
     }).then(emitStatus);
   }
+
+  /* ---------------------------------------------------------------------------
+     SCHEMA VERSION
+     ------------------------------------------------------------------------ */
+
+  /** What version is the connected project on, and is it behind this build? */
+  function checkPersonalSchema() {
+    if (!enabled()) return Promise.resolve(null);
+    return personal.rpc('gym_ping', {}).then(function (info) {
+      const current = (info && info.schema_version) || 1;
+      cfg.personal.schemaVersion = current;
+      return savePersonalCfg().then(function () {
+        return {
+          current: current,
+          required: REQUIRED_SCHEMA,
+          needsUpdate: current < REQUIRED_SCHEMA,
+          /* gym_migrate() only exists from v2, so a v1 project cannot migrate
+             itself — that first step has to be a copy-paste. */
+          canSelfMigrate: current >= 2
+        };
+      });
+    }).catch(function () { return null; });
+  }
+
+  /**
+   * Ask the project to migrate itself. Only possible from v2 onward, because
+   * the function doing the work did not exist before then.
+   */
+  function migratePersonal() {
+    if (!enabled()) return Promise.reject(new Error('No personal project connected.'));
+    return personal.rpc('gym_migrate', {}).then(function (rows) {
+      const r = Array.isArray(rows) ? rows[0] : rows;
+      schemaOutdated = false;
+      return checkPersonalSchema().then(function (st) {
+        return { from: r && r.from_version, to: r && r.to_version,
+          applied: (r && r.applied) || [], schema: st };
+      });
+    });
+  }
+
+  function schemaNeedsAttention() { return schemaOutdated; }
 
   /* ---------------------------------------------------------------------------
      PUSH / PULL
@@ -317,7 +398,7 @@
             if (i >= rows.length) return Promise.resolve();
             const slice = rows.slice(i, i + CHUNK);
             i += CHUNK;
-            return personal.from(table).upsert(slice, 'id').then(function () {
+            return upsertTolerant(table, slice).then(function () {
               done += slice.length;
               summary.uploaded += slice.length;
               if (onProgress) onProgress(done, total, job[0]);
@@ -371,7 +452,7 @@
           let p = Promise.resolve();
           if (live.length) p = p.then(function () {
             return encodeRows(key, live).then(function (rows) {
-              return personal.from(table).upsert(rows, 'id');
+              return upsertTolerant(table, rows);
             });
           });
           if (gone.length) {
@@ -683,6 +764,13 @@
   /** Tell the hub where this account's personal project is. */
   function publishConnection() {
     if (!signedIn() || !cfg.personal.url) return Promise.resolve();
+    /* Make sure the key exists before deciding. Publishing plaintext because
+       the key had not finished loading is exactly how an unencrypted anon key
+       ends up sitting in the hub. */
+    const ready = (App.Crypto && App.Crypto.available() && !App.Crypto.hasKey())
+      ? App.Crypto.loadOrCreate() : Promise.resolve();
+
+    return ready.then(function () {
     const canEncrypt = !!(App.Crypto && App.Crypto.hasKey());
     return Promise.all([
       canEncrypt ? App.Crypto.sealText(cfg.personal.key) : cfg.personal.key,
@@ -702,6 +790,27 @@
         }], 'user_id');
       });
     });
+    });
+  }
+
+  /**
+   * Re-publish the stored connection if it is sitting in the hub unencrypted.
+   * Rows written by a build that predates encryption, or written before the key
+   * had loaded, stay in the clear until something rewrites them — this is that
+   * something.
+   */
+  function reencryptConnection() {
+    if (!signedIn() || !cfg.personal.url) return Promise.resolve(null);
+    if (!App.Crypto || !App.Crypto.available()) return Promise.resolve(null);
+    return hub.withRetry(function () {
+      return hub.from('connections').select('user_id,encrypted',
+        { user_id: 'eq.' + cfg.account.id });
+    }).then(function (rows) {
+      const row = rows && rows[0];
+      if (!row || row.encrypted) return null;
+      console.info('[sync] connection stored unencrypted — re-publishing sealed');
+      return publishConnection().then(function () { return { reencrypted: true }; });
+    }).catch(function () { return null; });
   }
 
   /** Publish rank + roll-up so friends' VS screens work without a deep read. */
@@ -874,6 +983,8 @@
   function start() {
     if (!navigator.onLine) return Promise.resolve();
     return runKeepalive()
+      .then(function () { return checkPersonalSchema(); })
+      .then(function () { return reencryptConnection(); })
       .then(function () { return pushPending().catch(function () {}); })
       .then(function () { if (signedIn()) return publishStats(); })
       .catch(function (e) { console.warn('[sync] start', e.message); });
@@ -906,6 +1017,10 @@
     searchProfiles: searchProfiles, listFriends: listFriends,
     requestFriend: requestFriend, respondFriend: respondFriend, removeFriend: removeFriend,
     leaderboard: leaderboard, readFriendData: readFriendData,
+    REQUIRED_SCHEMA: REQUIRED_SCHEMA,
+    checkPersonalSchema: checkPersonalSchema, migratePersonal: migratePersonal,
+    schemaNeedsAttention: schemaNeedsAttention,
+    reencryptConnection: reencryptConnection,
     createInvite: createInvite, redeemInvite: redeemInvite,
     myInvites: myInvites, revokeInvite: revokeInvite,
     adoptStoredConnection: adoptStoredConnection, syncDataKey: syncDataKey,
