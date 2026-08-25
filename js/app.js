@@ -115,7 +115,20 @@
      SHELL
      ------------------------------------------------------------------------ */
 
+  /**
+   * Host for the decorative background. Three real elements rather than the two
+   * available pseudo-elements, so a background can move several layers
+   * independently and each one can be promoted to its own compositor layer.
+   */
+  function buildBackground() {
+    const fx = U.h('.bg-fx', { 'aria-hidden': 'true' }, [
+      U.h('i.bg-l1'), U.h('i.bg-l2'), U.h('i.bg-l3')
+    ]);
+    document.body.appendChild(fx);
+  }
+
   function buildShell() {
+    buildBackground();
     const nav = U.h('nav.nav', { 'aria-label': 'Main' }, [
       U.h('.brand', [
         U.h('.brand-mark', 'AG'),

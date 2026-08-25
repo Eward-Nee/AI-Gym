@@ -132,11 +132,15 @@ The app is designed for a phone first and widens from there. Three rules do most
 
 Breakpoints: 1100px (sidebar layout loosens), 860px (sidebar becomes a bottom tab bar), 760px (figure panels stack), 560px (denser list rows), 344px (tiles go single column). A `(hover: none)` block makes row actions permanent and grows hit areas, since a phone never fires hover.
 
-### Translucent surfaces
+### Backgrounds and translucent surfaces
 
-When a decorative background is selected, every container that would otherwise be an opaque slab — cards, modals, tiles, table headers, the topbar and nav — goes translucent with a backdrop blur, so the background is visible through the page rather than only in the gutters. Selecting **None** restores fully opaque surfaces.
+Backgrounds are three absolutely-positioned layers in a fixed host, each built from the scheme palette. When one is selected, every container that would otherwise be an opaque slab — cards, modals, tiles, table headers, the topbar and nav — goes translucent so the background reads through the whole page. Selecting **None** restores fully opaque surfaces.
 
-`--surface-alpha` in [css/backgrounds.css](css/backgrounds.css) is the single knob, and it is mode-aware: dark text on a washed-out light panel loses contrast much faster than light text on a dark one, so light mode keeps more body than dark. The shipped values were checked against all 144 mode × scheme × palette-stop combinations — worst-case body text lands at 6.4:1, comfortably past the WCAG AA 4.5:1 threshold. Pushing the alpha much lower starts to fail it, which is why this stops at clearly translucent rather than going fully glassy.
+**Performance is the design constraint.** An earlier version ran two viewport-sized layers under `filter: blur(70px)` while animating them, and put `backdrop-filter` on every card. Those are two of the most expensive things a mobile browser can be asked to do — a large blur re-rasterises as the layer moves, and each backdrop-filter forces a compositing layer that re-reads what is behind it on every paint. The current version has **no `filter` or `backdrop-filter` in the running app at all**: softness comes from wide radial-gradient falloffs, which cost nothing, and only `transform`/`opacity` are animated so frames never leave the compositor. `will-change` and layer activation are both opt-in per background, so nothing is promoted that does not move.
+
+Two knobs in [css/backgrounds.css](css/backgrounds.css), both mode-aware: `--bg-alpha` (how strong the background reads) and `--surface-alpha` (how transparent panels are). Dark text on a washed-out light panel loses contrast much faster than light text on a dark one, so the values differ per mode, and dark modes also lift `--text-2`/`--text-3` a step while a background is active — a bold background washes a dark panel *lighter*, which eats light-on-dark contrast. Checked across all 144 mode × scheme × palette-stop combinations: worst-case body text 6.2:1, worst muted text 3.2:1, zero WCAG AA failures.
+
+One gotcha worth recording: `radial-gradient(closest-side …)` anchored at an edge (`at 50% 0%`) collapses to a zero radius and paints nothing. Every gradient here uses explicit size pairs instead.
 
 ### Running inside a web-to-app wrapper
 
