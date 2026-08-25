@@ -75,7 +75,7 @@
     const units = App.Store.getSettings().units;
     const figWrap = U.h('.anat-wrap');
     setTimeout(function () {
-      App.Anatomy.render(figWrap, st.heat, { compact: true, legend: false, interactive: false });
+      App.Anatomy.render(figWrap, st.heat, { compact: true, legend: false });
     }, 0);
 
     return U.h('.card', [
@@ -514,6 +514,7 @@
 
     /* Prefill from the plan, and from the last time this workout was done. */
     const previous = App.Store.allSessions().find(function (s) { return s.workoutId === w.id; });
+    const previousHeat = previous ? App.Store.sessionsHeat([previous]) : null;
     const session = resume ? resume.session : {
       workoutId: w.id,
       name: w.name,
@@ -620,7 +621,10 @@
           sets: en.sets.filter(function (s) { return s.done; }) };
       }) };
       const heat = App.Store.sessionsHeat([live]);
-      App.Anatomy.render(heatWrap, heat, { compact: true, legend: false, interactive: false });
+      /* Measured against the last time this workout was run, so tapping a
+         muscle answers "am I hitting it harder than last time?" */
+      App.Anatomy.render(heatWrap, heat, { compact: true, legend: false,
+        compare: previousHeat });
 
       let vol = 0, sets = 0;
       live.entries.forEach(function (en) {
@@ -634,65 +638,202 @@
       ]));
     }
 
-    const listWrap = U.h('.stack');
-    session.entries.forEach(function (en, ei) {
-      const ex = App.Store.getExercise(en.exerciseId);
-      const item = (w.items || [])[ei] || {};
-      const setsWrap = U.h('.stack-sm');
+    /* ---------------------------------------------------------------------
+       The session is EDITABLE while it runs. A plan is a starting point, not a
+       contract: sets get added when a lift feels light, dropped when it does
+       not, and whole exercises get swapped because a rack was busy. Locking the
+       runner to the plan meant the log stopped matching the training.
 
-      en.sets.forEach(function (s, si) {
-        const row = U.h('.set-grid', [
-          U.h('span.set-idx', { text: String(si + 1) }),
-          U.h('input.input.input-sm.input-num', {
-            type: 'number', min: '0', step: '0.5', value: s.weight,
-            'aria-label': 'Weight', oninput: function () { s.weight = Number(this.value) || 0; persist(); }
-          }),
-          U.h('input.input.input-sm.input-num', {
-            type: 'number', min: '0', step: '1', value: s.reps,
-            'aria-label': 'Reps', oninput: function () { s.reps = Number(this.value) || 0; persist(); }
-          }),
-          U.h('span.u-xs.u-muted.u-center', {
-            text: s.weight && s.reps ? U.num(App.Ranks.e1rm(s.weight, s.reps), 0) : '—'
-          }),
-          /* Reflect s.done in the initial render, not only on click, so a
-             restored session comes back with its ticked sets already ticked. */
-          U.h('button.btn.btn-sm' + (s.done ? '.btn-primary' : ''), {
-            type: 'button', html: U.icon('check'), 'aria-label': 'Mark set ' + (si + 1) + ' done',
+       Everything below rebuilds from `session.entries`, so adding or removing
+       anything is a mutation followed by a redraw.
+       ------------------------------------------------------------------ */
+    const listWrap = U.h('.stack');
+
+    /* Rest between sets: the plan's value for a planned exercise, the account
+       default for one added mid-session. */
+    function restFor(ei) {
+      const it = (w.items || [])[ei];
+      return (it && it.restSets) || App.Store.getSettings().restDefault;
+    }
+
+    /** The most recent logged sets for a movement, so a new row is not blank. */
+    function lastSetsFor(exerciseId, count) {
+      const prevSession = App.Store.allSessions().find(function (s2) {
+        return (s2.entries || []).some(function (e) { return e.exerciseId === exerciseId; });
+      });
+      const prevEntry = prevSession && prevSession.entries
+        .find(function (e) { return e.exerciseId === exerciseId; });
+      const out = [];
+      for (let i = 0; i < count; i++) {
+        const pr = prevEntry && prevEntry.sets[i];
+        out.push({ weight: (pr && pr.weight) || 0, reps: (pr && pr.reps) || 0, done: false });
+      }
+      return out;
+    }
+
+    function addExercise() {
+      C.pickExercise({ multi: true, onPick: function (list) {
+        list.forEach(function (ex) {
+          session.entries.push({
+            exerciseId: ex.id,
+            sets: lastSetsFor(ex.id, 3),
+            note: '', added: true
+          });
+        });
+        drawList(); refreshSummary(); persist();
+      } });
+    }
+
+    function removeExercise(ei) {
+      const en = session.entries[ei];
+      const ex = App.Store.getExercise(en.exerciseId);
+      const logged = en.sets.filter(function (st) { return st.done; }).length;
+      const go = function () {
+        session.entries.splice(ei, 1);
+        drawList(); refreshSummary(); persist();
+      };
+      /* Only interrupt when there is something to lose. */
+      if (!logged) { go(); return; }
+      U.confirm({
+        title: 'Remove ' + (ex ? ex.name : 'this exercise') + '?',
+        message: logged + ' logged set' + (logged === 1 ? '' : 's') +
+          ' will be dropped from this session.',
+        confirmLabel: 'Remove', danger: true
+      }).then(function (ok) { if (ok) go(); });
+    }
+
+    function drawList() {
+      U.clear(listWrap);
+
+      session.entries.forEach(function (en, ei) {
+        const ex = App.Store.getExercise(en.exerciseId);
+        const setsWrap = U.h('.stack-sm');
+
+        function drawSets() {
+          U.clear(setsWrap);
+          en.sets.forEach(function (st, si) {
+            const e1rmCell = U.h('span.u-xs.u-muted.u-center');
+
+            /* The estimate is the entire reason the weight and rep boxes sit
+               next to each other, so it has to move as they are typed — not
+               when the set is finally ticked. */
+            function syncE1rm() {
+              e1rmCell.textContent = st.weight && st.reps
+                ? U.num(App.Ranks.e1rm(st.weight, st.reps), 0) : '—';
+            }
+            syncE1rm();
+
+            const row = U.h('.set-grid.set-grid-run', [
+              U.h('span.set-idx', { text: String(si + 1) }),
+              U.h('input.input.input-sm.input-num', {
+                type: 'number', min: '0', step: '0.5', inputmode: 'decimal', value: st.weight,
+                'aria-label': 'Weight for set ' + (si + 1),
+                oninput: function () {
+                  st.weight = Number(this.value) || 0;
+                  syncE1rm();
+                  if (st.done) refreshSummary();
+                  persist();
+                }
+              }),
+              U.h('input.input.input-sm.input-num', {
+                type: 'number', min: '0', step: '1', inputmode: 'numeric', value: st.reps,
+                'aria-label': 'Reps for set ' + (si + 1),
+                oninput: function () {
+                  st.reps = Number(this.value) || 0;
+                  syncE1rm();
+                  if (st.done) refreshSummary();
+                  persist();
+                }
+              }),
+              e1rmCell,
+              U.h('button.btn.btn-sm' + (st.done ? '.btn-primary' : ''), {
+                type: 'button', html: U.icon('check'),
+                'aria-label': 'Mark set ' + (si + 1) + ' done',
+                onclick: function () {
+                  st.done = !st.done;
+                  this.classList.toggle('btn-primary', st.done);
+                  row.classList.toggle('is-done', st.done);
+                  if (st.done) restLeft = restFor(ei);
+                  syncE1rm();
+                  refreshSummary();
+                  persist();
+                }
+              }),
+              U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+                type: 'button', html: U.icon('x'),
+                'aria-label': 'Remove set ' + (si + 1),
+                onclick: function () {
+                  en.sets.splice(si, 1);
+                  drawSets();
+                  refreshSummary();
+                  persist();
+                }
+              })
+            ]);
+            if (st.done) row.classList.add('is-done');
+            setsWrap.appendChild(row);
+          });
+
+          setsWrap.appendChild(U.h('button.btn.btn-sm.btn-block.btn-ghost', {
+            type: 'button', html: U.icon('plus') + '<span>Add set</span>',
             onclick: function () {
-              s.done = !s.done;
-              this.classList.toggle('btn-primary', s.done);
-              row.style.opacity = s.done ? '1' : '';
-              if (s.done) {
-                restLeft = item.restSets || App.Store.getSettings().restDefault;
-              }
-              const cell = row.children[3];
-              cell.textContent = s.weight && s.reps
-                ? U.num(App.Ranks.e1rm(s.weight, s.reps), 0) : '—';
-              refreshSummary();
+              /* Carry the last set forward: the next one is nearly always the
+                 same weight, and retyping it on a phone is a chore. */
+              const last = en.sets[en.sets.length - 1];
+              en.sets.push({ weight: last ? last.weight : 0,
+                             reps: last ? last.reps : 0, done: false });
+              drawSets();
               persist();
             }
-          })
-        ]);
-        setsWrap.appendChild(row);
+          }));
+        }
+
+        drawSets();
+
+        listWrap.appendChild(U.h('.wo-block', [
+          U.h('.wo-block-head', [
+            C.exThumb(ex || {}),
+            /* Actions first in source order: they float right and the name
+               wraps beneath them rather than colliding with them. */
+            U.h('.wo-block-actions', [
+              U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+                type: 'button', html: U.icon('trash'),
+                'aria-label': 'Remove ' + (ex ? ex.name : 'exercise') + ' from this session',
+                onclick: function () { removeExercise(ei); }
+              })
+            ]),
+            U.h('.wo-block-title', [
+              U.h('.ex-name', { text: ex ? ex.name : 'Missing exercise' }),
+              U.h('.ex-meta', [
+                U.h('span', { text: 'Rest ' + U.dur(restFor(ei)) }),
+                en.added ? U.h('span', { text: 'added' }) : null
+              ])
+            ])
+          ]),
+          U.h('.wo-block-body', [
+            U.h('.set-grid.set-grid-run', [
+              U.h('span.label', ''), U.h('span.label', 'Weight'), U.h('span.label', 'Reps'),
+              U.h('span.label', 'e1RM'), U.h('span.label', ''), U.h('span.label', '')
+            ]),
+            setsWrap
+          ])
+        ]));
       });
 
-      listWrap.appendChild(U.h('.wo-block', [
-        U.h('.wo-block-head', [
-          C.exThumb(ex || {}),
-          U.h('.wo-block-title', [
-            U.h('.ex-name', { text: ex ? ex.name : 'Missing exercise' }),
-            U.h('.ex-meta', [U.h('span', { text: 'Rest ' + U.dur(item.restSets || 0) })])
-          ])
-        ]),
-        U.h('.wo-block-body', [
-          U.h('.set-grid', [
-            U.h('span.label', ''), U.h('span.label', 'Weight'), U.h('span.label', 'Reps'),
-            U.h('span.label', 'e1RM'), U.h('span.label', '')
-          ]),
-          setsWrap
-        ])
-      ]));
-    });
+      if (!session.entries.length) {
+        listWrap.appendChild(U.h('.empty', [
+          U.h('.empty-title', 'Nothing in this session yet'),
+          U.h('p', 'Add a movement to start logging.')
+        ]));
+      }
+
+      listWrap.appendChild(U.h('button.btn.btn-block', {
+        type: 'button', html: U.icon('plus') + '<span>Add an exercise</span>',
+        onclick: addExercise
+      }));
+    }
+
+    drawList();
 
     root.appendChild(U.h('.card', [
       U.h('.row.row-wrap', [

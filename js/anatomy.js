@@ -322,7 +322,8 @@
    * Render a front+back pair into a container element.
    * @param {HTMLElement} el
    * @param {Object} heat  {muscleId: percentage}
-   * @param {Object} opts  {legend:false, compact:true, interactive:false}
+   * @param {Object} opts  {legend:false, compact:true, interactive:false,
+   *                       compare:<heat map to show a delta against>}
    */
   function render(el, heat, opts) {
     if (!el) return;
@@ -340,7 +341,7 @@
       '</div>' +
       (opts.legend === false ? '' : legendHTML(max));
 
-    if (opts.interactive !== false) bindTooltip(el);
+    if (opts.interactive !== false) bindTooltip(el, opts.compare || null);
   }
 
   function legendHTML(max) {
@@ -351,8 +352,19 @@
     '</div>';
   }
 
-  /* Shared hover readout across both figures; highlights the mirrored twin too. */
-  function bindTooltip(root) {
+  /**
+   * Readout shared across both figures, highlighting the mirrored twin too.
+   *
+   * Hover is a desktop idea. On a phone `pointermove` only fires while a finger
+   * is already dragging, and `pointerleave` fires the moment it lifts — so a
+   * tap, which is the only gesture a phone user has here, showed nothing at
+   * all. Touch therefore gets its own model: tap a muscle to PIN the readout,
+   * tap it again or anywhere else to dismiss. Mouse keeps hover.
+   *
+   * @param {Object} compare  optional heat map to measure against, which is
+   *                          what turns "18%" into "18%, up 4 points".
+   */
+  function bindTooltip(root, compare) {
     let tip = root.querySelector('.anat-tip');
     if (!tip) {
       tip = document.createElement('div');
@@ -360,25 +372,92 @@
       tip.setAttribute('aria-hidden', 'true');
       root.appendChild(tip);
     }
-    function clear() {
+    let pinned = null;
+
+    function clearHot() {
       root.querySelectorAll('.anat-m.is-hot').forEach(function (n) { n.classList.remove('is-hot'); });
     }
-    root.addEventListener('pointermove', function (e) {
-      const path = e.target && e.target.closest ? e.target.closest('.anat-m') : null;
-      if (!path) { tip.classList.remove('is-on'); clear(); return; }
+
+    function hide() {
+      pinned = null;
+      tip.classList.remove('is-on', 'is-pinned');
+      clearHot();
+    }
+
+    function text(id, v) {
+      let out = App.Muscles.label(id, true) + '  ·  ' +
+        (v > 0 ? (Math.round(v * 10) / 10) + '% of this workload' : 'not worked');
+      if (compare) {
+        const was = Number(compare[id]) || 0;
+        const d = v - was;
+        /* Both numbers are shares of a total, so the difference is in
+           percentage POINTS — calling it a percent change would be wrong. */
+        if (Math.abs(d) >= 0.1) {
+          out += '  ·  ' + (d > 0 ? '+' : '−') + (Math.round(Math.abs(d) * 10) / 10) + ' pts';
+        } else if (was > 0 || v > 0) {
+          out += '  ·  level';
+        }
+      }
+      return out;
+    }
+
+    /** Place the readout, keeping it inside the figure rather than off-screen. */
+    function show(path, clientX, clientY) {
       const id = path.getAttribute('data-muscle');
       const v = Number(path.getAttribute('data-value')) || 0;
-      clear();
+      clearHot();
       root.querySelectorAll('.anat-m[data-muscle="' + id + '"]')
           .forEach(function (n) { n.classList.add('is-hot'); });
-      tip.textContent = App.Muscles.label(id, true) +
-        (v > 0 ? '  ·  ' + (Math.round(v * 10) / 10) + '%' : '  ·  not worked');
-      const r = root.getBoundingClientRect();
-      tip.style.left = (e.clientX - r.left) + 'px';
-      tip.style.top = (e.clientY - r.top) + 'px';
+      tip.textContent = text(id, v);
       tip.classList.add('is-on');
+
+      const r = root.getBoundingClientRect();
+      let x = clientX - r.left;
+      const y = clientY - r.top;
+      const half = tip.offsetWidth / 2;
+      /* The tip is centred on the touch point, so clamp by half its width or a
+         muscle near either edge puts the label outside the card. */
+      x = Math.max(half + 4, Math.min(r.width - half - 4, x));
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+      return id;
+    }
+
+    function hit(e) {
+      return e.target && e.target.closest ? e.target.closest('.anat-m') : null;
+    }
+
+    root.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse' || pinned) return;
+      const path = hit(e);
+      if (!path) { tip.classList.remove('is-on'); clearHot(); return; }
+      show(path, e.clientX, e.clientY);
     });
-    root.addEventListener('pointerleave', function () { tip.classList.remove('is-on'); clear(); });
+
+    root.addEventListener('pointerleave', function (e) {
+      if (e.pointerType === 'mouse' && !pinned) { tip.classList.remove('is-on'); clearHot(); }
+    });
+
+    /* Touch and pen: tap to pin. Also fires for mouse clicks, which is what
+       lets a pinned readout survive the pointer moving away. */
+    root.addEventListener('click', function (e) {
+      const path = hit(e);
+      if (!path) { hide(); return; }
+      const id = path.getAttribute('data-muscle');
+      if (pinned === id) { hide(); return; }   /* second tap closes it */
+      pinned = show(path, e.clientX, e.clientY);
+      tip.classList.add('is-pinned');
+    });
+
+    /* A tap anywhere else puts it away. Captured on the document because the
+       figure has already stopped receiving the event by then. */
+    if (!root.__anatDismiss) {
+      root.__anatDismiss = function (e) {
+        if (!pinned) return;
+        if (!root.contains(e.target)) hide();
+      };
+      document.addEventListener('click', root.__anatDismiss, true);
+    }
   }
 
   App.Anatomy = {

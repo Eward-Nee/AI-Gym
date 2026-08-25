@@ -122,7 +122,21 @@
   function buildHub(session) {
     hub = App.Supabase.createClient(cfg.hub.url, cfg.hub.key, {
       accessToken: session ? session.accessToken : null,
-      refreshToken: session ? session.refreshToken : null
+      refreshToken: session ? session.refreshToken : null,
+      expiresAt: session ? session.expiresAt : 0,
+      /* Write the tokens down every time they rotate. Without this the stored
+         refresh token goes stale the first time it is used and the next cold
+         start looks like an expired session. */
+      onSession: function (next) {
+        App.DB.setMeta('sync.session', next).catch(function () {});
+        if (!next) {
+          /* The server rejected the token outright — that is a real sign-out,
+             and it is the only thing besides the button that ends a session. */
+          cfg.account = null;
+          saveAccount().catch(function () {});
+          emitStatus();
+        }
+      }
     });
     return hub;
   }
@@ -752,7 +766,34 @@
     }).catch(function () { return null; });
   }
 
+  /**
+   * Keep the hub session valid for as long as the app is open.
+   *
+   * Access tokens last an hour. Left alone, a phone that sits on a bench between
+   * sets comes back to a dead token and the app used to present that as "sign in
+   * again" — which is why the app appeared to log itself out at random. Nothing
+   * here can end a session: only an explicit sign-out, or the server actively
+   * rejecting the refresh token, does that.
+   */
+  let refreshTimer = null;
+  function keepSessionAlive() {
+    if (!hub || !hub.session().refreshToken) return Promise.resolve(false);
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(function () {
+      if (hub) hub.ensureFresh().catch(function () {});
+    }, 10 * 60 * 1000);
+    /* And on the way back from a locked screen, where timers are throttled. */
+    if (!keepSessionAlive.bound) {
+      keepSessionAlive.bound = true;
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && hub) hub.ensureFresh().catch(function () {});
+      });
+    }
+    return hub.ensureFresh().catch(function () { return false; });
+  }
+
   function signOut() {
+    if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
     const c = hubClient();
     return c.auth.signOut().then(function () {
       cfg.account = null;
@@ -982,7 +1023,10 @@
    */
   function start() {
     if (!navigator.onLine) return Promise.resolve();
-    return runKeepalive()
+    /* Renew the session up front so the first cloud call of the day is not the
+       one that discovers the token expired overnight. */
+    return keepSessionAlive()
+      .then(function () { return runKeepalive(); })
       .then(function () { return checkPersonalSchema(); })
       .then(function () { return reencryptConnection(); })
       .then(function () { return pushPending().catch(function () {}); })
@@ -1021,6 +1065,7 @@
     checkPersonalSchema: checkPersonalSchema, migratePersonal: migratePersonal,
     schemaNeedsAttention: schemaNeedsAttention,
     reencryptConnection: reencryptConnection,
+    keepSessionAlive: keepSessionAlive,
     createInvite: createInvite, redeemInvite: redeemInvite,
     myInvites: myInvites, revokeInvite: revokeInvite,
     adoptStoredConnection: adoptStoredConnection, syncDataKey: syncDataKey,

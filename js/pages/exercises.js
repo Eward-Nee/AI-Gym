@@ -1,5 +1,5 @@
 /* =============================================================================
-   pages/exercises.js — the movement library: browse, filter, add, edit, remove
+   pages/exercises.js — the exercise list: browse, filter, add, edit, remove
    ============================================================================= */
 (function (App) {
   'use strict';
@@ -141,16 +141,29 @@
 
   /* ---------------------------------------------------------------------------
      LIST
+
+     Every movement is listed, always. The old cap of 400 meant a library that
+     had grown past it silently hid the newest entries — the ones most likely to
+     be the user's own — and the only way to reach them was to filter, which is
+     backwards: filtering is for narrowing a list you can already see.
+
+     Rendering 500+ rows outright is what the cap was avoiding, so instead the
+     list is windowed: only the rows near the viewport exist as DOM, with spacer
+     elements standing in for the rest so the scrollbar stays honest. Scrolling
+     swaps the window. Cost is flat no matter how large the library gets.
      ------------------------------------------------------------------------ */
 
   let listBody = null;
 
+  /* Keep in step with .ex-list .ex-row in css/app.css, which pins the height. */
+  const ROW_H = 62;
+
   function listCard() {
-    listBody = U.h('.stack-sm.list-scroll');
+    listBody = U.h('.list-scroll.ex-list');
     const card = U.h('.card', [
       U.h('.card-head', [
         U.h('div', [
-          U.h('h2', 'Movement library'),
+          U.h('h2', 'Exercises'),
           U.h('.card-sub#exCount', '')
         ])
       ]),
@@ -165,12 +178,15 @@
     const list = sortedList();
     const counter = U.$('#exCount');
     if (counter) {
-      counter.textContent = list.length + ' of ' + App.Store.allExercises().length +
-        ' movements' + (view.onlyMine ? ' · custom only' : '');
+      const total = App.Store.allExercises().length;
+      counter.textContent = (list.length === total
+        ? total + ' movements'
+        : list.length + ' of ' + total + ' movements') +
+        (view.onlyMine ? ' \u00b7 custom only' : '');
     }
 
-    U.clear(listBody);
     if (!list.length) {
+      U.clear(listBody);
       listBody.appendChild(U.h('.empty', [
         U.h('div', { html: U.icon('search') }),
         U.h('.empty-title', 'Nothing matches'),
@@ -183,46 +199,49 @@
     }
 
     const usage = usageMap();
-    list.slice(0, 400).forEach(function (ex) {
-      const u = usage[ex.id];
-      const row = U.h('.ex-row' + (view.selected === ex.id ? '.is-sel' : ''), {
-        dataset: { id: ex.id }, tabindex: '0', role: 'button',
-        onclick: function () { select(ex.id); },
-        onkeydown: function (e) {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(ex.id); }
-        }
-      }, [
-        C.exThumb(ex),
-        U.h('div', { style: { minWidth: 0 } }, [
-          U.h('.ex-name', { text: ex.name }),
-          U.h('.ex-meta', [
-            U.h('span', { text: App.Equipment[ex.equipment] || ex.equipment }),
-            U.h('span', { text: C.topMuscleLabel(ex) }),
-            u ? U.h('span', { text: u.sessions + '× · ' + U.relDate(u.last) }) : null,
-            ex.builtin ? null : U.h('span.badge', 'custom')
-          ])
-        ]),
-        U.h('.row', { style: { gap: '8px' } }, [
-          C.heatStrip(ex.muscles),
-          U.h('.ex-actions', [
-            U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
-              type: 'button', 'aria-label': 'Edit ' + ex.name, html: U.icon('edit'),
-              onclick: function (e) { e.stopPropagation(); C.editExercise(ex, function () { draw(); }); }
-            }),
-            U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
-              type: 'button', 'aria-label': 'Delete ' + ex.name, html: U.icon('trash'),
-              onclick: function (e) { e.stopPropagation(); removeExercise(ex); }
-            })
-          ])
-        ])
-      ]);
-      listBody.appendChild(row);
-    });
+    /* Reveal the selection if it is outside the window \u2014 a deep link or a
+       freshly created movement must not land on an apparently empty list. */
+    const sel = view.selected
+      ? list.findIndex(function (x) { return x.id === view.selected; }) : -1;
 
-    if (list.length > 400) {
-      listBody.appendChild(U.h('.u-xs.u-muted.u-center', { style: { padding: '12px' },
-        text: 'Showing 400 of ' + list.length + ' — narrow the search to see the rest.' }));
-    }
+    U.virtualList(listBody, list, ROW_H, function (ex) {
+      return exRow(ex, usage);
+    }, { scrollTo: sel >= 0 ? sel : null });
+  }
+
+  function exRow(ex, usage) {
+    const u = usage[ex.id];
+    return U.h('.ex-row' + (view.selected === ex.id ? '.is-sel' : ''), {
+      dataset: { id: ex.id }, tabindex: '0', role: 'button',
+      onclick: function () { select(ex.id); },
+      onkeydown: function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(ex.id); }
+      }
+    }, [
+      C.exThumb(ex),
+      U.h('div', { style: { minWidth: 0 } }, [
+        U.h('.ex-name', { text: ex.name }),
+        U.h('.ex-meta', [
+          U.h('span', { text: App.Equipment[ex.equipment] || ex.equipment }),
+          U.h('span', { text: C.topMuscleLabel(ex) }),
+          u ? U.h('span', { text: u.sessions + '× · ' + U.relDate(u.last) }) : null,
+          ex.builtin ? null : U.h('span.badge', 'custom')
+        ])
+      ]),
+      U.h('.row', { style: { gap: '8px' } }, [
+        C.heatStrip(ex.muscles),
+        U.h('.ex-actions', [
+          U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+            type: 'button', 'aria-label': 'Edit ' + ex.name, html: U.icon('edit'),
+            onclick: function (e) { e.stopPropagation(); C.editExercise(ex, function () { draw(); }); }
+          }),
+          U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+            type: 'button', 'aria-label': 'Delete ' + ex.name, html: U.icon('trash'),
+            onclick: function (e) { e.stopPropagation(); removeExercise(ex); }
+          })
+        ])
+      ])
+    ]);
   }
 
   function select(id) {

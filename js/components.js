@@ -228,7 +228,8 @@
     ]);
     /* render after the node exists so measurements are correct */
     setTimeout(function () {
-      App.Anatomy.render(fig, heat, { compact: opts.compact, legend: opts.legend });
+      App.Anatomy.render(fig, heat, { compact: opts.compact, legend: opts.legend,
+        compare: opts.compare || null });
     }, 0);
     return wrap;
   }
@@ -246,7 +247,7 @@
     const selected = new Set();
     let query = '', group = 'all', equip = 'all';
 
-    const listEl = U.h('.stack-sm.list-scroll');
+    const listEl = U.h('.list-scroll.ex-list');
     const countEl = U.h('.u-xs.u-muted');
 
     function matches(ex) {
@@ -263,19 +264,26 @@
       return true;
     }
 
+    /* Keep in step with .ex-list .ex-row in css/app.css. */
+    const PICK_ROW_H = 62;
+
     function draw() {
       const all = App.Store.allExercises().filter(matches)
         .sort(function (a, b) { return a.name.localeCompare(b.name); });
-      U.clear(listEl);
       countEl.textContent = all.length + ' of ' + App.Store.allExercises().length;
 
       if (!all.length) {
+        U.clear(listEl);
         listEl.appendChild(U.h('.empty', [
           U.h('p', 'No movement matches those filters.')
         ]));
         return;
       }
-      all.slice(0, 300).forEach(function (ex) {
+
+      /* Every match is listed. The picker is how an exercise gets added to a
+         running session, so a cap here hid movements at the moment they were
+         most needed; windowing keeps it cheap instead of keeping it short. */
+      U.virtualList(listEl, all, PICK_ROW_H, function (ex) {
         const row = U.h('.ex-row' + (selected.has(ex.id) ? '.is-sel' : ''), {
           dataset: { id: ex.id }, tabindex: '0', role: 'button'
         }, [
@@ -303,14 +311,8 @@
         row.addEventListener('keydown', function (e) {
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(); }
         });
-        listEl.appendChild(row);
+        return row;
       });
-      if (all.length > 300) {
-        listEl.appendChild(U.h('.u-xs.u-muted.u-center', {
-          style: { padding: '10px' },
-          text: 'Showing the first 300 — refine the search to narrow it down.'
-        }));
-      }
     }
 
     const groupSel = U.h('select.select.input-sm', {
@@ -411,7 +413,7 @@
     const settings = App.Store.getSettings();
     const draft = Object.assign({
       name: '', equipment: 'barbell', pattern: 'other', unilateral: false,
-      muscles: {}, image: null, notes: '', wr: null
+      loadMode: null, muscles: {}, image: null, notes: '', wr: null
     }, ex || {});
     draft.muscles = Object.assign({}, draft.muscles);
     draft.wr = draft.wr ? Object.assign({}, draft.wr) : null;
@@ -440,10 +442,59 @@
     });
 
     const equipSel = U.h('select.select', {
-      onchange: function () { draft.equipment = this.value; refillWr(); }
+      onchange: function () { draft.equipment = this.value; refillWr(); syncLoadRow(); }
     }, Object.keys(App.Equipment).map(function (k) {
       return U.h('option', { value: k, selected: draft.equipment === k }, App.Equipment[k]);
     }));
+
+    /* --- how a logged weight is read --------------------------------------
+
+       Dumbbells are logged per implement: nobody writes down 80 kg for a pair
+       of 40s. Scoring that 40 against a two-arm record made every dumbbell
+       movement read as half the strength it was. This is where an exercise can
+       depart from the account default; unilateral movements never need it,
+       since one dumbbell already is the whole load. */
+
+    const loadSel = U.h('select.select', {
+      onchange: function () {
+        draft.loadMode = this.value || null;
+        syncLoadHint();
+        syncWrHint();
+      }
+    });
+    const loadHint = U.h('.hint');
+    const loadRow = U.h('.field', [
+      U.h('label.label', 'Weight is logged as'), loadSel, loadHint
+    ]);
+
+    function defaultLoadLabel() {
+      return App.Store.getSettings().dumbbellLoad === 'total'
+        ? 'the total for both' : 'one implement';
+    }
+
+    function rebuildLoadOptions() {
+      U.clear(loadSel);
+      [['', 'Use the default (' + defaultLoadLabel() + ')'],
+       ['per-hand', 'One implement \u2014 both sides working'],
+       ['total', 'The total load']].forEach(function (o) {
+        loadSel.appendChild(U.h('option', {
+          value: o[0], selected: (draft.loadMode || '') === o[0] }, o[1]));
+      });
+    }
+
+    function syncLoadHint() {
+      const mode = App.Ranks.loadMode(draft, App.Store.getSettings());
+      loadHint.textContent = mode === 'per-hand'
+        ? 'A logged 40 counts as 80 of work, and records are shown per hand.'
+        : 'The number you log is taken as the whole load.';
+    }
+
+    /* Only paired equipment raises the question at all. */
+    function syncLoadRow() {
+      const applies = App.Ranks.pairedEquipment(draft.equipment) && !draft.unilateral;
+      loadRow.style.display = applies ? '' : 'none';
+      if (applies) { rebuildLoadOptions(); syncLoadHint(); }
+    }
 
     const PATTERNS = ['horizontal-push', 'incline-push', 'vertical-push', 'horizontal-pull',
       'vertical-pull', 'squat', 'hinge', 'lunge', 'olympic', 'carry', 'core',
@@ -483,16 +534,26 @@
     function syncWrHint() {
       const isBw = draft.equipment === 'bodyweight';
       const v = Number(wrInput.value) || 0;
-      wrHint.textContent = (isBw
-        ? 'For a bodyweight movement this is the TOTAL load — the athlete plus any added weight. '
-        : 'The heaviest single rep anyone has done at that bodyweight. ') +
-        (v > 0
-          ? 'Scaled to your ' + settings.bodyweight + ' ' + settings.units + ': ' +
-            Math.round(App.Ranks.exerciseRecord(
-              { pattern: draft.pattern, equipment: draft.equipment,
-                wr: { value: v, bodyweight: Number(wrBwInput.value) || settings.bodyweight } },
-              settings.bodyweight)) + ' ' + settings.units + '.'
-          : 'Required — this is what your rank is measured against.');
+      /* The record is always stored as TOTAL load, so a two-dumbbell record is
+         the pair. It is displayed per hand further down, next to the lifts it
+         will be compared with. */
+      const probe = { pattern: draft.pattern, equipment: draft.equipment,
+        unilateral: draft.unilateral, loadMode: draft.loadMode,
+        wr: { value: v, bodyweight: Number(wrBwInput.value) || settings.bodyweight } };
+      const perHand = App.Ranks.loadMode(probe, App.Store.getSettings()) === 'per-hand';
+      let out = isBw
+        ? 'For a bodyweight movement this is the TOTAL load \u2014 the athlete plus any added weight. '
+        : 'The heaviest single rep anyone has done at that bodyweight, as TOTAL load. ';
+      if (v > 0) {
+        const scaled = App.Ranks.exerciseRecord(probe, settings.bodyweight);
+        out += 'Scaled to your ' + settings.bodyweight + ' ' + settings.units + ': ' +
+          Math.round(scaled) + ' ' + settings.units +
+          (perHand ? ', shown to you as ' + Math.round(scaled / 2) + ' ' +
+            settings.units + ' per hand.' : '.');
+      } else {
+        out += 'Required \u2014 this is what your rank is measured against.';
+      }
+      wrHint.textContent = out;
     }
     if (draft.wr && Number(draft.wr.value) > 0) wrInput.value = draft.wr.value;
     else wrInput.value = Math.round(suggestedWr());
@@ -565,12 +626,17 @@
             U.h('label.label', 'Options'),
             U.h('label.switch', [
               U.h('input', { type: 'checkbox', checked: draft.unilateral,
-                onchange: function () { draft.unilateral = this.checked; } }),
+                onchange: function () {
+                  draft.unilateral = this.checked;
+                  syncLoadRow(); syncWrHint();
+                } }),
               U.h('i.switch-track'),
               U.h('span.u-sm', 'One side at a time')
             ])
           ])
         ]));
+
+        body.appendChild(loadRow);
 
         body.appendChild(U.h('.field', [
           U.h('label.label', 'World record 1RM'),
@@ -634,6 +700,7 @@
 
         drawMuscles();
         redrawFigure();
+        syncLoadRow();
         syncWrHint();
       },
       actions: [

@@ -11,7 +11,24 @@ html, body { height: 100%; }
 /* Anything the app scrolls to programmatically must clear the sticky topbar. */
 [data-scroll-target] { scroll-margin-top: 76px; }
 
+/* This is a phone app: the PAGE never travels sideways. Anything genuinely
+   wider than the screen — a table, a chart — scrolls inside its own container.
+
+   `overflow-x: hidden` on body alone was doing this by propagation, which is
+   fragile: it only applies while the root element's own overflow is `visible`,
+   and inside a web-to-app WebView a pinch-zoom still leaves the viewport
+   pannable. Clipping at the root as well is unconditional, and `clip` (rather
+   than `hidden`) refuses to become a scroll container at all, so there is
+   nothing left to pan even programmatically. */
+html {
+  overflow-x: clip;
+  max-width: 100%;
+  overscroll-behavior-x: none;
+}
+
 body {
+  max-width: 100%;
+  overscroll-behavior-x: none;
   font-family: var(--font-sans);
   font-size: var(--fs-md);
   line-height: 1.5;
@@ -19,7 +36,7 @@ body {
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 img, video { display: block; max-width: 100%; }
@@ -576,14 +593,25 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 .anat-tip {
   position: absolute; z-index: 5;
   transform: translate(-50%, calc(-100% - 12px));
-  padding: 5px 9px;
+  padding: 6px 10px;
   border-radius: var(--r-sm);
   background: var(--ink); color: var(--bg);
-  font-size: var(--fs-xs); font-weight: 560; white-space: nowrap;
+  font-size: var(--fs-xs); font-weight: 560;
+  /* It carries a name, a share and a delta now, which does not fit on one line
+     of a phone — so it wraps inside the figure instead of running off it. */
+  white-space: normal; text-align: center;
+  max-width: min(240px, 88%); width: max-content;
   opacity: 0; pointer-events: none;
   transition: opacity 120ms var(--ease);
 }
 .anat-tip.is-on { opacity: 1; }
+/* A pinned readout is the result of a deliberate tap, so it gets a little more
+   presence than something you merely swept a mouse over. */
+.anat-tip.is-pinned { box-shadow: var(--shadow-2); }
+
+/* Muscles are tappable, so say so — and stop the long-press callout and
+   double-tap zoom that otherwise fire instead of the tap. */
+.anat-m { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
 /* muscle breakdown list beside a figure */
 .mlist { display: flex; flex-direction: column; gap: 7px; }
@@ -696,6 +724,19 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 .ex-row:hover { background: var(--surface-2); border-color: var(--line); }
+
+/* Windowed lists compute scroll positions from a row height, so inside one the
+   height is FIXED rather than content-driven — see U.virtualList. The row is
+   laid out with a margin instead of the container's gap, because a flex gap
+   would not be counted in that arithmetic. */
+.ex-list { display: block; }
+.ex-list .ex-row {
+  height: 56px;
+  margin-bottom: 6px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.list-pad { display: block; width: 100%; }
 .ex-row.is-sel { background: color-mix(in srgb, var(--accent) 10%, transparent);
   border-color: color-mix(in srgb, var(--accent) 34%, transparent); }
 
@@ -789,6 +830,12 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   gap: var(--sp-2); align-items: center;
 }
 .set-grid .label { grid-column: auto; }
+
+/* The runner adds a per-set remove button, so it carries one more column than
+   the builder. The weight/rep boxes keep the flexible track; both buttons sit
+   in auto tracks so they stay finger-sized as the row narrows. */
+.set-grid-run { grid-template-columns: 26px repeat(2, minmax(52px, 1fr)) minmax(34px, auto) auto auto; }
+.set-grid-run.is-done { opacity: 0.62; }
 .set-idx { font-size: var(--fs-xs); color: var(--text-3); font-family: var(--font-mono);
   text-align: center; }
 
@@ -1094,6 +1141,16 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   .set-grid {
     grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) 44px 38px;
     gap: 5px;
+  }
+  /* The runner variant must be named here too. Both selectors carry the same
+     specificity, so the later one simply wins — leaving .set-grid-run silently
+     one track short of its own markup and dropping the remove button into the
+     first column of the next row. */
+  /* Touch targets are 36px here, so both action tracks are sized to hold one
+     rather than to a guess — a 30px track clipped the button by 6px. */
+  .set-grid-run {
+    grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr) 38px 36px 36px;
+    gap: 4px;
   }
 
   .stat-value { font-size: var(--fs-xl); }

@@ -8,13 +8,13 @@
 
   const ROUTES = [
     { id: 'home',      title: 'Home',          sub: 'Today at a glance',      icon: 'home' },
-    { id: 'exercises', title: 'Exercises',     sub: 'Movement library',       icon: 'dumbbell' },
+    { id: 'exercises', title: 'Exercises',     sub: 'Every movement you train',  icon: 'dumbbell' },
     { id: 'workouts',  title: 'Workouts',      sub: 'Plans and progression',  icon: 'list' },
     { id: 'report',    title: 'Report',        sub: 'Analysis and rankings',  icon: 'chart' },
     { id: 'settings',  title: 'Control Panel', sub: 'Account, sync, theme',   icon: 'settings' }
   ];
 
-  const VERSION = '0.3.4';
+  const VERSION = '0.4.0';
 
   /* Four static, four animated. All derive their colour from the active scheme
      and mode, so they never fight the theme. */

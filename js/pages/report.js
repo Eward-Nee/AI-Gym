@@ -68,6 +68,18 @@
       .slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
   }
 
+  /**
+   * The window of the same length immediately before this one. Tapping a muscle
+   * should say more than "18%" — the useful question is whether that is more or
+   * less than it used to be, and the honest baseline is the previous period.
+   */
+  function priorRangeSessions() {
+    const range = C.rangeById(view.range);
+    if (!range.days) return [];
+    return App.Store.sessionsBetween(U.daysAgo(range.days * 2), U.daysAgo(range.days))
+      .slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
+  }
+
   /* ===========================================================================
      OVERVIEW
      ======================================================================== */
@@ -162,6 +174,7 @@
 
     /* --- muscle distribution --- */
     const heat = App.Store.sessionsHeat(sessions);
+    const priorHeat = App.Store.sessionsHeat(priorRangeSessions());
     const groups = App.Muscles.groupTotals(heat);
 
     root.appendChild(U.h('.grid.grid-main', [
@@ -169,10 +182,11 @@
         U.h('.card-head', [
           U.h('div', [
             U.h('h2', 'Where the work landed'),
-            U.h('.card-sub', 'Normalised so the hardest-worked muscle reads 100%.')
+            U.h('.card-sub', 'Normalised so the hardest-worked muscle reads 100%. ' +
+              'Tap a muscle for its share and how it has moved.')
           ])
         ]),
-        C.heatPanel(heat, { limit: 12 })
+        C.heatPanel(heat, { limit: 12, compare: priorHeat })
       ]),
       U.h('.stack', [
         U.h('.card', [
@@ -389,7 +403,15 @@
                     : U.h('.u-xs.u-muted', 'not rank-bearing — no load recorded'))
             ]),
             U.h('td.num', { text: U.num(s.e1rm, 0) + ' ' + units }),
-            U.h('td.num.u-muted', { text: U.num(s.record, 0) + ' ' + units }),
+            /* Shown in the same terms the lift was logged in: for a per-hand
+               dumbbell movement that is one dumbbell, not the pair. Printing
+               the two-arm record beside a per-hand entry invites exactly the
+               comparison that is wrong. */
+            U.h('td.num.u-muted', [
+              U.h('span', { text: U.num(s.displayRecord || s.record, 0) + ' ' + units }),
+              s.loadMode === 'per-hand'
+                ? U.h('.u-xs.u-muted', 'per hand') : null
+            ]),
             U.h('td.num', { text: U.num(s.score, 1) + '%' }),
             U.h('td.bar-cell', [
               U.h('.mlist-bar', [
@@ -647,8 +669,8 @@
         ])
       ]));
       setTimeout(function () {
-        App.Anatomy.render(a, mineHeat, { compact: true });
-        App.Anatomy.render(b, theirHeat, { compact: true });
+        App.Anatomy.render(a, mineHeat, { compact: true, compare: theirHeat });
+        App.Anatomy.render(b, theirHeat, { compact: true, compare: mineHeat });
       }, 0);
     }
 

@@ -85,6 +85,52 @@
 
   const DEFAULT_WR = { ext: 1.50, bw: 1.45 };
 
+  /* ---------------------------------------------------------------------------
+     HOW A LOGGED WEIGHT MAPS TO SYSTEM LOAD
+
+     With a barbell the number you write down IS the load. With dumbbells it is
+     not: nobody logs an 80 kg incline press, they log "40s" and pick up two of
+     them. Scoring that 40 against a two-arm record made every dumbbell movement
+     look half as strong as it was.
+
+     So a logged weight is interpreted through a load mode:
+
+       per-hand   the number is ONE implement, and both limbs work at once, so
+                  the load on the body is double what was written down
+       total      the number is already the whole load
+
+     Unilateral movements are always `total` no matter what the setting says —
+     a one-arm row uses one dumbbell, so there is nothing to double.
+     ------------------------------------------------------------------------ */
+
+  /* Equipment that comes in pairs. Everything else is a single implement and
+     the question never arises. */
+  const PAIRED_EQUIPMENT = { dumbbell: true, kettlebell: true };
+
+  function pairedEquipment(equipment) { return !!PAIRED_EQUIPMENT[equipment]; }
+
+  /**
+   * The effective load mode for an exercise: its own override if it has one,
+   * otherwise the account-wide default for paired equipment.
+   *
+   * @param {Object} exercise
+   * @param {Object} settings  App.Store settings (for `dumbbellLoad`)
+   * @returns {'per-hand'|'total'}
+   */
+  function loadMode(exercise, settings) {
+    if (!exercise || !pairedEquipment(exercise.equipment)) return 'total';
+    if (exercise.unilateral) return 'total';
+    const own = exercise.loadMode;
+    if (own === 'per-hand' || own === 'total') return own;
+    const def = settings && settings.dumbbellLoad;
+    return def === 'total' ? 'total' : 'per-hand';
+  }
+
+  /** How many implements a logged weight represents: 2 for per-hand, else 1. */
+  function loadFactor(exercise, settings) {
+    return loadMode(exercise, settings) === 'per-hand' ? 2 : 1;
+  }
+
   /**
    * Patterns where moving your own bodyweight IS a max-strength feat, so an
    * unloaded set still counts toward the rank. A pull-up or a dip belongs here;
@@ -195,11 +241,12 @@
    * Bodyweight movements count the athlete's own mass as load, which is what
    * makes an unweighted pull-up score at all.
    */
-  function wrPercent(exercise, best, bodyweight) {
+  function wrPercent(exercise, best, bodyweight, settings) {
     const bw = Math.max(30, Number(bodyweight) || REF_BW);
     const isBw = !!(exercise && exercise.equipment === 'bodyweight');
 
-    let load = (best && best.e1rm) || 0;
+    /* A per-hand dumbbell entry is half the load the body actually moved. */
+    let load = ((best && best.e1rm) || 0) * loadFactor(exercise, settings);
     if (isBw) load += bw;
 
     if (!load) {
@@ -216,8 +263,22 @@
   }
 
   /** Backwards-compatible alias: the 0-100 score IS the world-record percent. */
-  function strengthScore(exercise, best, bodyweight) {
-    return wrPercent(exercise, best, bodyweight);
+  function strengthScore(exercise, best, bodyweight, settings) {
+    return wrPercent(exercise, best, bodyweight, settings);
+  }
+
+  /**
+   * The record as the user will actually type it into a log — halved when they
+   * log one dumbbell rather than two. Displaying the two-arm figure next to a
+   * per-hand entry invites exactly the comparison that is wrong.
+   */
+  function displayRecord(exercise, bodyweight, settings) {
+    return exerciseRecord(exercise, bodyweight) / loadFactor(exercise, settings);
+  }
+
+  /** 'per hand' / '' — the qualifier to print after a weight. */
+  function loadSuffix(exercise, settings) {
+    return loadMode(exercise, settings) === 'per-hand' ? ' per hand' : '';
   }
 
   /* ---------------------------------------------------------------------------
@@ -256,6 +317,7 @@
     const sessions = input.sessions || [];
     const exMap = input.exercises || {};
     const bw = Number(input.bodyweight) || REF_BW;
+    const settings = input.settings || null;
     const win = input.windowDays || 28;
     const since = Date.now() - win * 86400000;
 
@@ -304,7 +366,7 @@
     for (const id in bestByEx) {
       const ex = exMap[id];
       if (!ex) continue;
-      const pct = wrPercent(ex, bestByEx[id], bw);
+      const pct = wrPercent(ex, bestByEx[id], bw, settings);
       if (pct <= 0) continue;
       scored.push({
         exerciseId: id,
@@ -313,6 +375,9 @@
         score: pct,                 /* % of world record */
         wrPercent: pct,
         record: exerciseRecord(ex, bw),
+        /* the record expressed in the units the user actually logs in */
+        displayRecord: displayRecord(ex, bw, settings),
+        loadMode: loadMode(ex, settings),
         e1rm: bestByEx[id].e1rm,
         sessions: bestByEx[id].sessions,
         lastDate: bestByEx[id].lastDate,
@@ -410,6 +475,11 @@
     bestE1RM: bestE1RM,
     volumeOf: volumeOf,
     worldRecord: worldRecord,
+    pairedEquipment: pairedEquipment,
+    loadMode: loadMode,
+    loadFactor: loadFactor,
+    displayRecord: displayRecord,
+    loadSuffix: loadSuffix,
     exerciseRecord: exerciseRecord,
     wrPercent: wrPercent,
     isRankBearing: isRankBearing,

@@ -30,6 +30,7 @@
       U.h('span.chip', { text: 'v' + App.VERSION })
     ]);
     root.appendChild(profileCard());
+    root.appendChild(exercisesCard());
     root.appendChild(appearanceCard());
     /* Account comes before the project section: linking a Supabase project
        requires one, so asking for it first is the honest order. */
@@ -138,6 +139,64 @@
             onchange: function () {
               App.Store.saveSettings({ restBetweenExercises: Number(this.value) || 150 }); } })
         ])
+      ])
+    ]);
+  }
+
+  /* ===========================================================================
+     EXERCISES
+     ======================================================================== */
+
+  /**
+   * The account-wide reading of a dumbbell weight.
+   *
+   * A pair of 40s is logged as 40, not 80 — that is simply how people write it
+   * down. Taken literally it made every two-dumbbell movement score as half the
+   * strength it represented, so the app needs to be told which convention the
+   * number follows. Per-hand is the default because it is what nearly everyone
+   * does; an individual exercise can still disagree, from its own editor.
+   */
+  function exercisesCard() {
+    const s = App.Store.getSettings();
+    const counts = App.Store.allExercises().reduce(function (a, ex) {
+      if (App.Ranks.pairedEquipment(ex.equipment)) {
+        a.paired++;
+        if (ex.loadMode === 'per-hand' || ex.loadMode === 'total') a.overridden++;
+      }
+      return a;
+    }, { paired: 0, overridden: 0 });
+
+    return U.h('.card', [
+      U.h('.card-head', [
+        U.h('div', [
+          U.h('h2', 'Exercises'),
+          U.h('.card-sub', 'Defaults applied to every movement that does not ' +
+            'override them itself.')
+        ])
+      ]),
+      U.h('.field', [
+        U.h('label.label', 'Dumbbell and kettlebell weights are logged as'),
+        U.h('select.select', {
+          onchange: function () {
+            App.Store.saveSettings({ dumbbellLoad: this.value });
+            U.toast('Saved', 'Strength scores recalculated.');
+            draw();
+          }
+        }, [
+          U.h('option', { value: 'per-hand', selected: s.dumbbellLoad !== 'total' },
+            'One implement \u2014 both sides working'),
+          U.h('option', { value: 'total', selected: s.dumbbellLoad === 'total' },
+            'The total load')
+        ]),
+        U.h('.hint', s.dumbbellLoad === 'total'
+          ? 'A logged 80 counts as 80 of work.'
+          : 'A logged 40 counts as 80 of work, and world records are shown per hand. ' +
+            'Movements marked "one side at a time" are never doubled.'),
+        U.h('.u-xs.u-muted', { text: counts.paired + ' movement' +
+          (counts.paired === 1 ? '' : 's') + ' use paired equipment' +
+          (counts.overridden
+            ? ', ' + counts.overridden + ' with their own setting'
+            : '') + '.' })
       ])
     ]);
   }

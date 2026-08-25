@@ -19,6 +19,10 @@
     name: '',
     handle: '',
     restDefault: 90,           /* seconds between sets */
+    /* How a logged dumbbell/kettlebell weight is read: 'per-hand' means the
+       number is one implement and both are in use, so the body moved double.
+       A per-exercise `loadMode` overrides it; see App.Ranks.loadMode(). */
+    dumbbellLoad: 'per-hand',  /* per-hand | total */
     restBetweenExercises: 150,
     autoSync: true,
     firstRun: true
@@ -181,6 +185,8 @@
       equipment: 'other',
       pattern: 'other',
       unilateral: false,
+      /* null = follow the account default for paired equipment */
+      loadMode: null,            /* null | 'per-hand' | 'total' */
       muscles: {},
       image: null,
       notes: '',
@@ -574,7 +580,8 @@
     return App.Ranks.compute({
       sessions: state.sessions,
       exercises: state.exerciseById,
-      bodyweight: state.settings.bodyweight
+      bodyweight: state.settings.bodyweight,
+      settings: state.settings
     });
   }
 

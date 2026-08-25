@@ -1,5 +1,5 @@
 {
-  "version": "0.3.4",
+  "version": "0.4.0",
   "name": "AI-Gym",
-  "notes": "Live backgrounds scaled back so AMOLED keeps real black."
+  "notes": "Editable live sessions, tappable muscle map, full exercise list, per-hand dumbbell records."
 }

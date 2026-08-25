@@ -539,6 +539,94 @@
     });
   }
 
+  /* ---------------------------------------------------------------------------
+     WINDOWED LIST
+
+     Long lists used to be truncated — the exercise list stopped at 400 rows and
+     the picker at 300 — which quietly hid whatever came after, usually the
+     user's own additions, and made a filter the only way to reach them. That is
+     backwards: filtering narrows a list you can already see.
+
+     The truncation existed to keep the DOM small, so this solves that directly
+     instead. Only the rows near the viewport exist; spacers above and below
+     stand in for the rest, so the scrollbar still describes the whole list.
+     Rendering cost is flat no matter how many items there are.
+
+     Rows MUST be a fixed height for the arithmetic to hold — see .ex-list in
+     css/app.css, which pins it.
+     ------------------------------------------------------------------------ */
+
+  /**
+   * @param {Element}  scroller  the scrolling container; is emptied
+   * @param {Array}    items
+   * @param {number}   rowH      row height in px, including its bottom margin
+   * @param {Function} build     (item, index) -> Element
+   * @param {Object}   opts      {overscan, scrollTo:<index to reveal>}
+   * @returns {Object} {refresh, scrollToIndex}
+   */
+  function virtualList(scroller, items, rowH, build, opts) {
+    opts = opts || {};
+    const overscan = opts.overscan == null ? 6 : opts.overscan;
+
+    /* Every filter change re-runs this on the SAME element. Without dropping
+       the previous listener each rebuild would leave another one attached,
+       still holding the old item array, and they would all fight over the
+       window on the next scroll. */
+    if (scroller.__vlist) {
+      scroller.removeEventListener('scroll', scroller.__vlist);
+      scroller.__vlist = null;
+    }
+
+    clear(scroller);
+    const topPad = h('i.list-pad');
+    const rows = h('div');
+    const botPad = h('i.list-pad');
+    scroller.appendChild(topPad);
+    scroller.appendChild(rows);
+    scroller.appendChild(botPad);
+
+    let first = -1, last = -1, pending = 0;
+
+    function paint() {
+      const top = scroller.scrollTop;
+      const height = scroller.clientHeight || 400;
+      const a = Math.max(0, Math.floor(top / rowH) - overscan);
+      const b = Math.min(items.length, Math.ceil((top + height) / rowH) + overscan);
+      if (a === first && b === last) return;
+      first = a; last = b;
+      clear(rows);
+      for (let i = a; i < b; i++) rows.appendChild(build(items[i], i));
+      topPad.style.height = (a * rowH) + 'px';
+      botPad.style.height = ((items.length - b) * rowH) + 'px';
+    }
+
+    function onScroll() {
+      /* One paint per frame; scroll fires far more often than that. */
+      if (pending) return;
+      pending = requestAnimationFrame(function () { pending = 0; paint(); });
+    }
+
+    scroller.__vlist = onScroll;
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    paint();
+
+    function scrollToIndex(i) {
+      if (i < 0) return;
+      const y = i * rowH;
+      const view = scroller.clientHeight;
+      if (y >= scroller.scrollTop && y <= scroller.scrollTop + view - rowH) return;
+      scroller.scrollTop = Math.max(0, y - view / 2);
+      paint();
+    }
+    if (opts.scrollTo != null) scrollToIndex(opts.scrollTo);
+
+    return {
+      /* Force a repaint of the current window, e.g. after a row's data changed. */
+      refresh: function () { first = -1; last = -1; paint(); },
+      scrollToIndex: scrollToIndex
+    };
+  }
+
   App.U = {
     $: $, $$: $$, h: h, append: append, clear: clear, esc: esc, on: on, debounce: debounce,
     num: num, compact: compact, pct: pct, dur: dur,
@@ -547,6 +635,7 @@
     icon: icon, toast: toast, modal: modal, confirm: confirm,
     copy: copy, copyOrShow: copyOrShow, showManualCopy: showManualCopy,
     openExternal: openExternal, androidIntentUrl: androidIntentUrl,
-    download: download, readFile: readFile, shrinkImage: shrinkImage
+    download: download, readFile: readFile, shrinkImage: shrinkImage,
+    virtualList: virtualList
   };
 })(window.App = window.App || {});

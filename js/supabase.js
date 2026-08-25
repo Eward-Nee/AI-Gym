@@ -22,12 +22,24 @@
    * @param {string} key      publishable / anon key
    * @param {Object} opts     { writeKey, accessToken }
    */
+  /* Refresh this far ahead of expiry rather than waiting for the deadline. */
+  const SKEW_MS = 120000;
+
   function createClient(url, key, opts) {
     opts = opts || {};
     const base = String(url || '').replace(/\/+$/, '');
     let accessToken = opts.accessToken || null;
     let refreshToken = opts.refreshToken || null;
+    let expiresAt = Number(opts.expiresAt) || 0;
+    let refreshing = null;
     let writeKey = opts.writeKey || null;
+    /* Called whenever the tokens change so the caller can persist them.
+       Supabase ROTATES the refresh token on every use: the old one is dead the
+       moment a refresh succeeds. Keeping the new pair only in memory meant the
+       next cold start replayed a spent token, the refresh failed, and the user
+       was told to sign in again — for no reason other than that we forgot to
+       write it down. */
+    let onSession = typeof opts.onSession === 'function' ? opts.onSession : null;
 
     function headers(extra) {
       const h = Object.assign({
@@ -165,7 +177,8 @@
       },
       signOut: function () {
         const token = accessToken;
-        accessToken = null; refreshToken = null;
+        accessToken = null; refreshToken = null; expiresAt = 0;
+        if (onSession) { try { onSession(null); } catch (e) {} }
         if (!token) return Promise.resolve();
         return request('/auth/v1/logout', {
           method: 'POST',
@@ -189,8 +202,53 @@
 
     function setSession(r) {
       if (!r) return;
+      const before = accessToken + '|' + refreshToken;
       if (r.access_token) accessToken = r.access_token;
       if (r.refresh_token) refreshToken = r.refresh_token;
+      /* Expiry lets us refresh BEFORE a request fails rather than after. */
+      if (r.expires_at) expiresAt = Number(r.expires_at) * 1000;
+      else if (r.expires_in) expiresAt = Date.now() + Number(r.expires_in) * 1000;
+      if (onSession && before !== accessToken + '|' + refreshToken) {
+        try { onSession(sessionObj()); } catch (e) { /* persistence is best-effort */ }
+      }
+    }
+
+    function sessionObj() {
+      return { accessToken: accessToken, refreshToken: refreshToken, expiresAt: expiresAt };
+    }
+
+    /**
+     * Refresh if the access token is spent or nearly so. Reusing one in-flight
+     * promise keeps a burst of parallel calls from firing several refreshes,
+     * which would rotate the token repeatedly and invalidate each other.
+     */
+    function ensureFresh() {
+      if (!refreshToken) return Promise.resolve(false);
+      if (expiresAt && Date.now() < expiresAt - SKEW_MS) return Promise.resolve(false);
+      if (refreshing) return refreshing;
+      refreshing = auth.refresh()
+        .then(function () { return true; })
+        .catch(function (e) {
+          /* Only a genuinely rejected token means the session is over. A network
+             blip must not sign anybody out. */
+          if (isDeadToken(e)) { accessToken = null; refreshToken = null; expiresAt = 0;
+            if (onSession) { try { onSession(null); } catch (x) {} } }
+          throw e;
+        })
+        .then(function (v) { refreshing = null; return v; },
+              function (e) { refreshing = null; throw e; });
+      return refreshing;
+    }
+
+    /** Did the server actively reject the token, as opposed to failing to answer? */
+    function isDeadToken(err) {
+      if (!err) return false;
+      if (err.status === 0) return false;              /* offline / timeout */
+      const b = err.body || {};
+      const code = String(b.error_code || b.error || '').toLowerCase();
+      if (code.indexOf('refresh_token') >= 0 || code === 'invalid_grant') return true;
+      return (err.status === 400 || err.status === 401) &&
+        /invalid|revoked|expired|not found/i.test(err.message || '');
     }
 
     /**
@@ -207,16 +265,18 @@
     }
 
     function withRetry(fn) {
-      return fn().catch(function (err) {
-        if (authProblem(err) && refreshToken) {
+      /* Renew first when the token is already known to be spent, so the common
+         case is a clean call rather than a failure followed by a repair. */
+      return ensureFresh().catch(function () { /* fall through and let fn fail */ })
+        .then(fn)
+        .catch(function (err) {
+          if (!authProblem(err) || !refreshToken) throw err;
           return auth.refresh().then(fn).catch(function (e) {
-            /* The refresh token is dead too — say so plainly. */
+            if (!isDeadToken(e)) throw e;   /* offline: keep the session */
             throw SupabaseError('Your session has expired. Sign in again.',
               e.status || 401, e.body);
           });
-        }
-        throw err;
-      });
+        });
     }
 
     return {
@@ -231,9 +291,10 @@
       setWriteKey: function (k) { writeKey = k; },
       getWriteKey: function () { return writeKey; },
       setSession: setSession,
-      session: function () {
-        return { accessToken: accessToken, refreshToken: refreshToken };
-      },
+      ensureFresh: ensureFresh,
+      isDeadToken: isDeadToken,
+      onSession: function (fn) { onSession = typeof fn === 'function' ? fn : null; },
+      session: sessionObj,
       hasSession: function () { return !!accessToken; }
     };
   }
