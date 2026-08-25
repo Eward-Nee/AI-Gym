@@ -1,5 +1,5 @@
 {
-  "version": "0.5.0",
+  "version": "0.5.1",
   "name": "AI-Gym",
-  "notes": "Rebuilt muscle figures: arms clear the legs, every muscle shows, split by head."
+  "notes": "Body proportions rebalanced: arms down, legs up."
 }
