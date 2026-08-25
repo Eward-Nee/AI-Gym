@@ -532,14 +532,18 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
    ============================================================================= */
 
 .anat-wrap { position: relative; min-width: 0; }
-.anat-pair { display: flex; gap: var(--sp-4); justify-content: center; align-items: flex-end; }
+.anat-pair { display: flex; gap: var(--sp-2); justify-content: center; align-items: flex-end; }
 .anat-fig { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2);
   min-width: 0; flex: 1 1 0; }
 /* Width-led, not height-led: each figure takes half the row and derives its
-   height from the 220:520 aspect. Sizing by height instead let a narrow column
-   crush the figure to a sliver while keeping it full height. */
-.anat-svg { width: 100%; max-width: 190px; height: auto; aspect-ratio: 220 / 520; margin-inline: auto; }
-.anat-pair.is-compact .anat-svg { max-width: 132px; }
+   height from the field's aspect. Sizing by height instead let a narrow column
+   crush the figure to a sliver while keeping it full height.
+
+   The field got wider when the arms were swung out to clear the legs, so the
+   max-widths grew with it — otherwise the same cap would have drawn a shorter
+   body than before. Keep the ratio in step with W/H in js/anatomy.js. */
+.anat-svg { width: 100%; max-width: 240px; height: auto; aspect-ratio: 276 / 520; margin-inline: auto; }
+.anat-pair.is-compact .anat-svg { max-width: 168px; }
 
 /* Muscle editor: controls beside the live preview, stacked on a phone. */
 .editor-split { display: grid; gap: var(--sp-4); align-items: start;
@@ -555,8 +559,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 .heat-panel-list { min-width: 0; }
 @media (max-width: 760px) {
   .heat-panel { grid-template-columns: minmax(0, 1fr); }
-  .anat-svg { max-width: 168px; }
-  .anat-pair.is-compact .anat-svg { max-width: 148px; }
+  .anat-svg { max-width: 210px; }
+  .anat-pair.is-compact .anat-svg { max-width: 186px; }
 }
 .anat-fig figcaption {
   font-size: var(--fs-xs); color: var(--text-3); letter-spacing: 0.08em;
@@ -565,7 +569,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 
 .anat-body path { fill: var(--anat-body); }
 .anat-m {
-  stroke: var(--ink); stroke-width: 0.6; vector-effect: non-scaling-stroke;
+  stroke: var(--ink); stroke-width: 0.8; vector-effect: non-scaling-stroke;
   transition: opacity var(--dur) var(--ease);
 }
 .anat-m.is-hot { stroke-width: 1.6; }
@@ -573,8 +577,10 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   fill: none; stroke: var(--ink-soft); stroke-width: 0.55;
   vector-effect: non-scaling-stroke; opacity: 0.55; stroke-linecap: round;
 }
-.anat-outline path {
-  fill: none; stroke: var(--ink); stroke-width: 1.35;
+/* Stroked wide and filled in ink, then buried under .anat-body — see the note
+   in figureSVG(). Half the stroke width survives, as a ring outside the body. */
+.anat-silhouette path {
+  fill: var(--ink); stroke: var(--ink); stroke-width: 2.6;
   stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke;
 }
 

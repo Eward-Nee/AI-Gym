@@ -1,29 +1,76 @@
 /* =============================================================================
-   anatomy.js — anatomical front/back heat figures
+   anatomy.js — front/back muscle heat figures
 
    Design notes
    -------------
-   * Each figure is drawn in a 220 x 520 viewBox, centred on x = 110.
-   * Bilateral muscles are authored ONCE for the right half of the body and
-     mirrored with matrix(-1,0,0,1,220,0). Perfect symmetry, half the data.
-   * The silhouette is an OPEN contour (head-top -> outer side -> foot -> inner
-     leg -> crotch). Appending "Z" closes it up the midline for the fill; the
-     open form strokes the outline, so no seam runs down the middle of the body.
-   * Muscle bellies are described as BANDS: a list of [y, xInner, xOuter] rows
-     traced against the real silhouette bounds, expanded into a closed
-     Catmull-Rom spline. Authoring against measured limb bounds is what keeps
-     each belly anatomically seated instead of floating.
-   * Every belly is drawn slightly oversized and clipped to the silhouette,
-     which is what produces the crisp "filled to the skin" edges of a medical
-     plate and makes small authoring errors impossible to see.
-   * Colour rule (per spec): everything structural is black / white / grey.
-     ONLY muscles carrying a non-zero load receive the accent heat ramp.
+   * The field is 286 x 520, centred on x = 143.
+
+   * THE ARMS LIVE IN THEIR OWN ROTATED FRAME. Previously the whole body was
+     authored in one vertical coordinate system, which forced the arms to hang
+     straight down against the hips — so the elbows and forearms collided with
+     the thighs and the two limbs were impossible to tell apart. Each arm is now
+     authored VERTICALLY in a local frame whose origin is the shoulder joint,
+     and then placed with translate + rotate. That buys two things at once: the
+     arm swings clear of the leg, and every belly in it can still be described
+     with the same simple top-to-bottom rows as the torso.
+
+   * Bilateral muscles are authored ONCE for the right half and mirrored with
+     matrix(-1,0,0,1,W,0). Perfect symmetry, half the data.
+
+   * The silhouette is the UNION of a torso contour and the two arm contours.
+     The arm shapes deliberately overlap the shoulder, so the union reads as one
+     body with no seam where the limb meets the trunk.
+
+   * Muscle bellies are described as BANDS: rows of [y, xInner, xOuter] traced
+     against the real silhouette bounds and deliberately overshot a little. The
+     clip trims the overshoot, so neighbouring bellies butt up against each
+     other and against the skin instead of leaving slivers of background
+     showing through.
+
+   * EVERY REGION OWNS DISTINCT TERRITORY. Where a deep muscle used to be
+     authored underneath a superficial one — rhomboids under the mid traps,
+     serratus under the pec — selecting the deep muscle lit a region that was
+     then painted over by the idle muscle on top of it, so it looked like
+     nothing happened. Neighbouring territories, plus drawing loaded muscles
+     last, means anything you select is actually visible.
+
+   * Colour rule: everything structural is black / white / grey. ONLY muscles
+     carrying a non-zero load receive the accent heat ramp.
    ============================================================================= */
 (function (App) {
   'use strict';
 
-  const W = 220, H = 520;
+  const W = 276, H = 520;
+  const CX = 138;               /* midline */
   let uid = 0;
+
+  /* ---------------------------------------------------------------------------
+     PROPORTIONS — the eight-head canon, on a 500-unit body inside a 520 field:
+
+       y  10  crown        y 198  navel        y 366  knee
+       y  72  chin         y 210  waist        y 478  ankle
+       y  92  shoulders    y 260  crotch       y 510  sole
+       y 135  nipple line
+
+     Shoulder width comes from the DELTOIDS, which live in the arm frame, so the
+     trunk itself stays near 50 and the waist pulls in to 36. That is where a
+     V-taper actually comes from on a real body — not from a flared ribcage.
+     ------------------------------------------------------------------------ */
+
+  /* THE ARM IS TWO HINGED FRAMES, not one straight limb.
+
+     A single rotation cannot be both things at once: angled enough at the elbow
+     to clear the ribs, and narrow enough at the hand to stay on the canvas. So
+     the upper arm swings out 20 degrees from the shoulder and the forearm hangs
+     back at 10 from the elbow — the natural carrying angle. The elbow clears the
+     waist, the hand falls at mid-thigh, and the figure stays inside its box. */
+  const SHOULDER_X = CX + 39, SHOULDER_Y = 112, UPPER_DEG = 16;
+  const UPPER_LEN = 98;                       /* shoulder joint -> elbow joint */
+  const FORE_DEG = 8;
+
+  const RAD = Math.PI / 180;
+  const ELBOW_X = SHOULDER_X + Math.sin(UPPER_DEG * RAD) * UPPER_LEN;
+  const ELBOW_Y = SHOULDER_Y + Math.cos(UPPER_DEG * RAD) * UPPER_LEN;
 
   /* ---------------------------------------------------------------------------
      PATH HELPERS
@@ -31,200 +78,229 @@
 
   function f(n) { return Math.round(n * 100) / 100; }
 
-  /** Closed Catmull-Rom spline through points, emitted as cubic beziers. */
-  function spline(pts) {
+  /** Catmull-Rom through points as cubic beziers; closed unless open is true. */
+  function spline(pts, open) {
     const n = pts.length;
-    const P = function (i) { return pts[((i % n) + n) % n]; };
+    const P = function (i) {
+      if (open) return pts[Math.max(0, Math.min(n - 1, i))];
+      return pts[((i % n) + n) % n];
+    };
     let d = 'M' + f(pts[0][0]) + ' ' + f(pts[0][1]);
-    for (let i = 0; i < n; i++) {
+    const last = open ? n - 1 : n;
+    for (let i = 0; i < last; i++) {
       const p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2);
       const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
       const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
-      d += 'C' + f(c1x) + ' ' + f(c1y) + ' ' + f(c2x) + ' ' + f(c2y) + ' ' + f(p2[0]) + ' ' + f(p2[1]);
+      d += 'C' + f(c1x) + ' ' + f(c1y) + ' ' + f(c2x) + ' ' + f(c2y) +
+           ' ' + f(p2[0]) + ' ' + f(p2[1]);
     }
-    return d + 'Z';
+    return d + (open ? '' : 'Z');
   }
 
-  /** Build a muscle belly from [y, xInner, xOuter] rows, top -> bottom. */
+  /** Build a belly from [y, xInner, xOuter] rows, top -> bottom. */
   function band(rows) {
     const outer = rows.map(function (r) { return [r[2], r[0]]; });
     const inner = rows.map(function (r) { return [r[1], r[0]]; }).reverse();
     return spline(outer.concat(inner));
   }
 
-  /* ---------------------------------------------------------------------------
-     SILHOUETTES
-     ------------------------------------------------------------------------ */
-
-  /* ---------------------------------------------------------------------------
-     PROPORTIONS
-     Athletic canon on a 220 x 520 field, centred on x = 110:
-       y  13  crown          y 136  nipple line     y 262  crotch
-       y  82  chin           y 205  waist (narrow)  y 356  knee
-       y 100  shoulder line  y 240  iliac crest     y 470  ankle
-     Shoulder span comes from the deltoids (half-width ~65) while the ribcage
-     stays near 50 and the waist at 30 — which is where the V-taper actually
-     comes from on a real body, rather than from a flared ribcage.
-     ------------------------------------------------------------------------ */
-
-  /* ONE continuous silhouette for the right half of the body: crown -> head ->
-     neck -> trap -> around the whole arm -> back up to the armpit -> down the
-     ribs, hip and leg -> foot -> up the inner leg -> crotch.
-
-     Authoring it as a single open contour rather than as separate torso and arm
-     shapes is what makes the figure read as one body: there is no stroke where
-     the arm meets the shoulder, so the limb is attached instead of floating
-     beside the torso. Appending "Z" closes it up the midline to give the fill
-     and the clip region; the open form is what gets stroked. */
-  const SILHOUETTE =
-    "M110 13" +
-    "C123 13 132 25 132 41" +          /* cranium */
-    "C132 51 130 59 127 65" +          /* temple */
-    "C125 69 123 72 120 75" +          /* cheek */
-    "C118 78 116 80 114 82" +          /* jaw to chin */
-    "C116 86 118 89 119 93" +          /* under the jaw */
-    "C120 96 123 98 129 100" +         /* neck into the trapezius */
-    "C137 100 144 101 149 99" +        /* trap ridge to the shoulder */
-    "C161 102 170 111 174 125" +       /* deltoid */
-    "C177 138 176 152 173 165" +       /* upper arm outer */
-    "C171 177 169 190 169 202" +       /* elbow */
-    "C169 213 171 226 173 240" +       /* brachioradialis */
-    "C175 253 175 265 173 277" +       /* forearm taper */
-    "C172 287 171 296 171 304" +       /* wrist */
-    "C173 313 174 323 172 332" +       /* hand */
-    "C170 340 164 345 158 343" +
-    "C153 341 151 336 152 329" +
-    "C150 331 147 329 146 324" +       /* thumb side */
-    "C144 317 144 308 146 300" +
-    "C145 287 143 273 142 258" +       /* inner forearm */
-    "C141 242 140 227 141 214" +
-    "C143 202 145 190 146 178" +       /* inner upper arm */
-    "C147 168 147 161 147 155" +       /* up to the armpit apex */
-    "C146 165 145 174 143 183" +       /* back down the ribcage */
-    "C141 193 140 200 140 208" +
-    "C140 219 142 230 146 240" +       /* iliac crest */
-    "C151 251 154 260 154 271" +       /* hip */
-    "C154 287 152 302 149 317" +       /* thigh */
-    "C147 331 144 345 142 357" +
-    "C141 365 140 372 140 380" +       /* knee */
-    "C140 392 142 404 143 416" +       /* calf */
-    "C144 430 142 448 139 460" +
-    "C138 468 137 474 137 480" +       /* ankle */
-    "C137 488 139 496 138 502" +
-    "C135 507 127 508 122 506" +       /* foot */
-    "C119 505 118 501 118 496" +
-    "C118 488 119 482 119 476" +
-    "C119 458 121 436 122 416" +       /* inner calf */
-    "C123 398 123 382 122 368" +
-    "C121 348 119 324 117 301" +       /* inner thigh */
-    "C116 285 115 273 113 266" +
-    "C112 263 111 262 110 262";        /* crotch */
-
-  /* ---------------------------------------------------------------------------
-     MUSCLE BANDS — [y, xInner, xOuter], traced against MEASURED silhouette
-     bounds and then deliberately overshot by a couple of units on each side.
-     The clip path trims the overshoot, and the result is that neighbouring
-     bellies butt up against each other and against the skin instead of leaving
-     slivers of background showing through — which is what separates a medical
-     plate from a diagram of floating tiles.
-     Order matters: deep muscles first, superficial last.
-     ------------------------------------------------------------------------ */
-
-  const FRONT_MUSCLES = [
-    { id: 'sternocleidomastoid', rows: [[74,113,122],[84,111,125],[93,109,124],[101,108,120]] },
-    { id: 'trap_upper',   rows: [[94,118,128],[102,121,143],[110,125,156],[119,129,159]] },
-
-    { id: 'serratus',     rows: [[145,137,153],[158,135,151],[172,133,148],[186,131,145],[199,130,142]] },
-    { id: 'pec_upper',    rows: [[102,108,126],[110,108,146],[118,108,156],[128,108,156]] },
-    { id: 'pec_mid',      rows: [[128,108,156],[140,108,154],[152,108,151],[164,108,147]] },
-    { id: 'pec_lower',    rows: [[164,108,147],[172,108,144],[180,108,138],[188,108,127]] },
-
-    { id: 'delt_side',    rows: [[97,149,162],[110,152,169],[124,154,177],[140,155,178],[154,156,174],[167,157,169]] },
-    { id: 'delt_front',   rows: [[97,143,155],[110,142,162],[124,142,167],[140,142,167],[154,143,164],[165,144,159]] },
-
-    { id: 'biceps',       rows: [[149,141,158],[165,141,162],[182,141,162],[198,141,160],[212,141,157]] },
-    { id: 'brachialis',   rows: [[151,157,173],[170,157,175],[188,156,172],[204,155,170],[218,153,167]] },
-    { id: 'forearm_flex', rows: [[204,141,159],[222,139,166],[242,138,171],[262,138,173],[282,141,173],[297,144,169]] },
-
-    { id: 'oblique',      rows: [[175,128,148],[194,129,146],[212,128,143],[230,127,146],[248,126,152],[263,126,155]] },
-    { id: 'abs_upper',    rows: [[175,108,130],[192,108,132],[208,108,132],[222,108,130],[234,108,128]] },
-    { id: 'abs_lower',    rows: [[234,108,128],[248,108,129],[262,108,126],[272,108,120],[281,108,113]] },
-
-    { id: 'hip_flexor',   rows: [[241,117,140],[254,113,148],[266,111,153],[279,115,155]] },
-    { id: 'adductor',     rows: [[261,107,127],[280,111,131],[300,115,131],[320,117,129],[340,118,126]] },
-    { id: 'quad_lateral', rows: [[263,135,155],[284,136,155],[304,136,153],[324,134,150],[344,132,146],[359,130,143]] },
-    { id: 'quad_rectus',  rows: [[265,123,139],[288,124,140],[310,124,139],[332,123,137],[352,122,134],[367,122,131]] },
-    { id: 'quad_medial',  rows: [[306,117,131],[326,116,133],[344,115,133],[360,115,130],[376,117,125]] },
-    { id: 'tibialis',     rows: [[370,121,141],[392,121,142],[412,120,144],[432,119,144],[452,118,141],[472,117,138]] }
-  ];
-
-  const BACK_MUSCLES = [
-    { id: 'splenius',     rows: [[72,110,124],[84,108,126],[94,108,123],[101,108,119]] },
-
-    { id: 'rhomboid',     rows: [[112,108,136],[126,108,144],[140,108,142],[157,108,131]] },
-    { id: 'rotator_cuff', rows: [[117,127,154],[132,127,158],[146,128,154],[161,129,146]] },
-    { id: 'teres_major',  rows: [[151,129,154],[164,128,155],[176,128,151],[187,129,145]] },
-    { id: 'erector',      rows: [[160,108,121],[184,108,127],[206,108,129],[228,108,129],[250,108,126],[274,108,120]] },
-    { id: 'lat',          rows: [[143,108,150],[162,108,155],[180,108,153],[200,108,148],[220,108,143],[240,108,141],[254,108,138]] },
-
-    { id: 'trap_upper',   rows: [[86,108,120],[96,108,139],[107,108,153],[119,110,159]] },
-    { id: 'trap_mid',     rows: [[119,108,153],[133,108,152],[147,108,148],[161,108,140]] },
-    { id: 'trap_lower',   rows: [[159,108,140],[175,108,134],[191,108,126],[207,108,118],[218,108,112]] },
-
-    { id: 'delt_side',    rows: [[97,149,162],[110,152,170],[124,154,178],[140,155,179],[154,156,175],[167,157,170]] },
-    { id: 'delt_rear',    rows: [[97,143,155],[110,142,163],[124,142,168],[140,142,168],[154,143,165],[165,144,160]] },
-
-    { id: 'triceps_long', rows: [[149,141,158],[166,141,161],[184,141,161],[200,141,159],[214,141,156]] },
-    { id: 'triceps_lat',  rows: [[147,156,173],[166,156,175],[184,155,173],[200,154,170],[214,152,166]] },
-    { id: 'forearm_ext',  rows: [[202,142,162],[220,140,168],[240,138,173],[262,138,173],[282,141,173],[297,144,169]] },
-
-    { id: 'glute_med',    rows: [[222,129,150],[238,129,154],[252,130,156],[267,131,154]] },
-    { id: 'glute_max',    rows: [[226,108,139],[246,108,149],[264,108,154],[282,108,156],[298,108,154],[310,112,150]] },
-
-    { id: 'ham_biceps',   rows: [[269,133,155],[292,134,154],[312,134,152],[332,133,148],[352,131,144],[370,129,141]] },
-    { id: 'ham_semi',     rows: [[269,113,138],[294,115,140],[314,116,140],[334,116,138],[352,116,135],[370,117,132]] },
-
-    { id: 'calf_gastro',  rows: [[364,120,141],[386,120,142],[406,119,144],[426,119,144],[446,118,142],[460,118,139]] },
-    { id: 'calf_soleus',  rows: [[438,118,143],[454,117,141],[470,116,139],[482,117,137],[492,118,134]] }
-  ];
-
-  /* Expand the bands into path data once, at load. */
-  function compile(list) {
-    return list.map(function (m) { return { id: m.id, d: m.d || band(m.rows) }; });
+  /** Same, but for rows written as offsets from the midline. */
+  function torsoBand(rows) {
+    return band(rows.map(function (r) { return [r[0], CX + r[1], CX + r[2]]; }));
   }
 
-  /* Fibre striations & tendinous inscriptions — decorative, always grey. */
+  /* ---------------------------------------------------------------------------
+     SILHOUETTES
+
+     Authored as point lists rather than hand-written beziers. Tracing a body by
+     eye through forty control points is guesswork; moving one vertex and letting
+     the spline re-fit is not.
+     ------------------------------------------------------------------------ */
+
+  /* Right half of the trunk: crown -> down the outside -> foot -> up the inside
+     -> crotch. Closing back up the midline gives the fill; the mirror hides
+     that edge. Offsets are from CX. */
+  const TORSO_PTS = [
+    [0, 10], [11, 13], [20, 24], [23, 40], [22, 54], [18, 65], [12, 74], [9, 82],
+    [12, 88], [19, 92], [30, 96],                          /* neck into trap */
+    [44, 102], [49, 118], [50, 134],                       /* trap ridge, ribcage */
+    [49, 150], [47, 166], [44, 182],                       /* lat flare */
+    [40, 196], [36, 210], [37, 224],                       /* waist */
+    [41, 238], [47, 252], [50, 264], [50, 276],            /* hip */
+    [48, 292], [44, 312], [39, 334], [34, 352], [30, 366], /* thigh */
+    [30, 380], [35, 398], [36, 418],                       /* calf */
+    [32, 442], [26, 462], [22, 478], [21, 492],            /* ankle */
+    [26, 502], [27, 510], [22, 514], [9, 515], [3, 511], [2, 502],   /* foot */
+    [5, 488], [7, 466], [9, 440], [10, 416], [9, 394],     /* inner calf */
+    [8, 374], [7, 352], [5, 326], [2, 298], [0, 278], [0, 262]       /* crotch */
+  ];
+
+  /* Upper arm, authored straight down from the shoulder joint. The cap reaches
+     well inside the trunk so the union has no seam at the shoulder, and the
+     bottom edge runs straight across the elbow where the forearm overlaps it. */
+  const UPPER_ARM_PTS = [
+    [-13, -8], [-3, -16], [10, -19], [22, -13], [30, 0],    /* deltoid cap */
+    [33, 18], [31, 37], [28, 56],                           /* delt insertion */
+    [26, 72], [24, 88], [23, 106],                          /* down to the elbow */
+    [-22, 106], [-24, 88], [-26, 68],                       /* back up the inside */
+    [-27, 48], [-26, 30], [-22, 14], [-17, 0]
+  ];
+
+  /* Forearm and hand, hanging from the elbow joint. */
+  const FOREARM_PTS = [
+    [22, -16], [26, -2], [29, 16], [30, 34],                /* brachioradialis */
+    [28, 52], [24, 70], [20, 86], [17, 98],                 /* taper to the wrist */
+    [19, 108], [21, 118], [17, 128], [9, 134],              /* hand */
+    [-1, 132], [-9, 124], [-14, 112],
+    [-15, 98], [-16, 84], [-18, 66],                        /* flexor bulge */
+    [-21, 46], [-22, 26], [-20, 8], [-18, -14]
+  ];
+
+  const TORSO_D = spline(TORSO_PTS.map(function (p) { return [CX + p[0], p[1]]; }), true) +
+    'L' + CX + ' 10Z';
+  const UPPER_ARM_D = spline(UPPER_ARM_PTS);
+  const FOREARM_D = spline(FOREARM_PTS);
+
+  const UPPER_TF = 'translate(' + f(SHOULDER_X) + ',' + f(SHOULDER_Y) + ') rotate(-' + UPPER_DEG + ')';
+  const FORE_TF = 'translate(' + f(ELBOW_X) + ',' + f(ELBOW_Y) + ') rotate(-' + FORE_DEG + ')';
+  const MIRROR_TF = 'matrix(-1,0,0,1,' + W + ',0)';
+
+  /* ---------------------------------------------------------------------------
+     TORSO MUSCLES — rows are [y, dxInner, dxOuter] from the midline.
+     ------------------------------------------------------------------------ */
+
+  const FRONT_TORSO = [
+    { id: 'sternocleidomastoid', rows: [[76,3,9],[84,2,11],[92,1,13],[100,1,15]] },
+    { id: 'trap_upper', rows: [[90,8,18],[97,12,32],[104,15,44],[112,17,50]] },
+
+    { id: 'pec_upper',  rows: [[101,1,24],[110,1,36],[120,1,44]] },
+    { id: 'pec_mid',    rows: [[120,1,43],[131,1,44],[142,1,43]] },
+    { id: 'pec_lower',  rows: [[142,1,43],[153,1,41],[164,1,36],[172,1,26]] },
+    { id: 'serratus',   rows: [[142,43,52],[153,42,50],[164,40,48],[175,38,46],[185,35,43]] },
+
+    { id: 'abs_upper',  rows: [[168,1,25],[181,1,27],[194,1,27],[206,1,26],[216,1,24]] },
+    { id: 'abs_lower',  rows: [[216,1,24],[228,1,24],[240,1,22],[250,1,18],[258,1,11]] },
+    { id: 'oblique',    rows: [[168,25,44],[183,27,43],[198,27,40],[213,26,42],[228,25,46],[240,25,49]] },
+
+    { id: 'hip_flexor', rows: [[246,15,38],[258,11,44],[268,11,46],[278,16,45]] },
+    { id: 'adductor',   rows: [[264,1,15],[284,2,17],[304,4,17],[322,6,15],[338,7,12]] },
+    { id: 'quad_medial',rows: [[302,11,23],[322,11,24],[338,10,24],[354,11,22],[368,12,19]] },
+    { id: 'quad_rectus',rows: [[268,17,33],[290,18,33],[312,19,32],[332,20,30],[350,19,28],[362,19,26]] },
+    { id: 'quad_lateral',rows:[[266,33,50],[286,33,49],[306,32,47],[326,30,43],[344,28,39],[358,27,36]] },
+
+    { id: 'tibialis',   rows: [[382,9,28],[404,9,30],[424,8,31],[446,7,29],[466,6,26]] },
+    { id: 'calf_gastro',rows: [[382,28,38],[402,30,40],[422,29,39],[442,26,35]] }
+  ];
+
+  const BACK_TORSO = [
+    { id: 'splenius',   rows: [[72,1,11],[82,1,14],[92,1,13],[99,2,11]] },
+
+    { id: 'rotator_cuff', rows: [[118,39,55],[131,39,55],[144,39,52],[155,39,48]] },
+    { id: 'teres_major',rows: [[146,41,54],[157,40,53],[168,39,50],[178,39,46]] },
+
+    { id: 'trap_upper', rows: [[90,1,15],[98,1,28],[106,1,40],[113,2,45]] },
+    { id: 'trap_mid',   rows: [[113,1,43],[125,1,43],[137,1,39]] },
+    { id: 'rhomboid',   rows: [[137,1,39],[149,1,36],[160,1,30]] },
+    { id: 'trap_lower', rows: [[160,1,30],[174,1,26],[188,1,20],[200,1,14]] },
+
+    { id: 'lat',        rows: [[140,28,47],[157,24,50],[174,19,50],[192,15,48],[209,13,45],[225,13,42],[238,15,39]] },
+    { id: 'erector',    rows: [[190,1,17],[210,1,19],[228,1,19],[244,1,16],[256,1,12]] },
+
+    { id: 'glute_med',  rows: [[230,32,50],[243,34,52],[255,36,50],[264,36,46]] },
+    { id: 'glute_max',  rows: [[242,1,36],[259,1,41],[276,1,45],[291,2,44],[303,6,41]] },
+
+    { id: 'ham_semi',   rows: [[292,6,25],[311,7,25],[330,8,24],[348,9,23],[362,10,22]] },
+    { id: 'ham_biceps', rows: [[292,25,45],[311,25,44],[330,24,42],[348,23,39],[362,22,36]] },
+
+    { id: 'calf_gastro',rows: [[380,8,36],[399,8,38],[418,7,38],[436,7,36],[450,8,33]] },
+    { id: 'calf_soleus',rows: [[440,7,35],[454,7,33],[468,7,30],[480,8,27]] }
+  ];
+
+  /* ---------------------------------------------------------------------------
+     ARM MUSCLES — [y, xInner, xOuter] in the UPPER-ARM or FOREARM frame.
+     Negative x is medial (toward the body), positive is lateral.
+     ------------------------------------------------------------------------ */
+
+  const FRONT_UPPER = [
+    { id: 'delt_front', rows: [[-14,-16,6],[-2,-22,8],[12,-22,8],[26,-20,8],[40,-16,8],[52,-10,6]] },
+    { id: 'delt_side',  rows: [[-16,6,20],[-2,8,30],[12,8,34],[26,8,34],[40,8,32],[54,6,27]] },
+    { id: 'biceps_short', rows: [[44,-22,-4],[60,-24,-3],[76,-24,-3],[92,-23,-4],[105,-21,-6]] },
+    { id: 'biceps_long',  rows: [[42,-4,13],[58,-3,15],[74,-3,15],[90,-4,14],[104,-6,11]] },
+    { id: 'brachialis',   rows: [[46,13,30],[64,13,31],[82,13,30],[98,12,28],[108,11,25]] }
+  ];
+
+  const BACK_UPPER = [
+    { id: 'delt_rear',  rows: [[-14,-16,6],[-2,-22,8],[12,-22,8],[26,-20,8],[40,-16,8],[52,-10,6]] },
+    { id: 'delt_side',  rows: [[-16,6,20],[-2,8,30],[12,8,34],[26,8,34],[40,8,32],[54,6,27]] },
+    { id: 'triceps_long', rows: [[40,-24,-4],[56,-25,-4],[72,-25,-5],[86,-24,-6]] },
+    { id: 'triceps_med',  rows: [[86,-24,-6],[96,-22,-5],[107,-19,-6]] },
+    { id: 'triceps_lat',  rows: [[36,-4,20],[54,-3,26],[70,-3,27],[88,-4,24],[103,-6,17]] }
+  ];
+
+  const FRONT_FORE = [
+    { id: 'brachioradialis', rows: [[-10,8,29],[8,11,32],[26,13,32],[44,12,30],[62,11,27]] },
+    { id: 'pronator',        rows: [[-10,-19,-2],[0,-17,4],[12,-13,10]] },
+    { id: 'forearm_flex',    rows: [[14,-21,10],[34,-22,14],[52,-21,15],[70,-18,13],[88,-15,8]] }
+  ];
+
+  const BACK_FORE = [
+    { id: 'brachioradialis', rows: [[-10,18,30],[8,20,32],[28,20,31],[46,18,28]] },
+    { id: 'forearm_ext',     rows: [[-8,-4,22],[12,-2,26],[32,-2,28],[52,-2,27],[70,-2,24],[88,-2,20]] },
+    { id: 'forearm_flex',    rows: [[2,-21,-2],[22,-23,0],[42,-23,0],[62,-20,-1],[82,-17,-2]] }
+  ];
+
+  /* Fibre striations and tendinous lines — decorative, always grey. These are
+     what stop a filled region reading as a flat tile: a trained body has visible
+     separations, and the figure should show them. */
   const FRONT_DETAIL = [
-    "M110 178V275",                                              /* linea alba */
-    "M111 192H133", "M111 206H133", "M111 220H131", "M111 232H129", /* inscriptions */
-    "M112 108L148 122", "M112 132L149 140", "M112 156L146 152",  /* pec fibres */
-    "M112 174L138 166",
-    "M138 152C142 163 143 175 141 188",                          /* serratus slips */
-    "M134 158C137 169 138 181 137 192",
-    "M125 268V362", "M137 266V356",                              /* quad borders */
-    "M119 314C124 332 126 352 125 372",                          /* vastus medialis */
-    "M147 130V204", "M158 132V208",                              /* biceps / brachialis */
-    "M143 212V288", "M156 216V284",                              /* forearm */
-    "M124 380V468"                                               /* tibia edge */
+    'M138 172V262',                                        /* linea alba */
+    'M139 184H163', 'M139 197H165', 'M139 210H165', 'M139 222H163',
+    'M140 106L176 120', 'M140 128L180 137', 'M140 150L178 151', 'M140 168L170 161',
+    'M180 150C184 162 185 175 183 187',                    /* serratus slips */
+    'M175 156C179 168 180 181 179 192',
+    'M170 162C174 173 175 186 174 197',
+    'M155 270V360', 'M170 268V356',                        /* quad borders */
+    'M149 306C154 325 156 345 155 368',                    /* teardrop */
+    'M147 386V464'                                         /* tibia edge */
   ];
 
   const BACK_DETAIL = [
-    "M110 96V272",                                               /* spine */
-    "M112 152L150 166", "M113 176L148 186", "M114 200L142 206",  /* lat fibres */
-    "M115 222L138 226",
-    "M112 116L146 130", "M112 134L144 144",                      /* trap fibres */
-    "M111 238L146 256", "M111 258L146 274",                      /* glute fibres */
-    "M135 278V362", "M118 278V360",                              /* hamstring split */
-    "M119 376V452",                                              /* gastroc heads */
-    "M128 122C136 134 141 146 142 160",                          /* scapular spine */
-    "M145 130V206", "M157 132V208",
-    "M144 212V288", "M157 216V284",
-    "M110 212L128 200"                                           /* thoracolumbar */
+    'M138 94V252',                                         /* spine */
+    'M140 148L180 161', 'M140 170L178 181', 'M140 192L172 200', 'M141 214L166 220',
+    'M140 110L177 123', 'M140 129L175 140',                /* trap fibres */
+    'M139 248L178 264', 'M139 268L178 283',                /* glute fibres */
+    'M162 296V360', 'M147 296V358',                        /* hamstring split */
+    'M148 386V448',                                        /* gastroc heads */
+    'M156 122C167 133 174 146 176 161'                     /* scapular spine */
   ];
 
+  const UPPER_DETAIL_FRONT = ['M-1 48V104', 'M14 68V106'];
+  const UPPER_DETAIL_BACK  = ['M-3 44V106', 'M12 40V102'];
+  const FORE_DETAIL_FRONT  = ['M2 18V90', 'M-12 22V86'];
+  const FORE_DETAIL_BACK   = ['M4 6V88', 'M20 2V80'];
+
+  function compileTorso(list) {
+    return list.map(function (m) { return { id: m.id, d: torsoBand(m.rows), frame: 'torso' }; });
+  }
+  function compileLimb(list, frame) {
+    return list.map(function (m) { return { id: m.id, d: band(m.rows), frame: frame }; });
+  }
+
   const FIGURES = {
-    front: { muscles: compile(FRONT_MUSCLES), detail: FRONT_DETAIL, label: 'Anterior' },
-    back:  { muscles: compile(BACK_MUSCLES),  detail: BACK_DETAIL,  label: 'Posterior' }
+    front: {
+      muscles: compileTorso(FRONT_TORSO)
+        .concat(compileLimb(FRONT_UPPER, 'upper'))
+        .concat(compileLimb(FRONT_FORE, 'fore')),
+      detail: FRONT_DETAIL, upperDetail: UPPER_DETAIL_FRONT, foreDetail: FORE_DETAIL_FRONT,
+      label: 'Front'
+    },
+    back: {
+      muscles: compileTorso(BACK_TORSO)
+        .concat(compileLimb(BACK_UPPER, 'upper'))
+        .concat(compileLimb(BACK_FORE, 'fore')),
+      detail: BACK_DETAIL, upperDetail: UPPER_DETAIL_BACK, foreDetail: FORE_DETAIL_BACK,
+      label: 'Back'
+    }
   };
 
   /* ---------------------------------------------------------------------------
@@ -233,7 +309,6 @@
 
   const STEPS = [0.001, 0.18, 0.38, 0.62, 0.84];
 
-  /** Map a 0..1 intensity onto the themed accent ramp. */
   function heatColor(t) {
     if (!(t > 0)) return 'var(--anat-idle)';
     let n = 1;
@@ -247,11 +322,36 @@
     });
   }
 
-  function mirror(d) { return '<path d="' + d + '" transform="matrix(-1,0,0,1,' + W + ',0)"'; }
-
   /* ---------------------------------------------------------------------------
      RENDER
      ------------------------------------------------------------------------ */
+
+  /* Every frame a shape can be drawn in, as flat transform STRINGS — never as
+     nested <g> wrappers. A <clipPath> only honours shape children: a <g> inside
+     one is silently ignored, and the clip then consists of whatever bare path
+     happened to come first. That single detail is why the arms and the entire
+     mirrored half once rendered as bare skin — they were being clipped away by
+     a region that only ever covered half a torso. */
+  const FRAMES = {
+    torso: ['', MIRROR_TF],
+    upper: [UPPER_TF, MIRROR_TF + ' ' + UPPER_TF],
+    fore:  [FORE_TF,  MIRROR_TF + ' ' + FORE_TF]
+  };
+
+  /** One shape, emitted once per frame, as sibling paths. */
+  function place(d, frames, attrs) {
+    return frames.map(function (tf) {
+      return '<path d="' + d + '"' + (tf ? ' transform="' + tf + '"' : '') +
+        (attrs || '') + '/>';
+    }).join('');
+  }
+  /** Same, but the shape carries child content (a <title>). */
+  function placeRich(d, frames, attrs, inner) {
+    return frames.map(function (tf) {
+      return '<path d="' + d + '"' + (tf ? ' transform="' + tf + '"' : '') +
+        attrs + '>' + inner + '</path>';
+    }).join('');
+  }
 
   /**
    * Build one figure as an SVG string.
@@ -261,95 +361,107 @@
    */
   function figureSVG(view, heat, opts) {
     opts = opts || {};
-    heat = heat || {};
     const fig = FIGURES[view];
     const clip = 'anatclip' + (++uid);
+
+    /* Composite ids from older exercises are rewritten onto the regions this
+       figure actually draws, so selecting "Biceps" lights both heads. */
+    heat = App.Muscles.expand(heat || {});
 
     let max = opts.max || 0;
     if (!max) for (const k in heat) max = Math.max(max, heat[k] || 0);
     if (!max) max = 1;
 
-    const bodyFill = SILHOUETTE + 'Z';
     const p = [];
-
     p.push('<svg class="anat-svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" ' +
-      'aria-label="' + esc(fig.label) + ' view of muscle activation" preserveAspectRatio="xMidYMid meet">');
+      'aria-label="' + esc(fig.label) + ' view of muscle activation" ' +
+      'preserveAspectRatio="xMidYMid meet">');
 
-    p.push('<defs><clipPath id="' + clip + '">');
-    p.push('<path d="' + bodyFill + '"/>');
-    p.push(mirror(bodyFill) + '/>');
-    p.push('</clipPath></defs>');
+    /* --- clip: the union of trunk and both arms --- */
+    const bodyShapes = place(TORSO_D, FRAMES.torso) +
+                       place(UPPER_ARM_D, FRAMES.upper) +
+                       place(FOREARM_D, FRAMES.fore);
+    p.push('<defs><clipPath id="' + clip + '">' + bodyShapes + '</clipPath></defs>');
 
-    /* --- body base fill --- */
-    p.push('<g class="anat-body">');
-    p.push('<path d="' + bodyFill + '"/>');
-    p.push(mirror(bodyFill) + '/>');
-    p.push('</g>');
+    /* THE OUTLINE IS DRAWN UNDERNEATH THE FILL.
 
-    /* --- muscle regions, clipped to the silhouette --- */
+       The body is three overlapping shapes per side — trunk, upper arm,
+       forearm — and stroking each one separately draws every place they cross:
+       an arm contour ruled across the chest, a straight edge sawn through the
+       elbow, and a seam down the midline where the two halves meet. Stroking
+       them WIDE and in the ink colour first, then covering all of it with the
+       plain fill, leaves ink showing only where no shape covered it — which is
+       exactly the outside edge of the union, and nowhere else. No masks, no
+       hand-trimmed open contours, and no interior seams by construction. */
+    p.push('<g class="anat-silhouette">' + bodyShapes + '</g>');
+    p.push('<g class="anat-body">' + bodyShapes + '</g>');
+
+    /* --- muscle regions, clipped to the skin ---
+       Loaded muscles are drawn AFTER idle ones. Territories no longer overlap,
+       but where two bellies do meet this guarantees the one carrying work is
+       the one you can see, rather than whichever happened to be authored
+       later. */
+    const ordered = fig.muscles.slice().sort(function (a, b) {
+      return ((Number(heat[a.id]) || 0) > 0 ? 1 : 0) - ((Number(heat[b.id]) || 0) > 0 ? 1 : 0);
+    });
+
     p.push('<g class="anat-muscles" clip-path="url(#' + clip + ')">');
-    fig.muscles.forEach(function (m) {
+    ordered.forEach(function (m) {
       const v = Number(heat[m.id]) || 0;
-      const cls = 'anat-m' + (v > 0 ? ' is-active' : '');
       const title = esc(App.Muscles.label(m.id, true)) +
         (v > 0 ? ' — ' + (Math.round(v * 10) / 10) + '%' : '');
-      const tail = ' class="' + cls + '" data-muscle="' + m.id + '" data-value="' + v + '"' +
-        ' fill="' + heatColor(v / max) + '"><title>' + title + '</title></path>';
-      p.push('<path d="' + m.d + '"' + tail);
-      p.push(mirror(m.d) + tail);
+      const attrs = ' class="anat-m' + (v > 0 ? ' is-active' : '') +
+        '" data-muscle="' + m.id + '" data-value="' + v + '"' +
+        ' fill="' + heatColor(v / max) + '"';
+      p.push(placeRich(m.d, FRAMES[m.frame], attrs, '<title>' + title + '</title>'));
     });
     p.push('</g>');
 
-    /* --- fibre / inscription detail --- */
+    /* --- striations --- */
     p.push('<g class="anat-detail" clip-path="url(#' + clip + ')">');
-    fig.detail.forEach(function (d) {
-      p.push('<path d="' + d + '"/>');
-      p.push(mirror(d) + '/>');
-    });
-    p.push('</g>');
-
-    /* --- outline last so it always reads crisply --- */
-    p.push('<g class="anat-outline">');
-    p.push('<path d="' + SILHOUETTE + '"/>');
-    p.push(mirror(SILHOUETTE) + '/>');
+    fig.detail.forEach(function (d) { p.push(place(d, FRAMES.torso)); });
+    fig.upperDetail.forEach(function (d) { p.push(place(d, FRAMES.upper)); });
+    fig.foreDetail.forEach(function (d) { p.push(place(d, FRAMES.fore)); });
     p.push('</g>');
 
     p.push('</svg>');
     return p.join('');
   }
 
+  function legendHTML(max) {
+    return '<div class="anat-legend">' +
+      '<span class="anat-legend-label">0%</span>' +
+      '<i class="anat-legend-ramp"></i>' +
+      '<span class="anat-legend-label">' + (max ? Math.round(max) + '%' : 'max') + '</span>' +
+    '</div>';
+  }
+
   /**
-   * Render a front+back pair into a container element.
-   * @param {HTMLElement} el
-   * @param {Object} heat  {muscleId: percentage}
+   * @param {Element} el
+   * @param {Object} heat  {muscleId: 0..100}
    * @param {Object} opts  {legend:false, compact:true, interactive:false,
-   *                       compare:<heat map to show a delta against>}
+   *                        compare:<heat map to show a delta against>}
    */
   function render(el, heat, opts) {
     if (!el) return;
     opts = opts || {};
     heat = heat || {};
+    const shown = App.Muscles.expand(heat);
     let max = 0;
-    for (const k in heat) max = Math.max(max, heat[k] || 0);
+    for (const k in shown) max = Math.max(max, shown[k] || 0);
 
     el.innerHTML =
       '<div class="anat-pair' + (opts.compact ? ' is-compact' : '') + '">' +
         '<figure class="anat-fig">' + figureSVG('front', heat, { max: max }) +
-          '<figcaption>Anterior</figcaption></figure>' +
+          '<figcaption>Front</figcaption></figure>' +
         '<figure class="anat-fig">' + figureSVG('back', heat, { max: max }) +
-          '<figcaption>Posterior</figcaption></figure>' +
+          '<figcaption>Back</figcaption></figure>' +
       '</div>' +
       (opts.legend === false ? '' : legendHTML(max));
 
-    if (opts.interactive !== false) bindTooltip(el, opts.compare || null);
-  }
-
-  function legendHTML(max) {
-    return '<div class="anat-legend">' +
-      '<span class="anat-legend-label">none</span>' +
-      '<span class="anat-legend-ramp" aria-hidden="true"></span>' +
-      '<span class="anat-legend-label">' + (max ? Math.round(max) + '%' : 'max') + '</span>' +
-    '</div>';
+    if (opts.interactive !== false) {
+      bindTooltip(el, opts.compare ? App.Muscles.expand(opts.compare) : null);
+    }
   }
 
   /**
@@ -360,9 +472,6 @@
    * tap, which is the only gesture a phone user has here, showed nothing at
    * all. Touch therefore gets its own model: tap a muscle to PIN the readout,
    * tap it again or anywhere else to dismiss. Mouse keeps hover.
-   *
-   * @param {Object} compare  optional heat map to measure against, which is
-   *                          what turns "18%" into "18%, up 4 points".
    */
   function bindTooltip(root, compare) {
     let tip = root.querySelector('.anat-tip');
@@ -401,7 +510,6 @@
       return out;
     }
 
-    /** Place the readout, keeping it inside the figure rather than off-screen. */
     function show(path, clientX, clientY) {
       const id = path.getAttribute('data-muscle');
       const v = Number(path.getAttribute('data-value')) || 0;
@@ -415,8 +523,8 @@
       let x = clientX - r.left;
       const y = clientY - r.top;
       const half = tip.offsetWidth / 2;
-      /* The tip is centred on the touch point, so clamp by half its width or a
-         muscle near either edge puts the label outside the card. */
+      /* Centred on the touch point, so clamp by half its width or a muscle near
+         either edge puts the label outside the card. */
       x = Math.max(half + 4, Math.min(r.width - half - 4, x));
       tip.style.left = x + 'px';
       tip.style.top = y + 'px';
@@ -438,8 +546,6 @@
       if (e.pointerType === 'mouse' && !pinned) { tip.classList.remove('is-on'); clearHot(); }
     });
 
-    /* Touch and pen: tap to pin. Also fires for mouse clicks, which is what
-       lets a pinned readout survive the pointer moving away. */
     root.addEventListener('click', function (e) {
       const path = hit(e);
       if (!path) { hide(); return; }
@@ -449,8 +555,6 @@
       tip.classList.add('is-pinned');
     });
 
-    /* A tap anywhere else puts it away. Captured on the document because the
-       figure has already stopped receiving the event by then. */
     if (!root.__anatDismiss) {
       root.__anatDismiss = function (e) {
         if (!pinned) return;
@@ -465,6 +569,14 @@
     figureSVG: figureSVG,
     heatColor: heatColor,
     band: band,
+    /** Every muscle id the figures can actually draw — used by the self-check. */
+    drawnIds: function () {
+      const s = Object.create(null);
+      ['front', 'back'].forEach(function (v) {
+        FIGURES[v].muscles.forEach(function (m) { s[m.id] = true; });
+      });
+      return Object.keys(s);
+    },
     W: W, H: H
   };
 })(window.App = window.App || {});
