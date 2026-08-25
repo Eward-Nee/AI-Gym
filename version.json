@@ -1,5 +1,5 @@
 {
-  "version": "0.3.3",
+  "version": "0.3.4",
   "name": "AI-Gym",
-  "notes": "Schema update dialog fits a phone screen."
+  "notes": "Live backgrounds scaled back so AMOLED keeps real black."
 }

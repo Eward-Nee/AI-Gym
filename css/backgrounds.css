@@ -37,14 +37,14 @@
    ============================================================================= */
 
 :root {
-  --bg-alpha: 0.46;        /* background layer opacity, per mode below */
-  --surface-alpha: 76%;    /* cards, modals, topbar */
-  --surface2-alpha: 66%;   /* nested blocks, tiles, table headers */
+  --bg-alpha: 0.38;        /* background layer opacity, per mode below */
+  --surface-alpha: 78%;    /* cards, modals, topbar */
+  --surface2-alpha: 68%;   /* nested blocks, tiles, table headers */
 }
 [data-mode='dark'] {
-  --bg-alpha: 0.92;
-  --surface-alpha: 60%;
-  --surface2-alpha: 48%;
+  --bg-alpha: 0.72;
+  --surface-alpha: 64%;
+  --surface2-alpha: 52%;
 }
 
 /* A bold background washes a dark panel LIGHTER, which eats the contrast of
@@ -57,14 +57,15 @@
   --text-2: #c6cedb;
   --text-3: #9aa4b3;
 }
-/* AMOLED is the BOLDEST, not the faintest. Against pure black a translucent
-   colour has nothing to blend with, so the same alpha that reads clearly on a
-   dark-grey ground looks washed out here. Unlit pixels stay unlit either way —
-   the layers are gradients, so most of the panel is still black. */
+/* AMOLED needs a higher alpha than dark grey to read at all — against pure
+   black a translucent colour has nothing to blend with — but not so high that
+   the panel never goes black. At full opacity six stacked layers lit the entire
+   screen and the mode lost its whole point. This keeps the light clearly
+   visible while leaving genuinely unlit ground between and around the blobs. */
 [data-mode='amoled'] {
-  --bg-alpha: 1;
-  --surface-alpha: 57%;
-  --surface2-alpha: 45%;
+  --bg-alpha: 0.6;
+  --surface-alpha: 66%;
+  --surface2-alpha: 54%;
 }
 
 /* ---- the layer host ------------------------------------------------------ */
@@ -268,7 +269,7 @@
 /* Horizon glow: the one layer that changes brightness, which keeps the scene
    from settling into an obvious loop. */
 [data-bg='aurora'] .bg-l6 {
-  background: radial-gradient(78% 40% at 50% 96%, var(--c4), transparent 100%);
+  background: radial-gradient(70% 32% at 50% 98%, var(--c4), transparent 100%);
   animation: aurora-breathe 13s ease-in-out infinite;
 }
 
@@ -290,18 +291,18 @@
 /* Curtains travel a long way sideways and shear as they go, so the columns
    lean and widen the way real ones do. */
 @keyframes curtain-a {
-  0%   { transform: translate3d(-14%, 4%, 0) skewX(-9deg)  scaleY(1.00); opacity: .55; }
-  40%  { transform: translate3d(2%, -3%, 0)  skewX(4deg)   scaleY(1.22); opacity: 1; }
-  100% { transform: translate3d(16%, 2%, 0)  skewX(12deg)  scaleY(0.92); opacity: .7; }
+  0%   { transform: translate3d(-14%, 4%, 0) skewX(-9deg)  scaleY(1.00); opacity: .38; }
+  40%  { transform: translate3d(2%, -3%, 0)  skewX(4deg)   scaleY(1.22); opacity: .78; }
+  100% { transform: translate3d(16%, 2%, 0)  skewX(12deg)  scaleY(0.92); opacity: .5; }
 }
 @keyframes curtain-b {
-  0%   { transform: translate3d(12%, -2%, 0)  skewX(8deg)   scaleY(1.15); opacity: .8; }
-  55%  { transform: translate3d(-6%, 5%, 0)   skewX(-6deg)  scaleY(0.95); opacity: .45; }
-  100% { transform: translate3d(-18%, -4%, 0) skewX(-14deg) scaleY(1.3);  opacity: 1; }
+  0%   { transform: translate3d(12%, -2%, 0)  skewX(8deg)   scaleY(1.15); opacity: .55; }
+  55%  { transform: translate3d(-6%, 5%, 0)   skewX(-6deg)  scaleY(0.95); opacity: .3; }
+  100% { transform: translate3d(-18%, -4%, 0) skewX(-14deg) scaleY(1.3);  opacity: .72; }
 }
 @keyframes aurora-breathe {
-  0%, 100% { transform: scale(1.00); opacity: .45; }
-  50%      { transform: scale(1.22); opacity: 1; }
+  0%, 100% { transform: scale(1.00); opacity: .3; }
+  50%      { transform: scale(1.22); opacity: .72; }
 }
 
 /* --- 6. Orbs: discrete bodies on slow independent orbits --------------------- */
@@ -414,8 +415,8 @@
 }
 .bg-swatch[data-preview='aurora']::after {
   background:
-    radial-gradient(52% 52% at 30% 34%, var(--c4), transparent 100%),
-    radial-gradient(56% 56% at 72% 62%, var(--c3), transparent 100%);
+    radial-gradient(44% 44% at 28% 32%, var(--c4), transparent 100%),
+    radial-gradient(46% 46% at 74% 62%, var(--c3), transparent 100%);
   animation: aurora-1 19s cubic-bezier(.45,.05,.55,.95) infinite alternate;
 }
 .bg-swatch[data-preview='orbs']::after {
