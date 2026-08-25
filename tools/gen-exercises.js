@@ -859,6 +859,114 @@ add('Bear Crawl', 'bodyweight', 'core',
       triceps_lat: 10, trap_upper: 10 });
 
 /* =============================================================================
+   GRIP VARIANTS
+
+   Grip width changes which head does the work, so a wide and a close variant of
+   the same bar movement are genuinely different exercises and deserve their own
+   entries and their own records. The shifts below follow the mechanics:
+
+     pressing  wide  -> shorter range, more pec, less triceps
+               close -> longer range, triceps take over
+     pulling   wide  -> more lat and teres, arms contribute less
+               close -> more elbow flexion, biceps and brachialis take over
+     curling   wide  -> supinated and inside shoulder width, short head
+               close -> hands narrow, long head and brachialis
+
+   add() de-duplicates by slug, so movements that already ship a grip variant by
+   name are left exactly as they are.
+   ============================================================================= */
+
+const GRIP_SHIFT = {
+  push: {
+    wide:  { pec_mid: 10, pec_upper: 3, triceps_lat: -7, triceps_long: -5 },
+    close: { triceps_lat: 13, triceps_long: 10, pec_mid: -12, pec_upper: -4 }
+  },
+  pull: {
+    wide:  { lat: 11, teres_major: 4, delt_rear: 3, biceps: -8, brachialis: -5 },
+    close: { biceps: 9, brachialis: 7, lat: -9, teres_major: -2 }
+  },
+  curl: {
+    wide:  { biceps: 9, brachialis: -7 },
+    close: { brachialis: 11, biceps: -7, forearm_flex: 3 }
+  }
+};
+
+function addGrips(baseName, equip, pattern, muscles, kind, extra) {
+  const g = GRIP_SHIFT[kind];
+  add('Wide-Grip ' + baseName, equip, pattern, shift(muscles, g.wide), extra);
+  add('Close-Grip ' + baseName, equip, pattern, shift(muscles, g.close), extra);
+}
+
+/* --- pressing ------------------------------------------------------------- */
+const BENCH_FLAT = shift(BENCH, {});
+const BENCH_INC = shift(BENCH, BENCH_ANGLE.Incline);
+const BENCH_DEC = shift(BENCH, BENCH_ANGLE.Decline);
+
+addGrips('Bench Press', 'barbell', 'horizontal-push', BENCH_FLAT, 'push');
+addGrips('Incline Bench Press', 'barbell', 'incline-push', BENCH_INC, 'push');
+addGrips('Decline Bench Press', 'barbell', 'horizontal-push', BENCH_DEC, 'push');
+addGrips('Smith Machine Bench Press', 'smith', 'horizontal-push',
+  shift(BENCH_FLAT, EQUIP_SHIFT.smith), 'push');
+addGrips('Smith Machine Incline Bench Press', 'smith', 'incline-push',
+  shift(BENCH_INC, EQUIP_SHIFT.smith), 'push');
+addGrips('Floor Press', 'barbell', 'horizontal-push',
+  shift(BENCH, { triceps_lat: 8, triceps_long: 6, pec_mid: -8 }), 'push');
+addGrips('Overhead Press', 'barbell', 'vertical-push', shift(OHP, {}), 'push');
+addGrips('Smith Machine Overhead Press', 'smith', 'vertical-push',
+  shift(OHP, EQUIP_SHIFT.smith), 'push');
+addGrips('Behind-the-Neck Press', 'barbell', 'vertical-push',
+  shift(OHP, { delt_side: 12, rotator_cuff: 6, delt_front: -10 }), 'push');
+addGrips('Seated Shoulder Press', 'barbell', 'vertical-push',
+  shift(OHP, { abs_upper: -3, erector: -2 }), 'push');
+
+/* --- pulling -------------------------------------------------------------- */
+addGrips('Bent-Over Row', 'barbell', 'horizontal-pull',
+  shift(ROW, { erector: 8, ham_biceps: 3 }), 'pull');
+addGrips('Pendlay Row', 'barbell', 'horizontal-pull',
+  shift(ROW, { erector: 8, trap_mid: 5 }), 'pull');
+addGrips('T-Bar Row', 'barbell', 'horizontal-pull',
+  shift(ROW, { lat: 6, trap_mid: 4, erector: 5 }), 'pull');
+addGrips('Seated Cable Row', 'cable', 'horizontal-pull',
+  shift(ROW, { rhomboid: 6, trap_mid: 4 }), 'pull');
+addGrips('Inverted Row', 'bodyweight', 'horizontal-pull',
+  shift(ROW, { rhomboid: 6, abs_upper: 6, glute_max: 3 }), 'pull');
+addGrips('Machine Pulldown', 'machine', 'vertical-pull',
+  shift(PULLUP, EQUIP_SHIFT.machine), 'pull');
+addGrips('Smith Machine Row', 'smith', 'horizontal-pull',
+  shift(ROW, EQUIP_SHIFT.smith), 'pull');
+
+/* Behind-the-neck work is grip-sensitive enough that the plain version on its
+   own was misleading. */
+const BTN_PULLDOWN = shift(PULLUP,
+  { trap_mid: 6, rhomboid: 5, rotator_cuff: 4, biceps: -4 });
+addGrips('Behind-the-Neck Lat Pulldown', 'cable', 'vertical-pull', BTN_PULLDOWN, 'pull');
+addGrips('Behind-the-Neck Pull-Up', 'bodyweight', 'vertical-pull', BTN_PULLDOWN, 'pull');
+add('Behind-the-Neck Pull-Up', 'bodyweight', 'vertical-pull', BTN_PULLDOWN);
+
+addGrips('Barbell Shrug', 'barbell', 'back-isolation', shift(SHRUG, {}), 'pull');
+
+/* --- curling -------------------------------------------------------------- */
+/* EZ bar curls, seated and standing, in every grip. The cambered bar is the
+   most common way people actually train biceps, and grip width on it changes
+   which head leads. */
+[['EZ Bar', 'ezbar'], ['Barbell', 'barbell']].forEach(function (bar) {
+  ['Standing', 'Seated'].forEach(function (stance) {
+    const base = stance + ' ' + bar[0] + ' Curl';
+    const m = shift(CURL, stance === 'Seated' ? { delt_front: -3, biceps: 3 } : {});
+    add(base, bar[1], 'biceps-isolation', m);
+    addGrips(base, bar[1], 'biceps-isolation', m, 'curl');
+  });
+});
+
+addGrips('EZ Bar Curl', 'ezbar', 'biceps-isolation', shift(CURL, {}), 'curl');
+addGrips('Barbell Curl', 'barbell', 'biceps-isolation', shift(CURL, {}), 'curl');
+addGrips('Preacher Curl', 'ezbar', 'biceps-isolation',
+  { biceps: 62, brachialis: 26, forearm_flex: 12 }, 'curl');
+addGrips('Cable Curl', 'cable', 'biceps-isolation', shift(CURL, EQUIP_SHIFT.cable), 'curl');
+addGrips('Spider Curl', 'ezbar', 'biceps-isolation',
+  { biceps: 64, brachialis: 24, forearm_flex: 12 }, 'curl');
+
+/* =============================================================================
    WRITE OUT
    ============================================================================= */
 

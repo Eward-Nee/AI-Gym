@@ -334,8 +334,8 @@
           U.h('div', [
             U.h('h2', 'Rank'),
             U.h('.card-sub', 'Eight tiers, Wood to Diamond, measured against the world ' +
-              'record for your bodyweight. Your rank is whatever your WEAKEST trained ' +
-              'movement can hold.')
+              'record for your bodyweight. Your rank is the AVERAGE across every ' +
+              'movement you train.')
           ])
         ]),
         C.rankCard(r, { large: true })
@@ -343,7 +343,7 @@
       U.h('.card', [
         U.h('.card-head', [U.h('h2', 'The ladder')]),
         U.h('.stack-sm', App.Ranks.RANKS.map(function (x) {
-          const done = r.floor >= x.wr;
+          const done = r.average >= x.wr;
           return U.h('.row', { style: { opacity: done ? '1' : '0.55' } }, [
             U.h('.rank-medal', {
               style: { '--rank-color': x.color, width: '36px', height: '36px',
@@ -353,10 +353,10 @@
             U.h('div', { style: { flex: 1, minWidth: 0 } }, [
               U.h('div', { style: { fontWeight: '580' },
                 text: x.name + (x.elite ? ' · Elite' : '') }),
-              U.h('.u-xs.u-muted', { text: x.wr + '% of world record — in every exercise' })
+              U.h('.u-xs.u-muted', { text: x.wr + '% of world record — averaged' })
             ]),
             done ? U.h('span.badge.badge-good', 'held')
-                 : U.h('span.u-xs.u-muted', { text: '+' + U.num(x.wr - r.floor, 1) + '%' })
+                 : U.h('span.u-xs.u-muted', { text: '+' + U.num(x.wr - r.average, 1) + '%' })
           ]);
         }))
       ])
@@ -369,7 +369,7 @@
           U.h('h2', 'Distance from the world record'),
           U.h('.card-sub', '100% is the world record for that movement at ' +
             App.Store.getSettings().bodyweight + ' ' + App.Store.getSettings().units +
-            '. The lowest row is the one setting your rank.')
+            '. Your rank is the average of these rows.')
         ])
       ]),
       r.scored.length ? U.h('.table-wrap', [U.h('table.tbl', [
@@ -384,7 +384,7 @@
             U.h('td', [
               U.h('div', { style: { fontWeight: isFloor ? '680' : '500' }, text: s.name }),
               isFloor
-                ? U.h('.u-xs', { style: { color: 'var(--bad)' }, text: 'sets your rank' })
+                ? U.h('.u-xs', { style: { color: 'var(--bad)' }, text: 'lowest — drags the average' })
                 : (s.rankBearing ? null
                     : U.h('.u-xs.u-muted', 'not rank-bearing — no load recorded'))
             ]),

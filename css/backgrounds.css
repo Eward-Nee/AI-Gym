@@ -37,14 +37,14 @@
    ============================================================================= */
 
 :root {
-  --bg-alpha: 0.34;        /* background layer opacity, per mode below */
-  --surface-alpha: 74%;    /* cards, modals, topbar */
-  --surface2-alpha: 62%;   /* nested blocks, tiles, table headers */
+  --bg-alpha: 0.46;        /* background layer opacity, per mode below */
+  --surface-alpha: 76%;    /* cards, modals, topbar */
+  --surface2-alpha: 66%;   /* nested blocks, tiles, table headers */
 }
 [data-mode='dark'] {
-  --bg-alpha: 0.62;
-  --surface-alpha: 66%;
-  --surface2-alpha: 52%;
+  --bg-alpha: 0.92;
+  --surface-alpha: 60%;
+  --surface2-alpha: 48%;
 }
 
 /* A bold background washes a dark panel LIGHTER, which eats the contrast of
@@ -57,12 +57,14 @@
   --text-2: #c6cedb;
   --text-3: #9aa4b3;
 }
-/* AMOLED stays lower: the point of the mode is unlit pixels, so the background
-   is present without lighting up a large area of the panel. */
+/* AMOLED is the BOLDEST, not the faintest. Against pure black a translucent
+   colour has nothing to blend with, so the same alpha that reads clearly on a
+   dark-grey ground looks washed out here. Unlit pixels stay unlit either way —
+   the layers are gradients, so most of the panel is still black. */
 [data-mode='amoled'] {
-  --bg-alpha: 0.44;
-  --surface-alpha: 58%;
-  --surface2-alpha: 44%;
+  --bg-alpha: 1;
+  --surface-alpha: 57%;
+  --surface2-alpha: 45%;
 }
 
 /* ---- the layer host ------------------------------------------------------ */
@@ -93,6 +95,7 @@
 [data-bg='glow']   .bg-l1, [data-bg='glow']   .bg-l2,
 [data-bg='strata'] .bg-l1, [data-bg='strata'] .bg-l2,
 [data-bg='aurora'] .bg-l1, [data-bg='aurora'] .bg-l2, [data-bg='aurora'] .bg-l3,
+[data-bg='aurora'] .bg-l4, [data-bg='aurora'] .bg-l5, [data-bg='aurora'] .bg-l6,
 [data-bg='orbs']   .bg-l1, [data-bg='orbs']   .bg-l2, [data-bg='orbs']   .bg-l3,
 [data-bg='pulse']  .bg-l1, [data-bg='pulse']  .bg-l2, [data-bg='pulse']  .bg-l3,
 [data-bg='tide']   .bg-l1, [data-bg='tide']   .bg-l2 {
@@ -168,7 +171,7 @@
   background: radial-gradient(54% 54% at 80% 32%, var(--c3), transparent 100%);
 }
 [data-bg='mesh'] .bg-l3 {
-  background: radial-gradient(62% 62% at 50% 84%, var(--c5), transparent 100%);
+  background: radial-gradient(62% 62% at 50% 84%, var(--c4), transparent 100%);
 }
 
 /* --- 2. Grid: engineering paper, tinted -------------------------------------- */
@@ -180,12 +183,12 @@
           mask-image: radial-gradient(120% 90% at 50% 8%, #000 20%, transparent 76%);
 }
 [data-bg='grid'] .bg-l2 {
-  background: radial-gradient(72% 52% at 50% 14%, var(--c5), transparent 100%);
+  background: radial-gradient(72% 52% at 50% 14%, var(--c4), transparent 100%);
 }
 
 /* --- 3. Glow: one light source above, one below ------------------------------ */
 [data-bg='glow'] .bg-l1 {
-  background: radial-gradient(82% 58% at 50% 8%, var(--c5), transparent 100%);
+  background: radial-gradient(82% 58% at 50% 8%, var(--c4), transparent 100%);
 }
 [data-bg='glow'] .bg-l2 {
   background: radial-gradient(86% 58% at 50% 92%, var(--c3), transparent 100%);
@@ -199,7 +202,7 @@
           mask-image: linear-gradient(160deg, #000 5%, transparent 88%);
 }
 [data-bg='strata'] .bg-l2 {
-  background: radial-gradient(54% 54% at 76% 18%, var(--c5), transparent 100%);
+  background: radial-gradient(54% 54% at 76% 18%, var(--c4), transparent 100%);
 }
 
 /* =============================================================================
@@ -208,38 +211,102 @@
    drift out of phase and the motion never visibly loops.
    ============================================================================= */
 
-/* --- 5. Aurora: three sheets on different orbits ----------------------------- */
+/* --- 5. Aurora ---------------------------------------------------------------
+   A real aurora is vertical curtains of light drifting across a broad colour
+   wash, not two blobs sliding about. Six layers:
+
+     l1..l3  broad colour sheets on long, mismatched orbits
+     l4, l5  CURTAINS — banded repeating gradients, skewed and translated
+             sideways at different speeds, which is what reads as columns of
+             light rising off the horizon
+     l6      a slow horizon glow whose opacity breathes, so the whole thing
+             keeps changing rather than looping visibly
+
+   Nothing here is blurred; the softness is in the gradient stops, and every
+   keyframe is transform or opacity so it all stays on the compositor.
+   -------------------------------------------------------------------------- */
 [data-bg='aurora'] .bg-l1 {
-  background: radial-gradient(52% 52% at 30% 34%, var(--c5), transparent 100%);
+  background: radial-gradient(48% 48% at 26% 30%, var(--c4), transparent 100%);
   animation: aurora-1 19s cubic-bezier(.45,.05,.55,.95) infinite alternate;
 }
 [data-bg='aurora'] .bg-l2 {
-  background: radial-gradient(56% 56% at 72% 62%, var(--c4), transparent 100%);
+  background: radial-gradient(52% 52% at 74% 58%, var(--c4), transparent 100%);
   animation: aurora-2 27s cubic-bezier(.45,.05,.55,.95) infinite alternate;
 }
 [data-bg='aurora'] .bg-l3 {
-  background: radial-gradient(62% 46% at 52% 20%, var(--c3), transparent 100%);
+  background: radial-gradient(60% 44% at 50% 16%, var(--c3), transparent 100%);
   animation: aurora-3 23s cubic-bezier(.45,.05,.55,.95) infinite alternate;
 }
+
+/* Curtains. The repeating gradient gives the banding; the mask fades them out
+   top and bottom so they read as light rather than as stripes. */
+[data-bg='aurora'] .bg-l4,
+[data-bg='aurora'] .bg-l5 {
+  inset: -40% -60%;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 62%, transparent 96%);
+          mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 62%, transparent 96%);
+}
+[data-bg='aurora'] .bg-l4 {
+  background: repeating-linear-gradient(97deg,
+    transparent 0 44px,
+    var(--c5) 60px 76px,
+    transparent 92px 150px,
+    var(--c4) 168px 188px,
+    transparent 210px 300px);
+  animation: curtain-a 21s ease-in-out infinite alternate;
+}
+[data-bg='aurora'] .bg-l5 {
+  background: repeating-linear-gradient(83deg,
+    transparent 0 70px,
+    var(--c3) 96px 118px,
+    transparent 150px 250px,
+    var(--c5) 268px 282px,
+    transparent 320px 420px);
+  animation: curtain-b 31s ease-in-out infinite alternate;
+}
+
+/* Horizon glow: the one layer that changes brightness, which keeps the scene
+   from settling into an obvious loop. */
+[data-bg='aurora'] .bg-l6 {
+  background: radial-gradient(78% 40% at 50% 96%, var(--c4), transparent 100%);
+  animation: aurora-breathe 13s ease-in-out infinite;
+}
+
 @keyframes aurora-1 {
-  0%   { transform: translate3d(-16%, -12%, 0) scale(1.00) rotate(0deg); }
-  50%  { transform: translate3d(10%, 14%, 0)  scale(1.35) rotate(9deg); }
-  100% { transform: translate3d(20%, -8%, 0)  scale(1.10) rotate(-6deg); }
+  0%   { transform: translate3d(-18%, -14%, 0) scale(1.00) rotate(0deg); }
+  50%  { transform: translate3d(12%, 16%, 0)  scale(1.38) rotate(10deg); }
+  100% { transform: translate3d(22%, -10%, 0) scale(1.12) rotate(-7deg); }
 }
 @keyframes aurora-2 {
-  0%   { transform: translate3d(18%, 10%, 0)   scale(1.25) rotate(0deg); }
-  50%  { transform: translate3d(-14%, -16%, 0) scale(1.00) rotate(-12deg); }
-  100% { transform: translate3d(-20%, 12%, 0)  scale(1.40) rotate(7deg); }
+  0%   { transform: translate3d(20%, 12%, 0)   scale(1.28) rotate(0deg); }
+  50%  { transform: translate3d(-16%, -18%, 0) scale(1.00) rotate(-13deg); }
+  100% { transform: translate3d(-22%, 14%, 0)  scale(1.44) rotate(8deg); }
 }
 @keyframes aurora-3 {
-  0%   { transform: translate3d(0, -18%, 0)   scale(1.15) rotate(4deg); }
-  50%  { transform: translate3d(16%, 8%, 0)   scale(1.45) rotate(-8deg); }
-  100% { transform: translate3d(-18%, -4%, 0) scale(1.05) rotate(10deg); }
+  0%   { transform: translate3d(0, -20%, 0)   scale(1.16) rotate(5deg); }
+  50%  { transform: translate3d(18%, 10%, 0)  scale(1.48) rotate(-9deg); }
+  100% { transform: translate3d(-20%, -6%, 0) scale(1.06) rotate(11deg); }
+}
+/* Curtains travel a long way sideways and shear as they go, so the columns
+   lean and widen the way real ones do. */
+@keyframes curtain-a {
+  0%   { transform: translate3d(-14%, 4%, 0) skewX(-9deg)  scaleY(1.00); opacity: .55; }
+  40%  { transform: translate3d(2%, -3%, 0)  skewX(4deg)   scaleY(1.22); opacity: 1; }
+  100% { transform: translate3d(16%, 2%, 0)  skewX(12deg)  scaleY(0.92); opacity: .7; }
+}
+@keyframes curtain-b {
+  0%   { transform: translate3d(12%, -2%, 0)  skewX(8deg)   scaleY(1.15); opacity: .8; }
+  55%  { transform: translate3d(-6%, 5%, 0)   skewX(-6deg)  scaleY(0.95); opacity: .45; }
+  100% { transform: translate3d(-18%, -4%, 0) skewX(-14deg) scaleY(1.3);  opacity: 1; }
+}
+@keyframes aurora-breathe {
+  0%, 100% { transform: scale(1.00); opacity: .45; }
+  50%      { transform: scale(1.22); opacity: 1; }
 }
 
 /* --- 6. Orbs: discrete bodies on slow independent orbits --------------------- */
 [data-bg='orbs'] .bg-l1 {
-  background: radial-gradient(30% 30% at 24% 28%, var(--c5), transparent 100%);
+  background: radial-gradient(30% 30% at 24% 28%, var(--c4), transparent 100%);
   animation: orb-1 21s ease-in-out infinite alternate;
 }
 [data-bg='orbs'] .bg-l2 {
@@ -265,7 +332,7 @@
 
 /* --- 7. Pulse: a slow breath from the centre --------------------------------- */
 [data-bg='pulse'] .bg-l1 {
-  background: radial-gradient(42% 42% at 50% 44%, var(--c5), transparent 100%);
+  background: radial-gradient(42% 42% at 50% 44%, var(--c4), transparent 100%);
   animation: pulse-in 7s ease-in-out infinite;
 }
 [data-bg='pulse'] .bg-l2 {
@@ -328,17 +395,17 @@
   background:
     radial-gradient(54% 54% at 22% 22%, var(--c4), transparent 100%),
     radial-gradient(54% 54% at 80% 32%, var(--c3), transparent 100%),
-    radial-gradient(62% 62% at 50% 84%, var(--c5), transparent 100%);
+    radial-gradient(62% 62% at 50% 84%, var(--c4), transparent 100%);
 }
 .bg-swatch[data-preview='grid']::after {
   background:
     linear-gradient(to right, var(--c4) 1px, transparent 1px) 0 0 / 12px 12px,
     linear-gradient(to bottom, var(--c4) 1px, transparent 1px) 0 0 / 12px 12px,
-    radial-gradient(80% 60% at 50% 10%, var(--c5), transparent 100%);
+    radial-gradient(80% 60% at 50% 10%, var(--c4), transparent 100%);
 }
 .bg-swatch[data-preview='glow']::after {
   background:
-    radial-gradient(82% 58% at 50% 8%, var(--c5), transparent 100%),
+    radial-gradient(82% 58% at 50% 8%, var(--c4), transparent 100%),
     radial-gradient(86% 58% at 50% 92%, var(--c3), transparent 100%);
 }
 .bg-swatch[data-preview='strata']::after {
@@ -347,18 +414,18 @@
 }
 .bg-swatch[data-preview='aurora']::after {
   background:
-    radial-gradient(52% 52% at 30% 34%, var(--c5), transparent 100%),
-    radial-gradient(56% 56% at 72% 62%, var(--c4), transparent 100%);
+    radial-gradient(52% 52% at 30% 34%, var(--c4), transparent 100%),
+    radial-gradient(56% 56% at 72% 62%, var(--c3), transparent 100%);
   animation: aurora-1 19s cubic-bezier(.45,.05,.55,.95) infinite alternate;
 }
 .bg-swatch[data-preview='orbs']::after {
   background:
-    radial-gradient(30% 30% at 24% 28%, var(--c5), transparent 100%),
-    radial-gradient(30% 30% at 76% 46%, var(--c4), transparent 100%);
+    radial-gradient(30% 30% at 24% 28%, var(--c4), transparent 100%),
+    radial-gradient(30% 30% at 76% 46%, var(--c3), transparent 100%);
   animation: orb-1 21s ease-in-out infinite alternate;
 }
 .bg-swatch[data-preview='pulse']::after {
-  background: radial-gradient(46% 46% at 50% 46%, var(--c5), transparent 100%);
+  background: radial-gradient(46% 46% at 50% 46%, var(--c4), transparent 100%);
   animation: pulse-in 7s ease-in-out infinite;
 }
 .bg-swatch[data-preview='tide']::after {

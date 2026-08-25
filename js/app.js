@@ -14,7 +14,7 @@
     { id: 'settings',  title: 'Control Panel', sub: 'Account, sync, theme',   icon: 'settings' }
   ];
 
-  const VERSION = '0.2.0';
+  const VERSION = '0.3.0';
 
   /* Four static, four animated. All derive their colour from the active scheme
      and mode, so they never fight the theme. */
@@ -122,7 +122,8 @@
    */
   function buildBackground() {
     const fx = U.h('.bg-fx', { 'aria-hidden': 'true' }, [
-      U.h('i.bg-l1'), U.h('i.bg-l2'), U.h('i.bg-l3')
+      U.h('i.bg-l1'), U.h('i.bg-l2'), U.h('i.bg-l3'),
+      U.h('i.bg-l4'), U.h('i.bg-l5'), U.h('i.bg-l6')
     ]);
     document.body.appendChild(fx);
   }
@@ -221,6 +222,7 @@
         updateSyncBadge();
         /* Best-effort: ask the browser to keep our data through storage pressure. */
         App.DB.persist();
+        App.Update.boot();
         return maybeFirstRun();
       })
       .catch(function (err) {

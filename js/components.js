@@ -108,9 +108,9 @@
     ]);
   }
 
-  /** Says plainly which lift is holding the rank down, and by how much. */
+  /** Explains what the average is made of, and what is dragging it down. */
   function wrExplainer(r) {
-    if (!r.weakest) {
+    if (!r.breadth) {
       return U.h('.callout', [
         U.h('.callout-bar'),
         U.h('div', [U.h('strong', 'Nothing scored yet.'),
@@ -118,20 +118,29 @@
           'record for your bodyweight.'])
       ]);
     }
-    const units = App.Store.getSettings().units;
-    return U.h('.callout', [
-      U.h('.callout-bar'),
-      U.h('div', [
+    return U.h('.stack-sm', [
+      U.h('.callout', [
+        U.h('.callout-bar'),
         U.h('div', [
-          U.h('strong', 'Your rank is set by your weakest lift: '),
-          r.weakest.name, ' at ', U.num(r.weakest.score, 1), '% of the world record',
-          r.weakest.record ? ' (' + U.num(r.weakest.e1rm, 0) + ' / ' +
-            U.num(r.weakest.record, 0) + ' ' + units + ')' : ''
-        ]),
-        U.h('.u-xs.u-muted', { style: { marginTop: '4px' },
-          text: 'Every rank needs that percentage in every exercise you train. ' +
-            'Diamond is 99% — a world record in all of them.' })
-      ])
+          U.h('div', [
+            U.h('strong', 'Your rank is the average across all ' + r.breadth +
+              ' movements you train: '),
+            U.num(r.average, 1), '% of world record.'
+          ]),
+          r.weakest ? U.h('.u-xs.u-muted', { style: { marginTop: '4px' },
+            text: 'Pulling it down hardest: ' + r.weakest.name + ' at ' +
+              U.num(r.weakest.score, 1) + '%.' }) : null
+        ])
+      ]),
+      r.breadthCapped ? U.h('.callout.is-warn', [
+        U.h('.callout-bar'),
+        U.h('div', [
+          U.h('strong', 'Held below Platinum: not enough movements. '),
+          'The top two ranks need at least ' + r.breadthNeeded +
+          ' scored movements so a single heavy lift cannot average its way to the top. ' +
+          'You have ' + r.breadth + '.'
+        ])
+      ]) : null
     ]);
   }
 

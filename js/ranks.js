@@ -21,25 +21,29 @@
 (function (App) {
   'use strict';
 
-  /* `wr` is the percentage of a world record required in EVERY trained
-     movement to hold the rank.
+  /* `wr` is the AVERAGE percentage of a world record across everything you
+     train that is needed to hold the rank.
 
-     Platinum stays at 90% ("close to complete") and Diamond at 99%, both fixed
-     by request. The rungs below them are eased so the early climb is not one
-     enormous first step: a committed amateur should be able to leave Wood, and
-     the ladder still gets brutal near the top, where the percentages look
-     evenly spaced but the difficulty is anything but — closing 72% -> 90% of a
-     world record is a far larger job than 22% -> 33%. */
+     Averaging is far more forgiving than the weakest-lift rule it replaces —
+     one light accessory no longer caps you — so the thresholds go back to the
+     strict spacing to compensate. Reaching Gold means averaging 78% of a world
+     record across every movement you log, which is a serious athlete; Diamond
+     means averaging 99%, which is world-record standard across the board. */
   const RANKS = [
     { id: 'wood',     name: 'Wood',     wr: 0,  color: '#8a6242' },
-    { id: 'stone',    name: 'Stone',    wr: 22, color: '#8d9299' },
-    { id: 'bronze',   name: 'Bronze',   wr: 33, color: '#c1793a' },
-    { id: 'iron',     name: 'Iron',     wr: 45, color: '#6b7480' },
-    { id: 'silver',   name: 'Silver',   wr: 57, color: '#b9c2cc' },
-    { id: 'gold',     name: 'Gold',     wr: 72, color: '#e0b23c' },
+    { id: 'stone',    name: 'Stone',    wr: 30, color: '#8d9299' },
+    { id: 'bronze',   name: 'Bronze',   wr: 42, color: '#c1793a' },
+    { id: 'iron',     name: 'Iron',     wr: 54, color: '#6b7480' },
+    { id: 'silver',   name: 'Silver',   wr: 65, color: '#b9c2cc' },
+    { id: 'gold',     name: 'Gold',     wr: 78, color: '#e0b23c' },
     { id: 'platinum', name: 'Platinum', wr: 90, color: '#63d3c4' },
     { id: 'diamond',  name: 'Diamond',  wr: 99, color: '#7fc4f5', elite: true }
   ];
+
+  /* The top two ranks additionally need breadth. Without it a single heavy
+     deadlift and nothing else would average 99% and hand out Diamond, which
+     would make the hardest tier the easiest one to game. */
+  const BREADTH_FOR_TOP = 8;
 
   const MAX_POINTS = 3200;
   const REF_BW = 80;          /* kg — bodyweight the ratios below are quoted at */
@@ -317,11 +321,21 @@
     }
     scored.sort(function (a, b) { return b.score - a.score; });
 
-    /* The rank is set by the weakest rank-bearing movement: "at least this good
-       at everything you do". */
+    /* The rank is the AVERAGE across every rank-bearing movement, so one weak
+       accessory drags the number down without capping it outright. */
     const bearing = scored.filter(function (s) { return s.rankBearing; });
     const weakest = bearing.length ? bearing[bearing.length - 1] : null;
-    const floor = weakest ? weakest.score : 0;
+    const average = bearing.length
+      ? bearing.reduce(function (a, s) { return a + s.score; }, 0) / bearing.length
+      : 0;
+
+    let floor = average;
+
+    /* Breadth gate on the top two tiers — see BREADTH_FOR_TOP. */
+    const topRank = RANKS[RANKS.length - 1];
+    const platinum = RANKS[RANKS.length - 2];
+    const breadthOk = bearing.length >= BREADTH_FOR_TOP;
+    if (!breadthOk && floor >= platinum.wr) floor = platinum.wr - 0.01;
 
     const rank = rankFor(floor);
     const idx = RANKS.indexOf(rank);
@@ -340,9 +354,13 @@
       rank: rank,
       next: next,
       progress: progress,
-      /* how many more percentage points of world record the weakest lift needs */
+      /* how many more percentage points the AVERAGE needs to lift by */
       toNext: next ? Math.max(0, Math.round((next.wr - floor) * 10) / 10) : 0,
       floor: Math.round(floor * 10) / 10,
+      average: Math.round(average * 10) / 10,
+      breadthOk: breadthOk,
+      breadthNeeded: BREADTH_FOR_TOP,
+      breadthCapped: !breadthOk && average >= platinum.wr,
       weakest: weakest,
       strongest: scored[0] || null,
       bodyweight: bw,
@@ -358,7 +376,7 @@
       rankBearing: bearing,
       breadth: bearing.length,
       weakestGroupScore: Math.round(floor),
-      eliteGate: floor >= RANKS[RANKS.length - 1].wr,
+      eliteGate: floor >= topRank.wr && breadthOk,
       recentSessions: recentSessions,
       recentVolume: recentVolume,
       groupVolume: groupVolume

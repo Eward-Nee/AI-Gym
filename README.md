@@ -1,16 +1,17 @@
 # AI-Gym
 
-**Version 0.2.0**
+**Version 0.3.0**
 
 A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No build step, no framework, no npm install, no CDN — open it and it works.
 
 - **Built for the phone**: bottom tab bar, bottom-sheet dialogs, 40px+ touch targets, one column by default, and charts that measure their container instead of being scaled to fit
-- **408 built-in exercises**, each with a weighted muscle split and an equipment tag
+- **468 built-in exercises**, each with a weighted muscle split, an equipment tag and its own world record — including wide/close grip variants across the bar movements
 - **Anatomical heat figures** (anterior + posterior) on every exercise, workout, session and report
 - **Workout builder** with sets, reps, load, per-set and per-exercise rest, drag reordering and smart push/pull/legs grouping
 - **Session runner** with a rest timer and live volume
 - **Progression reports** with least-squares trend lines and a 60-day forecast band
-- **Eight ranks scored against world records** for your bodyweight — Diamond is 99% of a world record in *every* exercise you train
+- **Eight ranks scored against world records** for your bodyweight — your rank is the average across everything you train, and Diamond is 99%
+- **In-app update check** against GitHub releases, with an update that never costs you work in progress
 - **Friends and head-to-head comparison** through a shared hub
 - **Three storage tiers**: IndexedDB always, your own Supabase optionally, a shared hub only for friends
 - **Light / dark / AMOLED**, eight colour schemes that also drive the heat gradient, and eight page backgrounds (four static, four animated) built from that same palette — with every panel going translucent so the background reads through the whole page
@@ -51,6 +52,7 @@ js/
   supabase.js         dependency-free Supabase REST + auth client
   sync.js             local ⇄ personal project ⇄ hub orchestration
   components.js       shared UI (pickers, editors, rank card, heat panel)
+  update.js           version check + resume-after-reload snapshots
   pages/*.js          the five pages
   app.js              shell, router, theme
 sql/
@@ -59,6 +61,7 @@ sql/
 tools/
   serve.js            zero-dependency static server
   gen-exercises.js    regenerates js/data/exercises.js
+version.json          the deployed version, used by the update check
 docs/SETUP.md         the full Supabase walkthrough
 ```
 
@@ -74,7 +77,7 @@ Dependencies run one way: `pages → components → store → db`. Nothing above
 node tools/gen-exercises.js
 ```
 
-The generator expresses the library as base movements plus variant matrices (equipment × angle × grip × stance). A bench press is one muscle map that incline/decline/dumbbell/smith variants *shift* rather than restate, which is what keeps 408 movements internally consistent instead of drifting apart the way a hand-typed list does. It refuses to write if any exercise references a muscle id that is not in the taxonomy.
+The generator expresses the library as base movements plus variant matrices (equipment × angle × grip × stance). A bench press is one muscle map that incline/decline/dumbbell/smith variants *shift* rather than restate, which is what keeps 468 movements internally consistent instead of drifting apart the way a hand-typed list does. It refuses to write if any exercise references a muscle id that is not in the taxonomy.
 
 Users can add, edit and delete exercises freely; those live in IndexedDB and override the built-ins by id.
 
@@ -82,33 +85,33 @@ Users can add, edit and delete exercises freely; those live in IndexedDB and ove
 
 ## How ranks work
 
-The yardstick is the **world record for your bodyweight**, and your rank is set by your **weakest** trained movement. A rank therefore means "I am at least this good at everything I do" — never "I have one big lift".
+The yardstick is the **world record for your bodyweight**, and your rank is the **average** across every movement you train. One weak accessory drags the number down without capping you outright.
 
-| Rank | Needs, in every exercise you train |
+| Rank | Needs, averaged across everything you train |
 |---|---|
 | Wood | — |
-| Stone | 22% of a world record |
-| Bronze | 33% |
-| Iron | 45% |
-| Silver | 57% |
-| Gold | 72% |
+| Stone | 30% of a world record |
+| Bronze | 42% |
+| Iron | 54% |
+| Silver | 65% |
+| Gold | 78% |
 | Platinum | 90% — close to complete |
 | **Diamond** | **99% — a world record in all of them** |
 
 Records are stored as a 1RM-to-bodyweight ratio at an 80 kg reference and re-scaled allometrically (strength ≈ mass^⅔), because absolute strength tracks cross-sectional area. A 60 kg lifter is therefore held to a higher bodyweight multiple than a 120 kg lifter for the same rank. 1RM uses Epley up to 10 reps and an Epley/Brzycki average beyond that, where Epley alone starts to overestimate.
 
-The ladder is steep at the top and gentler at the bottom. For an 80 kg lifter, held back by their curl in every case:
+The ladder is steep at the top and gentler at the bottom. For an 80 kg lifter:
 
-| Lifter | Bench / Squat / Deadlift / Curl | Floor | Rank |
+| Lifter | Bench / Squat / Deadlift / Curl | Average | Rank |
 |---|---|---|---|
-| Beginner | 40 / 60 / — / 10 | 12% | Wood |
-| Novice | 70 / 100 / 120 / 15 | 18% | Wood |
-| Intermediate | 100 / 140 / 180 / 20 | 24% | Stone |
-| Strong amateur | 130 / 180 / 230 / 32 | 39% | Bronze |
-| Advanced | 150 / 210 / 260 / 45 | 55% | Iron |
-| Near-elite | 200 / 290 / 330 / 75 | 91% | Platinum |
+| Beginner | 40 / 60 / — / 10 | 18% | Wood |
+| Intermediate | 100 / 140 / 180 / 20 | 45% | Bronze |
+| Advanced | 150 / 210 / 260 / 45 | 71% | Silver |
+| Near-elite | 200 / 290 / 330 / 75 | 98% | Gold* |
 
-The percentages look evenly spaced but the difficulty is anything but — closing 72% → 90% is a far larger job than 22% → 33%.
+\* capped — see below.
+
+**The top two ranks need breadth.** Platinum and Diamond additionally require at least **8 scored movements**. Without that, a single heavy deadlift and nothing else would average 99% and hand out Diamond, making the hardest tier the easiest one to game. The near-elite lifter above trains only four movements, so they are held at Gold until they log more.
 
 ### Per-exercise records
 
@@ -116,9 +119,9 @@ Every exercise carries its own world record, entered when you create it and pre-
 
 The pattern table is only a fallback. "The vertical-pull record" is a coarse stand-in for a hundred different movements, and the person doing the lift knows their sport better than a lookup table does, so a record you enter always wins.
 
-**Not everything is rank-bearing.** A movement counts toward the floor only if it carries a recorded external load, or is a bodyweight movement whose whole point is maximal effort (pull-up, dip, push-up, pistol). A plank is scored and shown but cannot set your rank, since holding a position is not a one-rep max and crediting it with full bodyweight would let it outscore a real lift.
+**Not everything is rank-bearing.** A movement counts toward the average only if it carries a recorded external load, or is a bodyweight movement whose whole point is maximal effort (pull-up, dip, push-up, pistol). A plank is scored and shown but cannot set your rank, since holding a position is not a one-rep max and crediting it with full bodyweight would let it outscore a real lift.
 
-Standards are held per movement *pattern*, not per exercise, so a lat pulldown is measured against the vertical-pull record rather than against a pulldown-specific one. That is a deliberate approximation — the alternative is a hand-maintained record for all 408 movements.
+Standards are held per movement *pattern*, not per exercise, so a lat pulldown is measured against the vertical-pull record rather than against a pulldown-specific one. That is a deliberate approximation — though a record you enter on any individual exercise overrides it.
 
 ---
 
@@ -141,6 +144,12 @@ Backgrounds are three absolutely-positioned layers in a fixed host, each built f
 Two knobs in [css/backgrounds.css](css/backgrounds.css), both mode-aware: `--bg-alpha` (how strong the background reads) and `--surface-alpha` (how transparent panels are). Dark text on a washed-out light panel loses contrast much faster than light text on a dark one, so the values differ per mode, and dark modes also lift `--text-2`/`--text-3` a step while a background is active — a bold background washes a dark panel *lighter*, which eats light-on-dark contrast. Checked across all 144 mode × scheme × palette-stop combinations: worst-case body text 6.2:1, worst muted text 3.2:1, zero WCAG AA failures.
 
 One gotcha worth recording: `radial-gradient(closest-side …)` anchored at an edge (`at 50% 0%`) collapses to a zero radius and paints nothing. Every gradient here uses explicit size pairs instead.
+
+### Updating
+
+The app checks GitHub releases for a newer version (falling back to the deployed `version.json`, since a build can be live before anyone tags a release) at most four times a day, and offers an update. There is also a manual check in the Control Panel.
+
+**An update never costs you work in progress.** Pages register a snapshot provider; the snapshot is written to IndexedDB on every edit and on `pagehide`/`visibilitychange`, so an OS-initiated kill is survivable too, not just our own reload. Take an update mid-workout and you come back to the same sets ticked, the same weights entered, and the elapsed clock still counting from the original start rather than restarting at zero. The reload carries a cache-busting query so an edge cache hands over the new build rather than the one it already has.
 
 ### Running inside a web-to-app wrapper
 

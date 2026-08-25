@@ -483,16 +483,38 @@
      RUNNER — log a session
      ======================================================================== */
 
+  /**
+   * The runner has to survive a reload — an update taken mid-session must not
+   * cost the user their sets. The live state is snapshotted to IndexedDB on
+   * every edit, so this first looks for one belonging to this workout and, if
+   * it is there, resumes from it instead of starting fresh.
+   */
   function drawRunner() {
     const w = App.Store.getWorkout(currentId);
     if (!w) { App.Shell.navigate('workouts'); return; }
 
-    const startedAt = Date.now();
+    U.clear(root);
+    root.appendChild(U.h('.card', [
+      U.h('.row', [U.h('.spinner'), U.h('span.u-sm.u-muted', 'Loading session…')])
+    ]));
+
+    App.Update.takeSnapshot().then(function (snap) {
+      const resume = snap && snap.data && snap.data.kind === 'runner' &&
+        snap.data.workoutId === w.id ? snap.data : null;
+      U.clear(root);
+      buildRunner(w, resume);
+    });
+  }
+
+  function buildRunner(w, resume) {
+    /* Resuming keeps the ORIGINAL start time, so the elapsed clock carries on
+       rather than restarting from zero. */
+    const startedAt = resume ? resume.startedAt : Date.now();
     const units = App.Store.getSettings().units;
 
     /* Prefill from the plan, and from the last time this workout was done. */
     const previous = App.Store.allSessions().find(function (s) { return s.workoutId === w.id; });
-    const session = {
+    const session = resume ? resume.session : {
       workoutId: w.id,
       name: w.name,
       date: U.today(),
@@ -510,6 +532,21 @@
         };
       })
     };
+
+    /* Snapshot on every edit. Debounced because ticking through a set of ten
+       should not mean ten writes. */
+    App.Update.registerSnapshot(function () {
+      return { kind: 'runner', workoutId: w.id, startedAt: startedAt, session: session };
+    });
+    const persist = U.debounce(function () { App.Update.saveSnapshot(); }, 400);
+
+    if (resume) {
+      const done = session.entries.reduce(function (a, en) {
+        return a + en.sets.filter(function (s) { return s.done; }).length; }, 0);
+      U.toast('Session restored', done + ' set' + (done === 1 ? '' : 's') +
+        ' already logged · ' + U.dur(Math.round((Date.now() - startedAt) / 1000)) +
+        ' elapsed', 'good');
+    }
 
     let restTimer = null, restLeft = 0;
     const timerEl = U.h('.stat-value.is-sm', { text: '0:00' });
@@ -539,7 +576,7 @@
         onclick: function () {
           U.confirm({ title: 'Discard this session?', message: 'Nothing will be saved.',
             confirmLabel: 'Discard', danger: true }).then(function (ok) {
-            if (ok) { stop(); App.Shell.navigate('workouts'); }
+            if (ok) { stop(); App.Update.clearSnapshot(); App.Shell.navigate('workouts'); }
           });
         } }),
       U.h('button.btn.btn-primary.btn-sm', {
@@ -560,6 +597,7 @@
         return;
       }
       stop();
+      App.Update.clearSnapshot();
       App.Store.saveSession(Object.assign({}, session, {
         entries: done,
         endedAt: new Date().toISOString(),
@@ -607,16 +645,18 @@
           U.h('span.set-idx', { text: String(si + 1) }),
           U.h('input.input.input-sm.input-num', {
             type: 'number', min: '0', step: '0.5', value: s.weight,
-            'aria-label': 'Weight', oninput: function () { s.weight = Number(this.value) || 0; }
+            'aria-label': 'Weight', oninput: function () { s.weight = Number(this.value) || 0; persist(); }
           }),
           U.h('input.input.input-sm.input-num', {
             type: 'number', min: '0', step: '1', value: s.reps,
-            'aria-label': 'Reps', oninput: function () { s.reps = Number(this.value) || 0; }
+            'aria-label': 'Reps', oninput: function () { s.reps = Number(this.value) || 0; persist(); }
           }),
           U.h('span.u-xs.u-muted.u-center', {
             text: s.weight && s.reps ? U.num(App.Ranks.e1rm(s.weight, s.reps), 0) : '—'
           }),
-          U.h('button.btn.btn-sm', {
+          /* Reflect s.done in the initial render, not only on click, so a
+             restored session comes back with its ticked sets already ticked. */
+          U.h('button.btn.btn-sm' + (s.done ? '.btn-primary' : ''), {
             type: 'button', html: U.icon('check'), 'aria-label': 'Mark set ' + (si + 1) + ' done',
             onclick: function () {
               s.done = !s.done;
@@ -629,6 +669,7 @@
               cell.textContent = s.weight && s.reps
                 ? U.num(App.Ranks.e1rm(s.weight, s.reps), 0) : '—';
               refreshSummary();
+              persist();
             }
           })
         ]);
@@ -661,7 +702,7 @@
         U.h('.field', { style: { width: '160px' } }, [
           U.h('label.label', 'Date'),
           U.h('input.input.input-sm', { type: 'date', value: session.date,
-            onchange: function () { session.date = this.value; } })
+            onchange: function () { session.date = this.value; persist(); } })
         ])
       ])
     ]));

@@ -80,6 +80,7 @@
       state.settings = Object.assign({}, DEFAULT_SETTINGS, r[4] || {});
 
       if (!state.exercises.length) return seedExercises();
+      return topUpSeedExercises();
     }).then(function () {
       state.sessions.sort(function (a, b) { return (a.date < b.date) ? 1 : -1; });
       reindex();
@@ -113,6 +114,41 @@
     return App.DB.putMany('exercises', rows).then(function () {
       console.info('[store] seeded ' + rows.length + ' exercises');
     });
+  }
+
+  /**
+   * Add built-in movements that shipped in a later version than the one that
+   * first seeded this device. Only genuinely new ids are inserted — anything
+   * already present is left exactly as it is, so an exercise the user edited or
+   * deleted on purpose is never resurrected or overwritten by an update.
+   */
+  function topUpSeedExercises() {
+    const seeds = App.SeedExercises || [];
+    if (!seeds.length) return Promise.resolve(0);
+
+    return App.DB.getMeta('seed.removed', []).then(function (removed) {
+      const gone = new Set(removed || []);
+      const have = new Set(state.exercises.map(function (e) { return e.id; }));
+      const now = new Date().toISOString();
+
+      const fresh = seeds.filter(function (e) {
+        return !have.has(e.id) && !gone.has(e.id);
+      }).map(function (e) {
+        return {
+          id: e.id, name: e.name, equipment: e.equipment, pattern: e.pattern,
+          unilateral: !!e.unilateral, muscles: e.muscles,
+          image: null, notes: '', wr: null, builtin: true, favorite: false,
+          createdAt: now, updatedAt: now
+        };
+      });
+
+      if (!fresh.length) return 0;
+      state.exercises = state.exercises.concat(fresh);
+      return App.DB.putMany('exercises', fresh).then(function () {
+        console.info('[store] added ' + fresh.length + ' new built-in exercises');
+        return fresh.length;
+      });
+    }).catch(function () { return 0; });
   }
 
   /* ---------------------------------------------------------------------------
@@ -170,8 +206,19 @@
   }
 
   function deleteExercise(id) {
+    const removed = state.exercises.find(function (e) { return e.id === id; });
     state.exercises = state.exercises.filter(function (e) { return e.id !== id; });
     reindex();
+
+    /* Remember deleted built-ins so a later version does not put them back. */
+    if (removed && removed.builtin) {
+      App.DB.getMeta('seed.removed', []).then(function (list) {
+        const set = new Set(list || []);
+        set.add(id);
+        return App.DB.setMeta('seed.removed', Array.from(set));
+      }).catch(function () {});
+    }
+
     /* Drop the movement from any workout that referenced it. */
     const touched = [];
     state.workouts.forEach(function (w) {

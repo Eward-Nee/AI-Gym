@@ -31,15 +31,38 @@
   }
 
   function aboutCard() {
+    const status = U.h('.u-xs.u-muted');
     return U.h('.card', [
       U.h('.row.row-wrap', [
-        U.h('div', [
+        U.h('div', { style: { minWidth: 0 } }, [
           U.h('div', { style: { fontWeight: '620' }, text: 'AI-Gym ' + App.VERSION }),
           U.h('.u-xs.u-muted', 'Offline-first training log. Your data stays on this ' +
-            'device unless you link a project.')
+            'device unless you link a project.'),
+          status
         ]),
         U.h('.spacer'),
-        U.h('span.chip', { text: 'v' + App.VERSION })
+        U.h('button.btn.btn-sm', {
+          type: 'button', html: U.icon('refresh') + '<span>Check for updates</span>',
+          onclick: function () {
+            const btn = this;
+            btn.disabled = true;
+            status.textContent = 'Checking…';
+            App.Update.check(true).then(function (found) {
+              btn.disabled = false;
+              if (found) { status.textContent = ''; App.Update.prompt(found); }
+              else status.textContent = 'You are on the latest version.';
+            }).catch(function (e) {
+              btn.disabled = false;
+              status.textContent = 'Could not check: ' + e.message;
+            });
+          }
+        })
+      ]),
+      U.h('div', { style: { marginTop: '14px' } }, [
+        C.linkRow(App.Update.VERSION_URL, {
+          label: 'Releases on GitHub',
+          hint: 'Opens outside the app where possible; otherwise copy the link.'
+        })
       ])
     ]);
   }
