@@ -180,10 +180,19 @@
             return wk;
           })
           .catch(function (err) {
-            step('Write access', false,
-              /already claimed/i.test(err.message || '')
-                ? 'Already claimed by another device. Run gym_rotate_write_key() there, or re-run the setup SQL to reset.'
-                : err.message);
+            /* An already-claimed key means this is an EXISTING project being
+               reconnected — a completely normal thing to do on a new device,
+               so it must not block the connection. Reading works immediately;
+               writing needs the key back, which sign-in restores from the hub
+               automatically, and which can otherwise be rotated. */
+            if (/already claimed/i.test(err.message || '')) {
+              report.readOnly = true;
+              step('Write access', true,
+                'This project is already set up. Connecting read-only for now — ' +
+                'sign in to your account and the write key comes back with it.');
+            } else {
+              step('Write access', false, err.message);
+            }
             return null;
           });
       })
@@ -227,7 +236,7 @@
 
   function toRow(table, rec) {
     const base = { id: rec.id, data: rec, updated_at: rec.updatedAt || new Date().toISOString(),
-      deleted: false };
+      deleted: false, encrypted: false };
     if (table === 'exercises') {
       return Object.assign(base, { name: rec.name, equipment: rec.equipment,
         pattern: rec.pattern, muscles: rec.muscles || {} });
@@ -241,6 +250,35 @@
       date: rec.date,
       volume: App.Ranks ? sessionVolume(rec) : 0,
       duration_sec: rec.durationSec || 0
+    });
+  }
+
+  /**
+   * Seal the detail payload before it leaves the device. Only `data` is
+   * encrypted; the promoted columns stay readable because the database sorts
+   * and filters on them and a friend's app needs them for comparisons.
+   */
+  function encodeRows(table, records) {
+    const rows = records.map(function (r) { return toRow(table, r); });
+    if (!App.Crypto || !App.Crypto.hasKey()) return Promise.resolve(rows);
+    return Promise.all(rows.map(function (row) {
+      return App.Crypto.seal(row.data).then(function (sealed) {
+        if (typeof sealed === 'string') { row.data = { enc: sealed }; row.encrypted = true; }
+        return row;
+      });
+    }));
+  }
+
+  /** Reverse of encodeRows: unwrap `{enc: "..."}` back into the record. */
+  function decodeRow(row) {
+    const d = row && row.data;
+    if (!d || typeof d !== 'object' || !d.enc) {
+      return Promise.resolve(Object.assign({}, d, { id: row.id, updatedAt: row.updated_at }));
+    }
+    if (!App.Crypto || !App.Crypto.hasKey()) return Promise.resolve(null);
+    return App.Crypto.open(d.enc).then(function (rec) {
+      if (!rec) return null;
+      return Object.assign({}, rec, { id: row.id, updatedAt: row.updated_at });
     });
   }
 
@@ -270,24 +308,24 @@
     return jobs.reduce(function (chain, job) {
       return chain.then(function () {
         const table = TABLES[job[0]];
-        const rows = job[1].map(function (r) { return toRow(job[0], r); });
-        if (!rows.length) { summary.tables[job[0]] = 0; return; }
-
-        /* Chunked so a large history does not blow the request size limit. */
-        const CHUNK = 200;
-        let i = 0;
-        function next() {
-          if (i >= rows.length) return Promise.resolve();
-          const slice = rows.slice(i, i + CHUNK);
-          i += CHUNK;
-          return personal.from(table).upsert(slice, 'id').then(function () {
-            done += slice.length;
-            summary.uploaded += slice.length;
-            if (onProgress) onProgress(done, total, job[0]);
-            return next();
-          });
-        }
-        return next().then(function () { summary.tables[job[0]] = rows.length; });
+        if (!job[1].length) { summary.tables[job[0]] = 0; return; }
+        return encodeRows(job[0], job[1]).then(function (rows) {
+          /* Chunked so a large history does not blow the request size limit. */
+          const CHUNK = 200;
+          let i = 0;
+          function next() {
+            if (i >= rows.length) return Promise.resolve();
+            const slice = rows.slice(i, i + CHUNK);
+            i += CHUNK;
+            return personal.from(table).upsert(slice, 'id').then(function () {
+              done += slice.length;
+              summary.uploaded += slice.length;
+              if (onProgress) onProgress(done, total, job[0]);
+              return next();
+            });
+          }
+          return next().then(function () { summary.tables[job[0]] = rows.length; });
+        });
       });
     }, Promise.resolve())
       .then(function () { return pushProfile(); })
@@ -327,11 +365,15 @@
           items.forEach(function (q) {
             if (q.deleted) { gone.push(q.rowId); return; }
             const rec = findLocal(key, q.rowId);
-            if (rec) live.push(toRow(key, rec)); else gone.push(q.rowId);
+            if (rec) live.push(rec); else gone.push(q.rowId);
           });
 
           let p = Promise.resolve();
-          if (live.length) p = p.then(function () { return personal.from(table).upsert(live, 'id'); });
+          if (live.length) p = p.then(function () {
+            return encodeRows(key, live).then(function (rows) {
+              return personal.from(table).upsert(rows, 'id');
+            });
+          });
           if (gone.length) {
             p = p.then(function () {
               return personal.from(table).update({ deleted: true,
@@ -385,13 +427,26 @@
       return personal.from(TABLES[kind]).select('id,data,updated_at,deleted', { deleted: 'is.false' })
         .then(function (rows) { return { kind: kind, rows: rows || [] }; });
     })).then(function (sets) {
+      /* Rows this device cannot decrypt are counted and skipped rather than
+         written back as nulls — that happens when the data key has not been
+         recovered yet, and the right answer is to tell the user, not to
+         overwrite good local data with garbage. */
+      let undecryptable = 0;
+      return Promise.all(sets.map(function (set) {
+        return Promise.all(set.rows.map(decodeRow)).then(function (recs) {
+          set.decoded = recs.filter(function (r) {
+            if (!r) { undecryptable++; return false; }
+            return true;
+          });
+          return set;
+        });
+      })).then(function (decoded) { return applyPull(decoded, undecryptable); });
+
+      function applyPull(sets, undecryptable) {
       const summary = {};
       const jobs = [];
-
       sets.forEach(function (set) {
-        const incoming = set.rows.map(function (r) {
-          return Object.assign({}, r.data, { id: r.id, updatedAt: r.updated_at });
-        });
+        const incoming = set.decoded;
         const localList = set.kind === 'exercises' ? App.Store.allExercises()
           : set.kind === 'workouts' ? App.Store.allWorkouts()
           : App.Store.allSessions();
@@ -412,7 +467,9 @@
         if (winners.length) jobs.push(App.DB.putMany(set.kind, winners));
       });
 
+      summary.undecryptable = undecryptable;
       return Promise.all(jobs).then(function () { return summary; });
+      }
     }).then(function (summary) {
       cfg.lastPull = new Date().toISOString();
       return saveMarks().then(function () { return summary; });
@@ -485,15 +542,59 @@
       .then(function (r) {
         /* Projects with email confirmation on return no session yet. */
         if (!r.access_token) return { needsConfirmation: true, user: r };
-        return afterAuth();
+        return afterAuth(password);
       });
   }
 
   function signIn(email, password) {
-    return hubClient().auth.signIn(email, password).then(afterAuth);
+    return hubClient().auth.signIn(email, password).then(function () {
+      return afterAuth(password);
+    });
   }
 
-  function afterAuth() {
+  /**
+   * Recover or publish this account's data key.
+   *
+   * The key is wrapped with the account password and stored in the hub so a
+   * second device can get it back. The password itself is never stored and the
+   * hub only ever holds ciphertext — which also means a forgotten password
+   * cannot be recovered by anyone, us included.
+   */
+  function syncDataKey(password) {
+    if (!App.Crypto || !App.Crypto.available() || !password) return Promise.resolve();
+    return hub.withRetry(function () {
+      return hub.from('user_keys').select('*', { user_id: 'eq.' + cfg.account.id });
+    }).then(function (rows) {
+      const stored = rows && rows[0];
+      if (stored) {
+        /* Adopt the account's existing key so this device can read what the
+           others wrote. Generating a new one here would strand the old data. */
+        return App.Crypto.unwrapDataKey(stored, password)
+          .then(function (key) { return App.Crypto.adoptKey(key); })
+          .then(function () { return { recovered: true }; })
+          .catch(function () {
+            console.warn('[sync] could not unwrap the stored key with this password');
+            return { recovered: false, mismatch: true };
+          });
+      }
+      /* First device for this account: publish the local key, wrapped. */
+      const key = App.Crypto.getKey();
+      if (!key) return { recovered: false };
+      return App.Crypto.wrapDataKey(key, password).then(function (w) {
+        return hub.withRetry(function () {
+          return hub.from('user_keys').upsert([{
+            user_id: cfg.account.id, salt: w.salt, wrapped: w.wrapped,
+            iterations: w.iterations, updated_at: new Date().toISOString()
+          }], 'user_id');
+        });
+      }).then(function () { return { published: true }; });
+    }).catch(function (e) {
+      console.warn('[sync] key escrow failed', e.message);
+      return { error: e.message };
+    });
+  }
+
+  function afterAuth(password) {
     return hub.auth.user().then(function (u) {
       if (!u) throw new Error('Sign-in did not return an account.');
       return hub.from('profiles').select('*', { id: 'eq.' + u.id }).then(function (rows) {
@@ -509,9 +610,65 @@
       });
     }).then(function () {
       emitStatus();
-      /* Register where this account's data lives, so friends can find it. */
+      return syncDataKey(password);
+    }).then(function () {
+      /* If this account already has a project registered, adopt it — that is
+         what makes signing in on a new device restore the connection instead
+         of asking for the keys again. */
+      return adoptStoredConnection();
+    }).then(function () {
       return publishConnection().catch(function () {});
-    }).then(function () { return cfg.account; });
+    }).then(function () {
+      emitStatus();
+      return cfg.account;
+    });
+  }
+
+  /**
+   * Pull this account's own connection record out of the hub and connect with
+   * it. Credentials come back encrypted, so this only works once the data key
+   * has been recovered.
+   */
+  function adoptStoredConnection() {
+    if (!signedIn()) return Promise.resolve(null);
+    if (cfg.personal.url && cfg.personal.key && cfg.personal.verifiedAt) {
+      return Promise.resolve(null);           /* already connected on this device */
+    }
+    return hub.withRetry(function () {
+      return hub.rpc('get_friend_connection', { friend: cfg.account.id });
+    }).then(function (rows) {
+      const conn = rows && rows[0];
+      if (!conn || !conn.supabase_url) return null;
+
+      return Promise.all([
+        conn.encrypted ? App.Crypto.openText(conn.anon_key) : conn.anon_key,
+        conn.encrypted && conn.write_key ? App.Crypto.openText(conn.write_key)
+                                         : (conn.write_key || null)
+      ]).then(function (v) {
+        const anon = v[0], wk = v[1];
+        if (!anon) {
+          console.warn('[sync] stored connection could not be decrypted');
+          return null;
+        }
+        cfg.personal.url = conn.supabase_url;
+        cfg.personal.key = anon;
+        if (wk) cfg.personal.writeKey = wk;
+        cfg.personal.schemaVersion = conn.schema_version || 1;
+        buildPersonal();
+        /* Confirm it actually answers before claiming to be connected. */
+        return personal.rpc('gym_ping', {}).then(function (info) {
+          cfg.personal.verifiedAt = new Date().toISOString();
+          cfg.personal.schemaVersion = (info && info.schema_version) || 1;
+          return savePersonalCfg().then(function () {
+            emitStatus();
+            return { url: conn.supabase_url, restored: true, canWrite: !!wk };
+          });
+        }).catch(function (e) {
+          console.warn('[sync] stored project did not answer', e.message);
+          return null;
+        });
+      });
+    }).catch(function () { return null; });
   }
 
   function signOut() {
@@ -526,15 +683,24 @@
   /** Tell the hub where this account's personal project is. */
   function publishConnection() {
     if (!signedIn() || !cfg.personal.url) return Promise.resolve();
-    return hub.withRetry(function () {
-      return hub.from('connections').upsert([{
-        user_id: cfg.account.id,
-        supabase_url: cfg.personal.url,
-        anon_key: cfg.personal.key,
-        schema_version: cfg.personal.schemaVersion || 1,
-        verified_at: cfg.personal.verifiedAt,
-        updated_at: new Date().toISOString()
-      }], 'user_id');
+    const canEncrypt = !!(App.Crypto && App.Crypto.hasKey());
+    return Promise.all([
+      canEncrypt ? App.Crypto.sealText(cfg.personal.key) : cfg.personal.key,
+      canEncrypt && cfg.personal.writeKey ? App.Crypto.sealText(cfg.personal.writeKey)
+                                          : (cfg.personal.writeKey || null)
+    ]).then(function (v) {
+      return hub.withRetry(function () {
+        return hub.from('connections').upsert([{
+          user_id: cfg.account.id,
+          supabase_url: cfg.personal.url,
+          anon_key: v[0],
+          write_key: v[1],
+          encrypted: canEncrypt,
+          schema_version: cfg.personal.schemaVersion || 1,
+          verified_at: cfg.personal.verifiedAt,
+          updated_at: new Date().toISOString()
+        }], 'user_id');
+      });
     });
   }
 
@@ -582,6 +748,32 @@
     return hub.withRetry(function () { return hub.rpc('remove_friend', { other: id }); });
   }
 
+  /* --- invites -------------------------------------------------------------
+     A code is generated by one side, handed over out of band, and redeemed by
+     the other. Redeeming IS the acceptance: holding the code is the consent, so
+     there is no second approval step to chase. */
+
+  function createInvite(label) {
+    return hub.withRetry(function () {
+      return hub.rpc('create_invite', { label: label || null });
+    }).then(function (rows) { return (rows && rows[0]) || null; });
+  }
+
+  function redeemInvite(code) {
+    return hub.withRetry(function () {
+      return hub.rpc('redeem_invite', { invite_code: String(code || '').trim().toUpperCase() });
+    }).then(function (rows) { return (rows && rows[0]) || null; });
+  }
+
+  function myInvites() {
+    if (!signedIn()) return Promise.resolve([]);
+    return hub.withRetry(function () { return hub.rpc('my_invites', {}); });
+  }
+
+  function revokeInvite(code) {
+    return hub.withRetry(function () { return hub.rpc('revoke_invite', { invite_code: code }); });
+  }
+
   function leaderboard() {
     if (!signedIn()) return Promise.resolve([]);
     return hub.withRetry(function () { return hub.rpc('friend_leaderboard', {}); });
@@ -601,6 +793,12 @@
     }).then(function (rows) {
       const conn = rows && rows[0];
       if (!conn) throw new Error('That friend has not linked a Supabase project yet.');
+      if (conn.encrypted) {
+        /* Their credentials are sealed with THEIR key, which we do not hold, so
+           the comparison uses the summary they chose to publish instead. */
+        throw new Error('That project is end-to-end encrypted, so only the summary ' +
+          'they publish is readable.');
+      }
       const c = App.Supabase.createClient(conn.supabase_url, conn.anon_key, {});
       const since = opts.since || U.daysAgo(180);
       return Promise.all([
@@ -668,15 +866,22 @@
      BOOT
      ------------------------------------------------------------------------ */
 
-  /** Called once after the store is ready. Never rejects — cloud is optional. */
+  /**
+   * The network half of start-up. Split from load() so the UI can paint with
+   * the correct signed-in state before any of this is attempted.
+   * Never rejects — the cloud is optional.
+   */
+  function start() {
+    if (!navigator.onLine) return Promise.resolve();
+    return runKeepalive()
+      .then(function () { return pushPending().catch(function () {}); })
+      .then(function () { if (signedIn()) return publishStats(); })
+      .catch(function (e) { console.warn('[sync] start', e.message); });
+  }
+
+  /** Load + start, for callers that want both. */
   function boot() {
-    return load().then(function () {
-      if (!navigator.onLine) return;
-      return runKeepalive()
-        .then(function () { return pushPending().catch(function () {}); })
-        .then(function () { if (signedIn()) return publishStats(); })
-        .catch(function (e) { console.warn('[sync] boot', e.message); });
-    }).catch(function (e) {
+    return load().then(start).catch(function (e) {
       console.warn('[sync] boot failed', e.message);
     });
   }
@@ -688,7 +893,7 @@
   App.Sync = {
     HUB_DEFAULT: HUB_DEFAULT,
     cfg: cfg,
-    load: load, boot: boot,
+    load: load, start: start, boot: boot,
     status: status, onStatus: onStatus, enabled: enabled, signedIn: signedIn,
 
     testPersonal: testPersonal, connectPersonal: connectPersonal,
@@ -701,6 +906,9 @@
     searchProfiles: searchProfiles, listFriends: listFriends,
     requestFriend: requestFriend, respondFriend: respondFriend, removeFriend: removeFriend,
     leaderboard: leaderboard, readFriendData: readFriendData,
+    createInvite: createInvite, redeemInvite: redeemInvite,
+    myInvites: myInvites, revokeInvite: revokeInvite,
+    adoptStoredConnection: adoptStoredConnection, syncDataKey: syncDataKey,
 
     runKeepalive: runKeepalive,
     setHub: function (url, key, on) {

@@ -130,6 +130,14 @@ $$;
 --    `data` holds the full record as JSONB so the app can evolve its shape
 --    without a migration; the promoted columns exist for indexing and for
 --    friends who want to query without parsing JSON.
+--
+--    ENCRYPTION. When the app has a data key, `data` is written as
+--    {"enc": "enc.v1:<iv>.<ciphertext>"} — AES-GCM, encrypted on your device
+--    with a key that never reaches any server in the clear. The promoted
+--    columns (name, date, volume, ...) stay readable because the database has
+--    to sort and filter on them, and because they are what a friend's app
+--    needs to show a comparison. Treat those as public to anyone holding your
+--    publishable key; the detail behind them is not.
 -- -----------------------------------------------------------------------------
 
 create table if not exists public.gym_exercises (
@@ -178,6 +186,10 @@ create table if not exists public.gym_profile (
 );
 
 insert into public.gym_profile (id) values (1) on conflict (id) do nothing;
+
+alter table public.gym_exercises add column if not exists encrypted boolean not null default false;
+alter table public.gym_workouts  add column if not exists encrypted boolean not null default false;
+alter table public.gym_sessions  add column if not exists encrypted boolean not null default false;
 
 create index if not exists gym_sessions_date_idx    on public.gym_sessions (date desc);
 create index if not exists gym_sessions_updated_idx on public.gym_sessions (updated_at desc);
@@ -291,7 +303,8 @@ as $$
     'workouts',  (select count(*) from public.gym_workouts  where not deleted),
     'sessions',  (select count(*) from public.gym_sessions  where not deleted),
     'last_session', (select max(date) from public.gym_sessions where not deleted),
-    'server_time', now()
+    'server_time', now(),
+    'encrypted', (select count(*) > 0 from public.gym_sessions where encrypted)
   );
 $$;
 

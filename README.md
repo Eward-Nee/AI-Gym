@@ -1,6 +1,6 @@
 # AI-Gym
 
-**Version 0.3.0**
+**Version 0.3.1**
 
 A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No build step, no framework, no npm install, no CDN — open it and it works.
 
@@ -12,6 +12,8 @@ A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No
 - **Progression reports** with least-squares trend lines and a 60-day forecast band
 - **Eight ranks scored against world records** for your bodyweight — your rank is the average across everything you train, and Diamond is 99%
 - **In-app update check** against GitHub releases, with an update that never costs you work in progress
+- **End-to-end encryption** of everything written to the cloud — AES-GCM with a key that never leaves your devices in the clear
+- **Invite codes** for adding friends: generate, share, redeem — redeeming is the acceptance
 - **Friends and head-to-head comparison** through a shared hub
 - **Three storage tiers**: IndexedDB always, your own Supabase optionally, a shared hub only for friends
 - **Light / dark / AMOLED**, eight colour schemes that also drive the heat gradient, and eight page backgrounds (four static, four animated) built from that same palette — with every panel going translucent so the background reads through the whole page
@@ -52,6 +54,7 @@ js/
   supabase.js         dependency-free Supabase REST + auth client
   sync.js             local ⇄ personal project ⇄ hub orchestration
   components.js       shared UI (pickers, editors, rank card, heat panel)
+  crypto.js           AES-GCM sealing, PBKDF2 key wrapping, key escrow
   update.js           version check + resume-after-reload snapshots
   pages/*.js          the five pages
   app.js              shell, router, theme
@@ -150,6 +153,20 @@ One gotcha worth recording: `radial-gradient(closest-side …)` anchored at an e
 The app checks GitHub releases for a newer version (falling back to the deployed `version.json`, since a build can be live before anyone tags a release) at most four times a day, and offers an update. There is also a manual check in the Control Panel.
 
 **An update never costs you work in progress.** Pages register a snapshot provider; the snapshot is written to IndexedDB on every edit and on `pagehide`/`visibilitychange`, so an OS-initiated kill is survivable too, not just our own reload. Take an update mid-workout and you come back to the same sets ticked, the same weights entered, and the elapsed clock still counting from the original start rather than restarting at zero. The reload carries a cache-busting query so an edge cache hands over the new build rather than the one it already has.
+
+### Encryption
+
+Everything the app writes to a Supabase project is encrypted on your device first. One random AES-GCM-256 **data key** per account, generated locally and never transmitted in the clear. Each record gets a fresh IV, and GCM authenticates as well as encrypts, so tampering is detected rather than silently decrypted into nonsense.
+
+To let a second device read your data, the key is **wrapped** with a key derived from your account password (PBKDF2-SHA256, 310k iterations, random salt) and the wrapped blob is stored in the hub. The hub therefore holds ciphertext it cannot read. Sign in on a new device, enter the password, and the key comes back — along with your project URL and keys, so the connection restores itself rather than asking you to paste anything.
+
+**What is not encrypted, deliberately.** The aggregate stats you publish for friends, and the promoted columns your own project indexes on (name, date, volume). The aggregates are the thing you are explicitly choosing to share, so encrypting them would break the feature they exist for; the promoted columns have to stay readable for the database to sort and filter. Treat those as visible to anyone holding your publishable key — the detail behind them is not.
+
+**The trade-off worth knowing:** lose the account password and the encrypted data is unrecoverable. A password reset through Supabase auth does not help, because the old password was the only thing that could unwrap the key. This is what end-to-end actually means — there is no one who can let you back in.
+
+### Adding friends
+
+Two routes. **By handle** sends a request the other person approves. **By invite code** goes the other way: you generate a single-use code, hand it over through any channel you like, and redeeming it completes the link in one step — holding the code *is* the consent, so there is no second approval to chase. Codes expire after 14 days and can be revoked.
 
 ### Running inside a web-to-app wrapper
 

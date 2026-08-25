@@ -10,7 +10,18 @@
   const U = App.U, C = App.C;
   let root = null;
 
-  function render(el) { root = el; draw(); }
+  let unbindSync = null;
+
+  function render(el) {
+    root = el;
+    if (unbindSync) unbindSync();
+    /* Sign-in, sign-out and auto-connect all resolve asynchronously. Without
+       this the panel keeps showing whatever was true when it first painted. */
+    unbindSync = App.Store.on('sync', function () {
+      if (root && root.isConnected && !document.querySelector('.modal-root')) draw();
+    });
+    draw();
+  }
   function onDataChange() { /* rebuilt on demand; avoid clobbering form input */ }
 
   function draw() {
@@ -774,6 +785,96 @@
       return card;
     }
 
+    /* --- invite codes ---------------------------------------------------
+       A handle request needs you to know their handle and lands as an
+       unsolicited prompt. An invite goes the other way: you generate a code,
+       hand it over however you like, and redeeming it IS the acceptance. */
+    const inviteOut = U.h('div');
+
+    body.appendChild(U.h('.grid.grid-2', [
+      U.h('.field', [
+        U.h('label.label', 'Invite someone'),
+        U.h('button.btn.btn-primary.btn-block', {
+          type: 'button', html: U.icon('plus') + '<span>Create invite code</span>',
+          onclick: function () {
+            const btn = this;
+            btn.disabled = true;
+            App.Sync.createInvite(null).then(function (inv) {
+              btn.disabled = false;
+              U.clear(inviteOut);
+              if (!inv) { U.toast('Could not create invite', '', 'bad'); return; }
+              inviteOut.appendChild(U.h('.callout.is-good', { style: { marginTop: '10px' } }, [
+                U.h('.callout-bar'),
+                U.h('div', { style: { minWidth: 0 } }, [
+                  U.h('div', [U.h('strong', 'Send them this code')]),
+                  U.h('.link-url', { style: { marginTop: '6px', fontSize: 'var(--fs-lg)',
+                    letterSpacing: '0.08em', textAlign: 'center' }, text: inv.code }),
+                  U.h('.row', { style: { marginTop: '8px' } }, [
+                    U.h('button.btn.btn-sm', {
+                      type: 'button', html: U.icon('copy') + '<span>Copy code</span>',
+                      onclick: function () {
+                        U.copyOrShow(inv.code, { label: 'Send it to whoever you are inviting.',
+                          title: 'Your invite code' });
+                      }
+                    }),
+                    navigator.share ? U.h('button.btn.btn-sm', {
+                      type: 'button', html: U.icon('link') + '<span>Share</span>',
+                      onclick: function () {
+                        navigator.share({ title: 'AI-Gym invite',
+                          text: 'Add me on AI-Gym with this code: ' + inv.code })
+                          .catch(function () {});
+                      }
+                    }) : null
+                  ]),
+                  U.h('.u-xs.u-muted', { style: { marginTop: '6px' },
+                    text: 'Single use, expires ' + U.fmtDate(inv.expires_at) +
+                      '. Only someone holding it can complete the link, and redeeming ' +
+                      'it accepts automatically.' })
+                ])
+              ]));
+            }).catch(function (e) {
+              btn.disabled = false;
+              U.toast('Could not create invite', e.message, 'bad');
+            });
+          }
+        })
+      ]),
+      U.h('.field', [
+        U.h('label.label', 'Redeem a code'),
+        (function () {
+          const codeInput = U.h('input.input', {
+            placeholder: 'ABCD-EFGH-JKLM', spellcheck: 'false', autocapitalize: 'characters',
+            style: { textTransform: 'uppercase', letterSpacing: '0.06em' }
+          });
+          const wrap = U.h('.stack-sm', [
+            codeInput,
+            U.h('button.btn.btn-block', {
+              type: 'button', html: U.icon('check') + '<span>Redeem &amp; connect</span>',
+              onclick: function () {
+                const code = codeInput.value.trim();
+                if (!code) return;
+                const btn = this;
+                btn.disabled = true;
+                App.Sync.redeemInvite(code).then(function (r) {
+                  btn.disabled = false;
+                  codeInput.value = '';
+                  U.toast('Connected', 'You and ' +
+                    ((r && (r.friend_name || r.friend_handle)) || 'they') +
+                    ' are now friends.', 'good');
+                  draw();
+                }).catch(function (e) {
+                  btn.disabled = false;
+                  U.toast('Could not redeem', e.message, 'bad');
+                });
+              }
+            })
+          ]);
+          return wrap;
+        })()
+      ])
+    ]));
+    body.appendChild(inviteOut);
+
     const handleInput = U.h('input.input', {
       placeholder: 'their handle, e.g. eward', spellcheck: 'false'
     });
@@ -842,8 +943,22 @@
         }
       }).catch(function (err) {
         U.clear(listWrap);
+        const missing = /does not exist|schema cache|PGRST202|PGRST203/i.test(err.message || '');
+        const expired = /expired|jwt|sign in again/i.test(err.message || '');
         listWrap.appendChild(U.h('.callout.is-bad', [
-          U.h('.callout-bar'), U.h('div', { text: err.message })
+          U.h('.callout-bar'),
+          U.h('div', [
+            U.h('div', [U.h('strong', 'Could not load friends. '), err.message]),
+            expired ? U.h('button.btn.btn-sm', { style: { marginTop: '8px' },
+              type: 'button', text: 'Sign in again',
+              onclick: function () { App.Sync.signOut().then(draw); } }) : null,
+            missing ? U.h('.u-xs.u-muted', { style: { marginTop: '6px' },
+              text: 'That error means the hub is missing a function this version ' +
+                'expects. Re-run sql/hub-schema.sql in the shared project — the ' +
+                'current file drops changed functions before recreating them, which ' +
+                'older copies did not, so a previous re-run may have failed silently.' })
+              : null
+          ])
         ]));
       });
     }
@@ -1082,6 +1197,10 @@
       body.appendChild(U.h('.table-wrap', [U.h('table.tbl', [
         U.h('tbody', [
           diagRow('App version', App.VERSION),
+          diagRow('Encryption', App.Crypto.available()
+            ? (App.Crypto.hasKey() ? 'AES-GCM-256 · key held on this device'
+                                   : 'available, no key yet')
+            : 'unavailable (needs a secure context)'),
           diagRow('Local storage engine', st.backend === 'idb'
             ? 'IndexedDB (recommended)' : 'localStorage fallback'),
           diagRow('Exercises', st.exercises + ' records'),

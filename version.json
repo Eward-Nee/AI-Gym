@@ -1,5 +1,5 @@
 {
-  "version": "0.3.0",
+  "version": "0.3.1",
   "name": "AI-Gym",
-  "notes": "World-record ranks by average, richer live backgrounds, 468 exercises, in-app update check."
+  "notes": "Encrypted cloud storage, invite codes, session-state fixes."
 }

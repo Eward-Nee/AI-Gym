@@ -74,6 +74,14 @@ Net effect: a friend can read everything you train and change nothing.
 
 ---
 
+## Part 2b — Re-running the hub schema
+
+If the Friends section shows an error mentioning a missing function, the hub is running an older schema than this build expects. Re-run [`sql/hub-schema.sql`](../sql/hub-schema.sql).
+
+Worth knowing why a previous re-run may have looked fine but silently failed: Postgres refuses to change a function's return type through `CREATE OR REPLACE` ("cannot change return type of existing function"). Any statement that tried to widen an existing function errored, the rest of the script carried on, and the old function stayed in place — so the app kept calling something that no longer matched. The current file drops those functions before recreating them, so it is genuinely safe to re-run across versions.
+
+A different error — one that mentions an expired session or JWT — is not a schema problem. Sign out and back in.
+
 ## Part 3 — The daily keep-alive
 
 Supabase pauses free projects after a stretch of inactivity. (For the record: the free-tier behaviour is a **pause after about a week of inactivity**, and your data is retained — it is not the "tables deleted after a month" you were expecting. Either way a periodic write keeps the project awake, so the mechanism you asked for is the right one.)

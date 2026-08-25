@@ -54,8 +54,17 @@
 
           return parse.then(function (body) {
             if (!res.ok) {
-              const msg = (body && (body.message || body.error_description || body.error || body.hint)) ||
+              /* PostgREST reports in message/details/hint with a machine code;
+                 GoTrue reports in `msg`. Reading only PostgREST's shape is how
+                 an expired session turned into a bare "HTTP 400" with nothing
+                 to act on, and how a missing function looked like a generic
+                 failure rather than "re-run the schema". */
+              let msg = (body && (body.message || body.msg || body.error_description ||
+                (typeof body.error === 'string' ? body.error : null))) ||
                 ('HTTP ' + res.status);
+              if (body && body.details && body.details !== msg) msg += ' — ' + body.details;
+              if (body && body.hint) msg += ' (' + body.hint + ')';
+              if (body && body.code) msg += ' [' + body.code + ']';
               throw SupabaseError(msg, res.status, body);
             }
             return body;
@@ -184,11 +193,27 @@
       if (r.refresh_token) refreshToken = r.refresh_token;
     }
 
-    /** Run fn, and on a 401 refresh the session once and retry. */
+    /**
+     * Run fn, refreshing the session once and retrying if it looks like the
+     * access token is the problem. A stale token shows up as a 401 from
+     * PostgREST but as a 400 from GoTrue, so matching only on 401 left the
+     * user staring at an unexplained 400 until they signed out and in again.
+     */
+    function authProblem(err) {
+      if (!err) return false;
+      if (err.status === 401) return true;
+      if (err.status === 403 && /jwt|token/i.test(err.message || '')) return true;
+      return err.status === 400 && /jwt|token|expired|session/i.test(err.message || '');
+    }
+
     function withRetry(fn) {
       return fn().catch(function (err) {
-        if (err.status === 401 && refreshToken) {
-          return auth.refresh().then(fn);
+        if (authProblem(err) && refreshToken) {
+          return auth.refresh().then(fn).catch(function (e) {
+            /* The refresh token is dead too — say so plainly. */
+            throw SupabaseError('Your session has expired. Sign in again.',
+              e.status || 401, e.body);
+          });
         }
         throw err;
       });
@@ -201,6 +226,7 @@
       rpc: rpc,
       auth: auth,
       withRetry: withRetry,
+      authProblem: authProblem,
       request: request,
       setWriteKey: function (k) { writeKey = k; },
       getWriteKey: function () { return writeKey; },

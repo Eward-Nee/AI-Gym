@@ -14,7 +14,7 @@
     { id: 'settings',  title: 'Control Panel', sub: 'Account, sync, theme',   icon: 'settings' }
   ];
 
-  const VERSION = '0.3.0';
+  const VERSION = '0.3.1';
 
   /* Four static, four animated. All derive their colour from the active scheme
      and mode, so they never fight the theme. */
@@ -214,9 +214,18 @@
 
         window.addEventListener('hashchange', render);
         if (!location.hash) location.hash = '#/home';
-        render();
 
-        return App.Sync.boot();
+        /* Read the stored session and project config BEFORE the first paint.
+           This is local-only and fast; the network half runs afterwards. Doing
+           it in the other order meant a refresh landing directly on the Control
+           Panel rendered before the account was known and reported the user as
+           signed out — correct a moment later, but only if they navigated. */
+        /* The data key must exist before anything is encrypted or decrypted. */
+        return App.Crypto.loadOrCreate().then(function () { return App.Sync.load(); });
+      })
+      .then(function () {
+        render();
+        return App.Sync.start();
       })
       .then(function () {
         updateSyncBadge();
