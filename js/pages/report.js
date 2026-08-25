@@ -333,16 +333,17 @@
         U.h('.card-head', [
           U.h('div', [
             U.h('h2', 'Rank'),
-            U.h('.card-sub', 'Eight tiers, from Wood to Diamond. Points blend strength, ' +
-              'consistency, volume and balance.')
+            U.h('.card-sub', 'Eight tiers, Wood to Diamond, measured against the world ' +
+              'record for your bodyweight. Your rank is whatever your WEAKEST trained ' +
+              'movement can hold.')
           ])
         ]),
         C.rankCard(r, { large: true })
       ]),
       U.h('.card', [
         U.h('.card-head', [U.h('h2', 'The ladder')]),
-        U.h('.stack-sm', App.Ranks.RANKS.map(function (x, i) {
-          const done = r.points >= x.min;
+        U.h('.stack-sm', App.Ranks.RANKS.map(function (x) {
+          const done = r.floor >= x.wr;
           return U.h('.row', { style: { opacity: done ? '1' : '0.55' } }, [
             U.h('.rank-medal', {
               style: { '--rank-color': x.color, width: '36px', height: '36px',
@@ -352,10 +353,10 @@
             U.h('div', { style: { flex: 1, minWidth: 0 } }, [
               U.h('div', { style: { fontWeight: '580' },
                 text: x.name + (x.elite ? ' · Elite' : '') }),
-              U.h('.u-xs.u-muted', { text: x.min + '+ points' })
+              U.h('.u-xs.u-muted', { text: x.wr + '% of world record — in every exercise' })
             ]),
-            done ? U.h('span.badge.badge-good', 'reached')
-                 : U.h('span.u-xs.u-muted', { text: U.num(x.min - r.points, 0) + ' to go' })
+            done ? U.h('span.badge.badge-good', 'held')
+                 : U.h('span.u-xs.u-muted', { text: '+' + U.num(x.wr - r.floor, 1) + '%' })
           ]);
         }))
       ])
@@ -365,25 +366,32 @@
     root.appendChild(U.h('.card', [
       U.h('.card-head', [
         U.h('div', [
-          U.h('h2', 'Strength by movement'),
-          U.h('.card-sub', 'Score of 100 is the elite standard for that pattern at your ' +
-            'bodyweight (' + App.Store.getSettings().bodyweight + ' ' +
-            App.Store.getSettings().units + ').')
+          U.h('h2', 'Distance from the world record'),
+          U.h('.card-sub', '100% is the world record for that movement at ' +
+            App.Store.getSettings().bodyweight + ' ' + App.Store.getSettings().units +
+            '. The lowest row is the one setting your rank.')
         ])
       ]),
       r.scored.length ? U.h('.table-wrap', [U.h('table.tbl', [
         U.h('thead', [U.h('tr', [
-          U.h('th', 'Movement'), U.h('th', 'Pattern'), U.h('th.num', 'Est. 1RM'),
-          U.h('th.num', 'Score'), U.h('th', '')
+          U.h('th', 'Movement'), U.h('th.num', 'Your 1RM'), U.h('th.num', 'World record'),
+          U.h('th.num', '% WR'), U.h('th', '')
         ])]),
-        U.h('tbody', r.scored.slice(0, 25).map(function (s) {
+        U.h('tbody', r.scored.slice(0, 30).map(function (s) {
           const units = App.Store.getSettings().units;
-          return U.h('tr', [
-            U.h('td', { text: s.name }),
-            U.h('td.u-muted', { text: String(s.pattern).replace(/-/g, ' ') }),
+          const isFloor = r.weakest && s.exerciseId === r.weakest.exerciseId;
+          return U.h('tr', { style: s.rankBearing ? null : { opacity: '0.55' } }, [
+            U.h('td', [
+              U.h('div', { style: { fontWeight: isFloor ? '680' : '500' }, text: s.name }),
+              isFloor
+                ? U.h('.u-xs', { style: { color: 'var(--bad)' }, text: 'sets your rank' })
+                : (s.rankBearing ? null
+                    : U.h('.u-xs.u-muted', 'not rank-bearing — no load recorded'))
+            ]),
             U.h('td.num', { text: U.num(s.e1rm, 0) + ' ' + units }),
-            U.h('td.num', { text: U.num(s.score, 0) }),
-            U.h('td', { style: { width: '30%' } }, [
+            U.h('td.num.u-muted', { text: U.num(s.record, 0) + ' ' + units }),
+            U.h('td.num', { text: U.num(s.score, 1) + '%' }),
+            U.h('td', { style: { width: '26%' } }, [
               U.h('.mlist-bar', [
                 U.h('i.mlist-fill', {
                   style: { width: Math.min(100, s.score) + '%',

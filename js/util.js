@@ -289,19 +289,205 @@
      CLIPBOARD / FILE
      ------------------------------------------------------------------------ */
 
-  function copy(text) {
-    if (navigator.clipboard && window.isSecureContext) {
-      return navigator.clipboard.writeText(text);
+  /* ---------------------------------------------------------------------------
+     CLIPBOARD
+
+     Copy fails in a lot of real-world mobile contexts: the async Clipboard API
+     needs a secure context and a live user gesture, execCommand is deprecated
+     and disabled in some webviews, and iOS ignores selection on a plain
+     readonly textarea. So every method is tried in turn and the caller is told
+     which one worked; copyOrShow() falls back to putting the text on screen,
+     pre-selected, so there is always a way to get it.
+     ------------------------------------------------------------------------ */
+
+  /** Async Clipboard API. */
+  function copyViaAsyncApi(text) {
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+      return Promise.reject(new Error('no async clipboard'));
     }
+    return navigator.clipboard.writeText(text).then(function () { return 'clipboard-api'; });
+  }
+
+  /** ClipboardItem — some webviews expose write() but not writeText(). */
+  function copyViaClipboardItem(text) {
+    if (!navigator.clipboard || !navigator.clipboard.write || typeof ClipboardItem === 'undefined') {
+      return Promise.reject(new Error('no ClipboardItem'));
+    }
+    const item = new ClipboardItem({ 'text/plain': new Blob([text], { type: 'text/plain' }) });
+    return navigator.clipboard.write([item]).then(function () { return 'clipboard-item'; });
+  }
+
+  /** Legacy execCommand on a textarea. */
+  function copyViaTextarea(text) {
     return new Promise(function (resolve, reject) {
-      const ta = h('textarea', { style: { position: 'fixed', opacity: '0', top: '0' } });
+      const ta = h('textarea', {
+        readonly: true,
+        style: { position: 'fixed', top: '0', left: '0', width: '1px', height: '1px',
+          padding: '0', border: 'none', outline: 'none', boxShadow: 'none',
+          background: 'transparent', opacity: '0', fontSize: '16px' }
+      });
       ta.value = text;
       document.body.appendChild(ta);
-      ta.select();
-      try { document.execCommand('copy'); resolve(); }
-      catch (e) { reject(e); }
+      try {
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, text.length);
+        const ok = document.execCommand('copy');
+        ok ? resolve('execCommand') : reject(new Error('execCommand returned false'));
+      } catch (e) { reject(e); }
       finally { ta.remove(); }
     });
+  }
+
+  /**
+   * iOS/Safari webview variant: a readonly textarea will not take a selection,
+   * so the text goes into a contenteditable node and is selected via a Range.
+   */
+  function copyViaRange(text) {
+    return new Promise(function (resolve, reject) {
+      const box = h('div', {
+        contenteditable: 'true',
+        style: { position: 'fixed', top: '0', left: '0', width: '1px', height: '1px',
+          opacity: '0', overflow: 'hidden', whiteSpace: 'pre', fontSize: '16px',
+          webkitUserSelect: 'text', userSelect: 'text' }
+      });
+      box.textContent = text;
+      document.body.appendChild(box);
+      try {
+        const range = document.createRange();
+        range.selectNodeContents(box);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        const ok = document.execCommand('copy');
+        sel.removeAllRanges();
+        ok ? resolve('range') : reject(new Error('execCommand returned false'));
+      } catch (e) { reject(e); }
+      finally { box.remove(); }
+    });
+  }
+
+  /**
+   * Try every strategy in order. Resolves with the name of whichever worked,
+   * rejects only when all of them fail.
+   */
+  function copy(text) {
+    text = String(text === null || text === undefined ? '' : text);
+    const methods = [copyViaAsyncApi, copyViaClipboardItem, copyViaRange, copyViaTextarea];
+    let i = 0;
+    function next(lastErr) {
+      if (i >= methods.length) {
+        return Promise.reject(lastErr || new Error('every copy method failed'));
+      }
+      const fn = methods[i++];
+      let attempt;
+      try { attempt = fn(text); } catch (e) { return next(e); }
+      return Promise.resolve(attempt).catch(next);
+    }
+    return next(null);
+  }
+
+  /**
+   * Copy, and if nothing worked put the text on screen pre-selected so it can
+   * be copied by hand. Always resolves — the user always ends up with a route
+   * to the text.
+   */
+  function copyOrShow(text, opts) {
+    opts = opts || {};
+    return copy(text).then(function (method) {
+      if (opts.quiet !== true) {
+        toast('Copied', opts.label || 'Copied to the clipboard.', 'good');
+      }
+      return { ok: true, method: method };
+    }).catch(function () {
+      showManualCopy(text, opts);
+      return { ok: false, method: null };
+    });
+  }
+
+  /** Last resort: a selectable field with select-all, plus Share where offered. */
+  function showManualCopy(text, opts) {
+    opts = opts || {};
+    const isLong = String(text).length > 120;
+    const field = isLong
+      ? h('textarea.textarea', { readonly: true, rows: '8',
+          style: { fontFamily: 'var(--font-mono)', fontSize: '12px' } })
+      : h('input.input', { readonly: true, style: { fontFamily: 'var(--font-mono)' } });
+    field.value = text;
+
+    function selectAll() {
+      field.focus();
+      field.select();
+      try { field.setSelectionRange(0, String(text).length); } catch (e) { /* ignore */ }
+    }
+
+    modal({
+      title: opts.title || 'Copy this',
+      body: function (body) {
+        body.appendChild(h('p.u-sm.u-muted',
+          'Automatic copying was blocked here. Tap the box to select it all, then ' +
+          'use your keyboard or long-press menu to copy.'));
+        body.appendChild(field);
+        field.addEventListener('click', selectAll);
+        field.addEventListener('focus', selectAll);
+        setTimeout(selectAll, 120);
+      },
+      actions: [
+        navigator.share ? { label: 'Share…', onClick: function (close) {
+          navigator.share({ text: text }).then(close).catch(function () {});
+        } } : null,
+        { label: 'Select all', onClick: function () { selectAll(); } },
+        { label: 'Done', kind: 'primary' }
+      ].filter(Boolean)
+    });
+  }
+
+  /* ---------------------------------------------------------------------------
+     EXTERNAL LINKS
+
+     The app is commonly wrapped as a web-to-app shell, where a normal anchor
+     opens inside the shell's own webview and traps the user. These try the
+     routes most likely to hand off to the real browser; none is guaranteed,
+     which is exactly why every external link in the UI is paired with a
+     copy-URL button.
+     ------------------------------------------------------------------------ */
+
+  function openExternal(url) {
+    url = String(url || '');
+    if (!/^https?:\/\//i.test(url)) return false;
+
+    /* 1. Cordova / Capacitor style shells honour the _system target. */
+    try {
+      const sys = window.open(url, '_system');
+      if (sys) return true;
+    } catch (e) { /* fall through */ }
+
+    /* 2. A real anchor click carries rel=external, which several shells use as
+          the signal to break out. */
+    try {
+      const a = h('a', { href: url, target: '_blank', rel: 'noopener noreferrer external' });
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { a.remove(); }, 1000);
+      return true;
+    } catch (e) { /* fall through */ }
+
+    /* 3. Plain window.open. */
+    try {
+      const w = window.open(url, '_blank', 'noopener,noreferrer');
+      if (w) { w.opener = null; return true; }
+    } catch (e) { /* fall through */ }
+
+    return false;
+  }
+
+  /** Android intent URL — hands the link to the system chooser. */
+  function androidIntentUrl(url) {
+    const m = /^https?:\/\/([^/]+)(\/.*)?$/i.exec(url);
+    if (!m) return null;
+    return 'intent://' + m[1] + (m[2] || '') +
+      '#Intent;scheme=https;action=android.intent.action.VIEW;end';
   }
 
   function download(filename, text, mime) {
@@ -359,6 +545,8 @@
     today: today, fmtDate: fmtDate, relDate: relDate, daysAgo: daysAgo,
     uid: uid, slug: slug,
     icon: icon, toast: toast, modal: modal, confirm: confirm,
-    copy: copy, download: download, readFile: readFile, shrinkImage: shrinkImage
+    copy: copy, copyOrShow: copyOrShow, showManualCopy: showManualCopy,
+    openExternal: openExternal, androidIntentUrl: androidIntentUrl,
+    download: download, readFile: readFile, shrinkImage: shrinkImage
   };
 })(window.App = window.App || {});

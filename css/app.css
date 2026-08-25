@@ -186,6 +186,16 @@ a:hover { text-decoration: underline; }
 .card-head .spacer { margin-left: auto; }
 .card-sub { font-size: var(--fs-sm); color: var(--text-3); margin-top: 2px; }
 
+/* Stacked blocks inside a card need breathing room, otherwise the last input of
+   one row sits flush against the first label of the next and reads as one
+   control with two labels. */
+.card > .grid + .grid,
+.card > .grid + .field,
+.card > .field + .grid,
+.card > .field + .field,
+.card > .grid + .row,
+.card > .row + .grid { margin-top: var(--sp-5); }
+
 .card-link { cursor: pointer; transition: border-color var(--dur) var(--ease),
   transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
 .card-link:hover { border-color: var(--line-strong); transform: translateY(-1px);
@@ -566,7 +576,11 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 .mlist-name { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mlist-bar { grid-column: 1 / -1; height: 5px; border-radius: var(--r-full);
   background: var(--surface-3); overflow: hidden; }
-.mlist-fill { height: 100%; border-radius: var(--r-full); background: var(--heat-4); }
+/* display:block matters: these fills are <i> elements, and width has no effect
+   on an inline box. Their parents are not flex containers, so nothing
+   blockifies them automatically and the bar renders empty. */
+.mlist-fill { display: block; height: 100%; border-radius: var(--r-full);
+  background: var(--heat-4); }
 .mlist-pct { font-variant-numeric: tabular-nums; font-size: var(--fs-xs); color: var(--text-3);
   font-family: var(--font-mono); }
 
@@ -636,6 +650,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   border: 1px solid var(--line);
 }
 .rank-fill {
+  display: block;                     /* see .mlist-fill — inline width is ignored */
   height: 100%; border-radius: var(--r-full);
   background: linear-gradient(90deg, var(--rank-color-prev, var(--heat-2)), var(--rank-color, var(--heat-4)));
   transition: width 600ms var(--ease);
@@ -774,6 +789,28 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 }
 .code.is-tall pre { max-height: 60vh; }
 
+/* ---- external link row --------------------------------------------------- */
+.link-row {
+  display: flex; flex-direction: column; gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.link-label { font-size: var(--fs-xs); font-weight: 640; color: var(--text-2);
+  letter-spacing: 0.03em; text-transform: uppercase; }
+.link-url {
+  font-family: var(--font-mono); font-size: var(--fs-xs);
+  color: var(--text); background: var(--bg-2);
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 8px 10px;
+  overflow-x: auto; white-space: nowrap;
+  -webkit-user-select: all; user-select: all;
+  cursor: text;
+}
+.link-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.link-actions .btn { flex: 1 1 auto; }
+
 .callout {
   display: flex; gap: var(--sp-3);
   padding: var(--sp-3) var(--sp-4);
@@ -805,6 +842,9 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   color-mix(in srgb, var(--accent) 30%, transparent); }
 .scheme-ramp { height: 22px; border-radius: var(--r-sm); border: 1px solid var(--line); }
 .scheme-name { font-size: var(--fs-xs); font-weight: 620; }
+
+.bg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: var(--sp-3); }
 
 .mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
 .mode-opt {
@@ -944,6 +984,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   .mode-grid { gap: var(--sp-2); }
   .mode-opt { padding: var(--sp-2); font-size: var(--fs-xs); }
   .scheme-grid { grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
+  .bg-grid { grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
 
   .step { grid-template-columns: 24px minmax(0, 1fr); gap: var(--sp-2); }
   .code pre { font-size: 10px; max-height: 240px; }
@@ -981,6 +1022,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   .ex-meta > span { white-space: nowrap; }
 
   .scheme-grid { grid-template-columns: repeat(2, 1fr); }
+  .bg-grid { grid-template-columns: repeat(2, 1fr); }
   .vs-bar { grid-template-columns: 1fr 72px 1fr; gap: var(--sp-2); }
 }
 

@@ -1,64 +1,107 @@
 /* =============================================================================
-   ranks.js — strength scoring and the 8-tier rank ladder
+   ranks.js — world-record strength scoring and the 8-tier rank ladder
 
-   Points (0–3200) blend four indices so a rank reflects an athlete, not a
-   single lift:
+   The scale is the world record for YOUR bodyweight, not a generic "elite"
+   standard. Every movement scores as a percentage of what the best human alive
+   at your weight can lift, and your rank is set by your WEAKEST trained
+   movement — so a rank means "I am at least this good at everything I do",
+   never "I have one big lift".
 
-     strength    60%   estimated 1RM vs. bodyweight-relative standards
-     consistency 18%   sessions logged in the last 28 days
-     volume      12%   28-day tonnage, log-scaled
-     balance     10%   how evenly the seven muscle groups are trained
+   Diamond is 99% of a world record in every exercise you train. It is meant to
+   be effectively unreachable.
 
-   The top tier is deliberately hard to reach: Diamond additionally requires
-   breadth (enough distinct movements) and a floor on the WEAKEST trained group,
-   so it means "elite across everything you do" rather than one huge lift.
+   Bodyweight scaling
+   ------------------
+   Absolute strength scales roughly with cross-sectional area, i.e. mass^(2/3),
+   so a record ratio measured at one bodyweight cannot be applied flat to
+   another. Records are stored as a 1RM-to-bodyweight ratio at an 80 kg
+   reference and re-scaled allometrically, which is why a 60 kg lifter is held
+   to a higher multiple than a 120 kg lifter for the same rank.
    ============================================================================= */
 (function (App) {
   'use strict';
 
+  /* `wr` is the percentage of a world record required in EVERY trained
+     movement to hold the rank. */
   const RANKS = [
-    { id: 'wood',     name: 'Wood',     min: 0,    color: '#8a6242' },
-    { id: 'stone',    name: 'Stone',    min: 320,  color: '#8d9299' },
-    { id: 'bronze',   name: 'Bronze',   min: 660,  color: '#c1793a' },
-    { id: 'iron',     name: 'Iron',     min: 1020, color: '#6b7480' },
-    { id: 'silver',   name: 'Silver',   min: 1400, color: '#b9c2cc' },
-    { id: 'gold',     name: 'Gold',     min: 1800, color: '#e0b23c' },
-    { id: 'platinum', name: 'Platinum', min: 2250, color: '#63d3c4' },
-    { id: 'diamond',  name: 'Diamond',  min: 2750, color: '#7fc4f5', elite: true }
+    { id: 'wood',     name: 'Wood',     wr: 0,  color: '#8a6242' },
+    { id: 'stone',    name: 'Stone',    wr: 8,  color: '#8d9299' },
+    { id: 'bronze',   name: 'Bronze',   wr: 16, color: '#c1793a' },
+    { id: 'iron',     name: 'Iron',     wr: 26, color: '#6b7480' },
+    { id: 'silver',   name: 'Silver',   wr: 38, color: '#b9c2cc' },
+    { id: 'gold',     name: 'Gold',     wr: 52, color: '#e0b23c' },
+    { id: 'platinum', name: 'Platinum', wr: 72, color: '#63d3c4' },
+    { id: 'diamond',  name: 'Diamond',  wr: 99, color: '#7fc4f5', elite: true }
   ];
 
   const MAX_POINTS = 3200;
+  const REF_BW = 80;          /* kg — bodyweight the ratios below are quoted at */
+  const ALLOMETRIC = 2 / 3;   /* strength ~ mass^(2/3) */
 
-  /* Elite 1RM expressed as a multiple of bodyweight, by movement pattern.
-     Compound patterns carry real-world standards; isolation patterns are set
-     lower so an arm day cannot inflate a rank. */
-  const ELITE_MULT = {
-    'horizontal-push': 1.50,
-    'incline-push': 1.25,
-    'vertical-push': 1.00,
-    'vertical-pull': 1.60,
-    'horizontal-pull': 1.40,
-    'squat': 2.00,
-    'hinge': 2.40,
-    'lunge': 1.10,
-    'olympic': 1.35,
-    'carry': 1.20,
-    'core': 0.60,
-    'chest-isolation': 0.55,
-    'back-isolation': 0.50,
-    'shoulder-isolation': 0.35,
-    'biceps-isolation': 0.55,
-    'triceps-isolation': 0.60,
-    'forearm-isolation': 0.45,
-    'quad-isolation': 1.00,
-    'ham-isolation': 0.80,
-    'glute-isolation': 0.55,
-    'leg-isolation': 0.90,
-    'calf-isolation': 1.60,
-    'neck-isolation': 0.30
+  /**
+   * World-record 1RM as a multiple of bodyweight at REF_BW, per movement
+   * pattern. `ext` is external load; `bw` is used for bodyweight-equipment
+   * variants and covers the athlete's own mass as well as any added plates,
+   * because a weighted dip and an overhead press are not the same feat even
+   * though both are vertical pressing.
+   */
+  const WORLD_RECORD = {
+    'horizontal-push':   { ext: 2.90, bw: 1.60 },
+    'incline-push':      { ext: 2.30, bw: 1.55 },
+    'vertical-push':     { ext: 1.80, bw: 3.40 },
+    'horizontal-pull':   { ext: 2.40, bw: 1.90 },
+    'vertical-pull':     { ext: 1.55, bw: 2.55 },
+    'squat':             { ext: 4.20, bw: 1.60 },
+    'hinge':             { ext: 4.80, bw: 2.10 },
+    'lunge':             { ext: 2.20, bw: 1.50 },
+    'olympic':           { ext: 2.60, bw: 1.60 },
+    'carry':             { ext: 3.00, bw: 1.50 },
+    'core':              { ext: 1.20, bw: 1.35 },
+    'chest-isolation':   { ext: 1.10, bw: 1.45 },
+    'back-isolation':    { ext: 1.00, bw: 1.40 },
+    'shoulder-isolation':{ ext: 0.55, bw: 1.20 },
+    'biceps-isolation':  { ext: 1.20, bw: 1.50 },
+    'triceps-isolation': { ext: 1.30, bw: 1.55 },
+    'forearm-isolation': { ext: 1.00, bw: 1.30 },
+    'quad-isolation':    { ext: 2.20, bw: 1.40 },
+    'ham-isolation':     { ext: 1.60, bw: 1.45 },
+    'glute-isolation':   { ext: 1.20, bw: 1.40 },
+    'leg-isolation':     { ext: 1.80, bw: 1.35 },
+    'calf-isolation':    { ext: 3.50, bw: 1.80 },
+    'neck-isolation':    { ext: 0.80, bw: 1.20 },
+    'other':             { ext: 1.50, bw: 1.45 }
   };
 
-  const DEFAULT_MULT = 0.80;
+  const DEFAULT_WR = { ext: 1.50, bw: 1.45 };
+
+  /**
+   * Patterns where moving your own bodyweight IS a max-strength feat, so an
+   * unloaded set still counts toward the rank. A pull-up or a dip belongs here;
+   * a plank does not, because holding a position is not a one-rep max and
+   * crediting it with full bodyweight would let it outscore a real lift.
+   */
+  const BODYWEIGHT_MAX_EFFORT = {
+    'vertical-pull': true,
+    'vertical-push': true,
+    'horizontal-push': true,
+    'squat': true,
+    'lunge': true,
+    'hinge': true,
+    'olympic': true
+  };
+
+  /**
+   * Does this movement count toward the rank floor? It must either carry a
+   * recorded external load, or be a bodyweight movement whose whole point is
+   * maximal effort. Everything else is still scored and shown, just not allowed
+   * to define the rank — otherwise one set of light face pulls would cap you at
+   * Wood forever.
+   */
+  function isRankBearing(exercise, best) {
+    if (best && best.e1rm > 0) return true;
+    return !!(exercise && exercise.equipment === 'bodyweight' &&
+      BODYWEIGHT_MAX_EFFORT[exercise.pattern]);
+  }
 
   /* ---------------------------------------------------------------------------
      1RM ESTIMATION
@@ -99,35 +142,51 @@
   }
 
   /* ---------------------------------------------------------------------------
-     PER-EXERCISE STRENGTH SCORE
+     WORLD-RECORD SCALE
      ------------------------------------------------------------------------ */
 
-  /**
-   * 0–100 (soft-capped at 115) score for one movement.
-   * Bodyweight movements with no external load fall back to a rep-count curve,
-   * because "18 strict pull-ups" is a strength signal even with no plates.
-   */
-  function strengthScore(exercise, best, bodyweight) {
-    const bw = Number(bodyweight) || 80;
-    const mult = ELITE_MULT[exercise && exercise.pattern] || DEFAULT_MULT;
+  /** The record load for a pattern at a given bodyweight, in kg. */
+  function worldRecord(pattern, bodyweight, isBodyweightMovement) {
+    const rec = WORLD_RECORD[pattern] || DEFAULT_WR;
+    const ratio = isBodyweightMovement ? rec.bw : rec.ext;
+    const bw = Math.max(30, Number(bodyweight) || REF_BW);
+    /* ratio is quoted at REF_BW; absolute record scales with mass^(2/3) */
+    return ratio * REF_BW * Math.pow(bw / REF_BW, ALLOMETRIC);
+  }
 
-    if (!best || !best.e1rm) {
-      const reps = best && best.reps ? best.reps : 0;
+  /**
+   * What fraction of the world record this lift represents, as a percentage.
+   * Bodyweight movements count the athlete's own mass as load, which is what
+   * makes an unweighted pull-up score at all.
+   */
+  function wrPercent(exercise, best, bodyweight) {
+    const bw = Math.max(30, Number(bodyweight) || REF_BW);
+    const isBw = !!(exercise && exercise.equipment === 'bodyweight');
+    const pattern = (exercise && exercise.pattern) || 'other';
+
+    let load = (best && best.e1rm) || 0;
+    if (isBw) load += bw;
+
+    if (!load) {
+      /* No load recorded at all — fall back on reps, heavily discounted, so a
+         rep-only entry can never carry a high rank. */
+      const reps = (best && best.reps) || 0;
       if (!reps) return 0;
-      /* 25 clean bodyweight reps ~ elite for a bodyweight movement */
-      return Math.min(100, (reps / 25) * 100);
+      return Math.min(20, (reps / 40) * 20);
     }
 
-    let load = best.e1rm;
-    /* Loaded bodyweight movements move the athlete too — count it. */
-    if (exercise && exercise.equipment === 'bodyweight') load += bw;
+    const record = worldRecord(pattern, bw, isBw);
+    if (!record) return 0;
+    return Math.max(0, (load / record) * 100);
+  }
 
-    const ratio = (load / bw) / mult;
-    return Math.max(0, Math.min(115, ratio * 100));
+  /** Backwards-compatible alias: the 0-100 score IS the world-record percent. */
+  function strengthScore(exercise, best, bodyweight) {
+    return wrPercent(exercise, best, bodyweight);
   }
 
   /* ---------------------------------------------------------------------------
-     INDICES
+     INDICES (context only — they no longer move the rank)
      ------------------------------------------------------------------------ */
 
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
@@ -147,31 +206,33 @@
     return clamp01(hSum / Math.log(keys.length)) * 100;
   }
 
+  /* ---------------------------------------------------------------------------
+     RANK
+     ------------------------------------------------------------------------ */
+
   /**
-   * Full rank computation.
    * @param {Object} input
    *   sessions    logged sessions (each with .date and .entries[{exerciseId, sets}])
    *   exercises   Map or object of id -> exercise
    *   bodyweight  kg
-   *   windowDays  activity window, default 28
+   *   windowDays  activity window for the context indices, default 28
    */
   function compute(input) {
     const sessions = input.sessions || [];
     const exMap = input.exercises || {};
-    const bw = Number(input.bodyweight) || 80;
+    const bw = Number(input.bodyweight) || REF_BW;
     const win = input.windowDays || 28;
     const since = Date.now() - win * 86400000;
 
-    /* --- best lift per exercise (all time) + recency weighting --- */
     const bestByEx = Object.create(null);
     const seenDays = Object.create(null);
     const groupVolume = Object.create(null);
-    let recentVolume = 0, recentSessions = 0;
+    let recentVolume = 0;
 
     sessions.forEach(function (s) {
       const t = new Date(s.date + (s.date.length === 10 ? 'T12:00:00' : '')).getTime();
       const isRecent = t >= since;
-      if (isRecent) { seenDays[s.date] = 1; }
+      if (isRecent) seenDays[s.date] = 1;
 
       (s.entries || []).forEach(function (en) {
         const ex = exMap[en.exerciseId];
@@ -201,73 +262,46 @@
         }
       });
     });
-    recentSessions = Object.keys(seenDays).length;
+    const recentSessions = Object.keys(seenDays).length;
 
-    /* --- per-exercise scores --- */
+    /* --- score every trained movement against its world record --- */
     const scored = [];
     for (const id in bestByEx) {
       const ex = exMap[id];
       if (!ex) continue;
-      const sc = strengthScore(ex, bestByEx[id], bw);
-      if (sc <= 0) continue;
+      const pct = wrPercent(ex, bestByEx[id], bw);
+      if (pct <= 0) continue;
       scored.push({
         exerciseId: id,
         name: ex.name,
         pattern: ex.pattern,
-        score: sc,
+        score: pct,                 /* % of world record */
+        wrPercent: pct,
+        record: worldRecord(ex.pattern || 'other', bw, ex.equipment === 'bodyweight'),
         e1rm: bestByEx[id].e1rm,
         sessions: bestByEx[id].sessions,
-        lastDate: bestByEx[id].lastDate
+        lastDate: bestByEx[id].lastDate,
+        rankBearing: isRankBearing(ex, bestByEx[id])
       });
     }
     scored.sort(function (a, b) { return b.score - a.score; });
 
-    /* Strength index: mean of the best 10 movements, so breadth is rewarded but
-       a single novelty lift cannot carry the whole rank. */
-    const top = scored.slice(0, 10);
-    const strengthIdx = top.length
-      ? Math.min(100, top.reduce(function (a, s) { return a + s.score; }, 0) / Math.max(6, top.length))
-      : 0;
+    /* The rank is set by the weakest rank-bearing movement: "at least this good
+       at everything you do". */
+    const bearing = scored.filter(function (s) { return s.rankBearing; });
+    const weakest = bearing.length ? bearing[bearing.length - 1] : null;
+    const floor = weakest ? weakest.score : 0;
 
-    const consistencyIdx = clamp01(recentSessions / 12) * 100;
-    const volumeIdx = recentVolume > 0
-      ? clamp01(Math.log10(1 + recentVolume) / Math.log10(1 + 120000)) * 100
-      : 0;
-    const balanceIdx = balanceIndex(groupVolume);
+    const rank = rankFor(floor);
+    const idx = RANKS.indexOf(rank);
+    const next = RANKS[idx + 1] || null;
+    const span = next ? next.wr - rank.wr : Math.max(1, 100 - rank.wr);
+    const progress = span > 0 ? clamp01((floor - rank.wr) / span) : 1;
 
-    const composite =
-      0.60 * strengthIdx +
-      0.18 * consistencyIdx +
-      0.12 * volumeIdx +
-      0.10 * balanceIdx;
-
-    let points = Math.round((composite / 100) * MAX_POINTS);
-
-    /* --- Diamond gate: elite must mean elite everywhere --- */
-    const breadth = scored.length;
-    const trainedGroups = Object.keys(groupVolume).filter(function (g) { return groupVolume[g] > 0; });
-    const weakest = trainedGroups.length
-      ? Math.min.apply(null, trainedGroups.map(function (g) {
-          const inGroup = scored.filter(function (s) {
-            const ex = exMap[s.exerciseId];
-            if (!ex || !ex.muscles) return false;
-            return Object.keys(ex.muscles).some(function (m) {
-              return (App.Muscles.BY_ID[m] || {}).group === g && ex.muscles[m] >= 20;
-            });
-          });
-          if (!inGroup.length) return 0;
-          return Math.max.apply(null, inGroup.map(function (s) { return s.score; }));
-        }))
-      : 0;
-
-    const eliteGate = breadth >= 12 && weakest >= 70 && trainedGroups.length >= 5;
-    const diamondMin = RANKS[RANKS.length - 1].min;
-    if (points >= diamondMin && !eliteGate) points = diamondMin - 1;
-
-    const rank = rankFor(points);
-    const next = RANKS[RANKS.indexOf(rank) + 1] || null;
-    const span = next ? next.min - rank.min : MAX_POINTS - rank.min;
-    const progress = span > 0 ? clamp01((points - rank.min) / span) : 1;
+    /* Points exist for the progress bar and the friend leaderboard; they are a
+       straight linear read of the same floor, so they can never disagree with
+       the rank the way a blended score could. */
+    const points = Math.round(clamp01(floor / RANKS[RANKS.length - 1].wr) * MAX_POINTS);
 
     return {
       points: points,
@@ -275,27 +309,42 @@
       rank: rank,
       next: next,
       progress: progress,
-      toNext: next ? Math.max(0, next.min - points) : 0,
+      /* how many more percentage points of world record the weakest lift needs */
+      toNext: next ? Math.max(0, Math.round((next.wr - floor) * 10) / 10) : 0,
+      floor: Math.round(floor * 10) / 10,
+      weakest: weakest,
+      strongest: scored[0] || null,
+      bodyweight: bw,
       indices: {
-        strength: Math.round(strengthIdx),
-        consistency: Math.round(consistencyIdx),
-        volume: Math.round(volumeIdx),
-        balance: Math.round(balanceIdx)
+        strength: Math.round(scored.length ? scored[0].score : 0),
+        consistency: Math.round(clamp01(recentSessions / 12) * 100),
+        volume: recentVolume > 0
+          ? Math.round(clamp01(Math.log10(1 + recentVolume) / Math.log10(1 + 120000)) * 100)
+          : 0,
+        balance: Math.round(balanceIndex(groupVolume))
       },
       scored: scored,
-      breadth: breadth,
-      weakestGroupScore: Math.round(weakest),
-      eliteGate: eliteGate,
+      rankBearing: bearing,
+      breadth: bearing.length,
+      weakestGroupScore: Math.round(floor),
+      eliteGate: floor >= RANKS[RANKS.length - 1].wr,
       recentSessions: recentSessions,
       recentVolume: recentVolume,
       groupVolume: groupVolume
     };
   }
 
-  function rankFor(points) {
+  /** Rank for a given world-record floor percentage. */
+  function rankFor(wrFloor) {
     let r = RANKS[0];
-    RANKS.forEach(function (x) { if (points >= x.min) r = x; });
+    RANKS.forEach(function (x) { if (wrFloor >= x.wr) r = x; });
     return r;
+  }
+
+  /** Rank from stored points, for friends' cached values. */
+  function rankForPoints(points) {
+    const pct = (Number(points) || 0) / MAX_POINTS * RANKS[RANKS.length - 1].wr;
+    return rankFor(pct);
   }
 
   /** Short initials used inside the medal chip. */
@@ -306,13 +355,18 @@
   App.Ranks = {
     RANKS: RANKS,
     MAX_POINTS: MAX_POINTS,
-    ELITE_MULT: ELITE_MULT,
+    WORLD_RECORD: WORLD_RECORD,
+    REF_BW: REF_BW,
     e1rm: e1rm,
     bestE1RM: bestE1RM,
     volumeOf: volumeOf,
+    worldRecord: worldRecord,
+    wrPercent: wrPercent,
+    isRankBearing: isRankBearing,
     strengthScore: strengthScore,
     compute: compute,
     rankFor: rankFor,
+    rankForPoints: rankForPoints,
     initials: initials
   };
 })(window.App = window.App || {});

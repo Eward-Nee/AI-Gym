@@ -14,6 +14,22 @@
     { id: 'settings',  title: 'Control Panel', sub: 'Account, sync, theme',   icon: 'settings' }
   ];
 
+  const VERSION = '0.2.0';
+
+  /* Four static, four animated. All derive their colour from the active scheme
+     and mode, so they never fight the theme. */
+  const BACKGROUNDS = [
+    { id: 'plain',  name: 'None',    live: false },
+    { id: 'mesh',   name: 'Mesh',    live: false },
+    { id: 'grid',   name: 'Grid',    live: false },
+    { id: 'glow',   name: 'Glow',    live: false },
+    { id: 'strata', name: 'Strata',  live: false },
+    { id: 'aurora', name: 'Aurora',  live: true },
+    { id: 'orbs',   name: 'Orbs',    live: true },
+    { id: 'pulse',  name: 'Pulse',   live: true },
+    { id: 'tide',   name: 'Tide',    live: true }
+  ];
+
   const SCHEMES = [
     { id: 'ember',    name: 'Ember' },
     { id: 'flux',     name: 'Flux' },
@@ -36,6 +52,7 @@
     const root = document.documentElement;
     root.setAttribute('data-mode', settings.mode || 'dark');
     root.setAttribute('data-scheme', settings.scheme || 'ember');
+    root.setAttribute('data-bg', settings.background || 'plain');
 
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
@@ -215,9 +232,13 @@
       'good');
   }
 
+  App.VERSION = VERSION;
+
   App.Shell = {
     ROUTES: ROUTES,
     SCHEMES: SCHEMES,
+    BACKGROUNDS: BACKGROUNDS,
+    VERSION: VERSION,
     navigate: navigate,
     render: render,
     applyTheme: applyTheme,

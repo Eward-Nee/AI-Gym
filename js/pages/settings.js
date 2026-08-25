@@ -15,14 +15,33 @@
 
   function draw() {
     U.clear(root);
-    App.Shell.setTopActions([]);
+    App.Shell.setTopActions([
+      U.h('span.chip', { text: 'v' + App.VERSION })
+    ]);
     root.appendChild(profileCard());
     root.appendChild(appearanceCard());
-    root.appendChild(supabaseCard());
+    /* Account comes before the project section: linking a Supabase project
+       requires one, so asking for it first is the honest order. */
     root.appendChild(accountCard());
+    root.appendChild(supabaseCard());
     root.appendChild(friendsCard());
     root.appendChild(dataCard());
     root.appendChild(diagnosticsCard());
+    root.appendChild(aboutCard());
+  }
+
+  function aboutCard() {
+    return U.h('.card', [
+      U.h('.row.row-wrap', [
+        U.h('div', [
+          U.h('div', { style: { fontWeight: '620' }, text: 'AI-Gym ' + App.VERSION }),
+          U.h('.u-xs.u-muted', 'Offline-first training log. Your data stays on this ' +
+            'device unless you link a project.')
+        ]),
+        U.h('.spacer'),
+        U.h('span.chip', { text: 'v' + App.VERSION })
+      ])
+    ]);
   }
 
   /* ===========================================================================
@@ -151,6 +170,24 @@
       });
     }, 0);
 
+    /* --- backgrounds -------------------------------------------------- */
+    const bgGrid = U.h('.bg-grid', App.Shell.BACKGROUNDS.map(function (b) {
+      return U.h('button.scheme-opt' + (s.background === b.id ? '.is-active' : ''), {
+        type: 'button', dataset: { bg: b.id },
+        'aria-label': b.name + (b.live ? ' (animated)' : ''),
+        onclick: function () {
+          App.Store.saveSettings({ background: b.id });
+          U.$$('[data-bg]', bgGrid).forEach(function (n) {
+            n.classList.toggle('is-active', n.dataset.bg === b.id);
+          });
+        }
+      }, [
+        U.h('i.bg-swatch', { dataset: { preview: b.id } },
+          b.live ? [U.h('span.bg-live', 'LIVE')] : []),
+        U.h('span.scheme-name', { text: b.name })
+      ]);
+    }));
+
     return U.h('.card', [
       U.h('.card-head', [
         U.h('div', [
@@ -162,7 +199,14 @@
       U.h('.field', [U.h('label.label', 'Mode'), modeGrid,
         U.h('.hint', 'AMOLED pushes the background to true black so unlit pixels stay off.')]),
       U.h('.field', { style: { marginTop: '20px' } },
-        [U.h('label.label', 'Colour scheme'), schemeGrid])
+        [U.h('label.label', 'Colour scheme'), schemeGrid]),
+      U.h('.field', { style: { marginTop: '20px' } }, [
+        U.h('label.label', 'Background'),
+        bgGrid,
+        U.h('.hint', 'Four static and four animated. Every one is built from the colour ' +
+          'scheme above, so it follows your scheme and your light / dark mode. Animated ' +
+          'backgrounds hold still if your device asks for reduced motion.')
+      ])
     ]);
   }
 
@@ -187,6 +231,33 @@
         : U.h('span.chip', 'Not connected')
     ]));
     card.appendChild(body);
+
+    /* An account is required first: the project's URL and key are registered
+       against it in the hub, which is what lets a friend find your data at all.
+       Linking a project with nowhere to publish it would be a dead end. */
+    if (!st.hub.signedIn && !st.personal.verified) {
+      body.appendChild(U.h('.empty', [
+        U.h('div', { html: U.icon('users') }),
+        U.h('.empty-title', 'Create an account first'),
+        U.h('p', 'Linking your own Supabase project needs an account, because the ' +
+          'project address is registered against it so friends can find your data. ' +
+          'Everything else in the app already works without one.'),
+        U.h('button.btn.btn-primary.btn-sm', {
+          type: 'button', html: U.icon('users') + '<span>Go to Account</span>',
+          onclick: function () {
+            const acct = U.$('#accountCard', root);
+            if (!acct) return;
+            const bar = document.querySelector('.topbar');
+            const offset = (bar ? bar.getBoundingClientRect().height : 0) + 10;
+            window.scrollTo(0, Math.max(0,
+              Math.round(window.scrollY + acct.getBoundingClientRect().top - offset)));
+            const input = acct.querySelector('input[type="email"]');
+            if (input) setTimeout(function () { input.focus(); }, 250);
+          }
+        })
+      ]));
+      return card;
+    }
 
     if (st.personal.verified) drawConnected(body, st);
     else drawWizard(body);
@@ -221,11 +292,6 @@
         onclick: function () { draw(); }
       }),
       U.h('.spacer'),
-      U.h('a.btn.btn-sm.btn-ghost', {
-        href: 'https://supabase.com/dashboard/project/' + st.personal.ref,
-        target: '_blank', rel: 'noopener noreferrer',
-        html: U.icon('link') + '<span>Open dashboard</span>'
-      }),
       U.h('button.btn.btn-sm.btn-danger', {
         type: 'button', text: 'Disconnect',
         onclick: function () {
@@ -239,6 +305,13 @@
             });
           });
         }
+      })
+    ]));
+
+    body.appendChild(U.h('div', { style: { marginTop: '16px' } }, [
+      C.linkRow('https://supabase.com/dashboard/project/' + st.personal.ref, {
+        label: 'Your project dashboard',
+        hint: 'Opens outside the app where possible; otherwise copy the link.'
       })
     ]));
   }
@@ -285,13 +358,37 @@
     const state = { url: App.Sync.cfg.personal.url || '', key: App.Sync.cfg.personal.key || '' };
     const resultWrap = U.h('div');
 
+    /* The SQL-editor link is rebuilt whenever the project URL changes, so once
+       a URL is entered it points straight at that project instead of the
+       generic project picker. */
+    const sqlLinkWrap = U.h('div');
+
+    function sqlEditorUrl() {
+      const ref = App.Supabase.projectRef(state.url);
+      return 'https://supabase.com/dashboard/project/' + (ref || '_') + '/sql/new';
+    }
+    function refreshSqlLink() {
+      const ref = App.Supabase.projectRef(state.url);
+      U.clear(sqlLinkWrap);
+      sqlLinkWrap.appendChild(C.linkRow(sqlEditorUrl(), {
+        label: ref ? 'SQL editor for ' + ref : 'Supabase SQL editor',
+        primary: true,
+        hint: ref
+          ? 'Opens a new query in your project. If Open lands back inside the app, ' +
+            'copy the link and paste it into your browser.'
+          : 'Enter your project URL below and this becomes a direct link. Otherwise it ' +
+            'opens the project picker: Dashboard → your project → SQL Editor → New query.'
+      }));
+    }
+
     const urlInput = U.h('input.input', {
       placeholder: 'https://your-project.supabase.co', value: state.url, spellcheck: 'false',
-      oninput: function () { state.url = this.value.trim(); }
+      inputmode: 'url', autocapitalize: 'none',
+      oninput: function () { state.url = this.value.trim(); refreshSqlLink(); }
     });
     const keyInput = U.h('input.input', {
       placeholder: 'sb_publishable_… (or the legacy anon key)', value: state.key,
-      spellcheck: 'false', autocomplete: 'off',
+      spellcheck: 'false', autocomplete: 'off', autocapitalize: 'none',
       oninput: function () { state.key = this.value.trim(); }
     });
 
@@ -304,22 +401,26 @@
           U.h('.step-body', [
             U.h('p', 'One project per person. The free tier is plenty — a lifetime of ' +
               'training history is a few megabytes.'),
-            U.h('a.btn.btn-sm', { href: 'https://supabase.com/dashboard/projects',
-              target: '_blank', rel: 'noopener noreferrer',
-              html: U.icon('link') + '<span>Open Supabase</span>' })
+            C.linkRow('https://supabase.com/dashboard/projects', {
+              label: 'Supabase dashboard',
+              hint: 'Opens outside the app where possible. If it opens in here instead, ' +
+                'use Copy link and paste it into your browser.'
+            })
           ])
         ])
       ]),
 
-      /* 2 */
+      /* 2 — the link comes before the SQL, so there is somewhere to paste it */
       U.h('.step', [
         U.h('.step-num', '2'),
         U.h('div', [
-          U.h('.step-title', 'Run the setup SQL'),
+          U.h('.step-title', 'Open the SQL editor, then run the setup script'),
           U.h('.step-body', [
-            U.h('p', 'In your project: SQL Editor → New query → paste → Run. ' +
-              'It creates the tables, the security rules and the daily keep-alive. ' +
-              'Safe to run more than once.'),
+            U.h('p', 'Path: Supabase dashboard → your project → SQL Editor → New query. ' +
+              'The link below goes straight there.'),
+            sqlLinkWrap,
+            U.h('p', 'Paste the whole script and press Run. It creates the tables, the ' +
+              'security rules and the daily keep-alive. Safe to run more than once.'),
             sqlBlock()
           ])
         ])
@@ -360,6 +461,8 @@
         ])
       ])
     ]));
+
+    refreshSqlLink();
   }
 
   function sqlBlock() {
@@ -372,10 +475,9 @@
       U.h('button.btn.btn-sm.btn-ghost', {
         type: 'button', html: U.icon('copy') + '<span>Copy</span>',
         onclick: function () {
-          U.copy(pre.textContent).then(function () {
-            U.toast('Copied', 'Paste it into the Supabase SQL editor.', 'good');
-          }).catch(function () {
-            U.toast('Copy failed', 'Select the text and copy manually.', 'bad');
+          U.copyOrShow(pre.textContent, {
+            label: 'Paste it into the Supabase SQL editor.',
+            title: 'Copy the setup SQL'
           });
         }
       }),
@@ -487,7 +589,7 @@
 
   function accountCard() {
     const st = App.Sync.status();
-    const card = U.h('.card');
+    const card = U.h('.card#accountCard');
     const body = U.h('div');
 
     card.appendChild(U.h('.card-head', [
@@ -837,15 +939,35 @@
     });
   }
 
+  const RESET_PHRASE = 'Reset Progress Confirm';
+
   function resetDialog() {
     const opts = { keepLibrary: true, keepFriends: true, resetSettings: false };
-    U.modal({
-      title: 'Reset data',
+    let confirmBtn = null;
+
+    const phraseInput = U.h('input.input', {
+      placeholder: RESET_PHRASE, spellcheck: 'false', autocapitalize: 'off',
+      autocomplete: 'off', 'aria-label': 'Type ' + RESET_PHRASE + ' to confirm'
+    });
+
+    function phraseOk() {
+      return phraseInput.value.trim() === RESET_PHRASE;
+    }
+    function sync() {
+      if (!confirmBtn) return;
+      confirmBtn.disabled = !phraseOk();
+      confirmBtn.classList.toggle('is-disabled', !phraseOk());
+    }
+    phraseInput.addEventListener('input', sync);
+
+    const m = U.modal({
+      title: 'Reset progress',
       body: function (body) {
-        body.appendChild(U.h('.callout.is-warn', [
+        body.appendChild(U.h('.callout.is-bad', [
           U.h('.callout-bar'),
-          U.h('div', 'This clears data on THIS DEVICE. If you have a Supabase project ' +
-            'connected, the cloud copy is untouched — you can download it again afterwards.')
+          U.h('div', 'This clears data on THIS DEVICE and cannot be undone. If you have ' +
+            'a Supabase project connected, the cloud copy is untouched — you can download ' +
+            'it again afterwards.')
         ]));
         body.appendChild(U.h('.stack', [
           toggleRow('Keep the exercise library', 'Otherwise it is reset to the ' +
@@ -856,10 +978,20 @@
         ]));
         body.appendChild(U.h('p.u-sm.u-muted',
           'Workouts and every logged session are always removed.'));
+        body.appendChild(U.h('.field', [
+          U.h('label.label', ['Type ', U.h('code', { text: RESET_PHRASE }), ' to continue']),
+          phraseInput,
+          U.h('.hint', 'Exactly as shown, including capitals and spaces.')
+        ]));
       },
       actions: [
         { label: 'Cancel' },
-        { label: 'Reset', kind: 'danger', onClick: function (close) {
+        { label: 'Reset progress', kind: 'danger', onClick: function (close) {
+          if (!phraseOk()) {
+            U.toast('Confirmation does not match', 'Type "' + RESET_PHRASE + '" exactly.', 'bad');
+            phraseInput.focus();
+            return;
+          }
           App.Store.resetData(opts).then(function () {
             close();
             U.toast('Reset', 'Workouts and history cleared.', 'good');
@@ -868,6 +1000,9 @@
         } }
       ]
     });
+
+    confirmBtn = m.root.querySelector('.modal-foot .btn-danger');
+    sync();
   }
 
   function toggleRow(title, hint, obj, key) {
@@ -923,6 +1058,7 @@
       U.clear(body);
       body.appendChild(U.h('.table-wrap', [U.h('table.tbl', [
         U.h('tbody', [
+          diagRow('App version', App.VERSION),
           diagRow('Local storage engine', st.backend === 'idb'
             ? 'IndexedDB (recommended)' : 'localStorage fallback'),
           diagRow('Exercises', st.exercises + ' records'),

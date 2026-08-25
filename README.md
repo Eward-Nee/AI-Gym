@@ -1,5 +1,7 @@
 # AI-Gym
 
+**Version 0.2.0**
+
 A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No build step, no framework, no npm install, no CDN — open it and it works.
 
 - **Built for the phone**: bottom tab bar, bottom-sheet dialogs, 40px+ touch targets, one column by default, and charts that measure their container instead of being scaled to fit
@@ -8,10 +10,10 @@ A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No
 - **Workout builder** with sets, reps, load, per-set and per-exercise rest, drag reordering and smart push/pull/legs grouping
 - **Session runner** with a rest timer and live volume
 - **Progression reports** with least-squares trend lines and a 60-day forecast band
-- **Eight ranks**, Wood → Diamond, where Diamond requires being strong *everywhere*
+- **Eight ranks scored against world records** for your bodyweight — Diamond is 99% of a world record in *every* exercise you train
 - **Friends and head-to-head comparison** through a shared hub
 - **Three storage tiers**: IndexedDB always, your own Supabase optionally, a shared hub only for friends
-- **Light / dark / AMOLED**, and eight colour schemes that also drive the heat gradient
+- **Light / dark / AMOLED**, eight colour schemes that also drive the heat gradient, and eight page backgrounds (four static, four animated) built from that same palette
 
 ---
 
@@ -36,6 +38,7 @@ index.html            loads everything in dependency order
 css/
   theme.css           design tokens, 3 modes, 8 schemes, the heat ramp
   app.css             reset, app shell, component kit
+  backgrounds.css     8 page backgrounds, all derived from the scheme palette
 js/
   data/muscles.js     38-region muscle taxonomy — the shared vocabulary
   data/exercises.js   GENERATED — do not hand edit
@@ -79,18 +82,26 @@ Users can add, edit and delete exercises freely; those live in IndexedDB and ove
 
 ## How ranks work
 
-Points run 0–3200 and blend four indices, so a rank describes an athlete rather than one lift:
+The yardstick is the **world record for your bodyweight**, and your rank is set by your **weakest** trained movement. A rank therefore means "I am at least this good at everything I do" — never "I have one big lift".
 
-| Index | Weight | What it measures |
-|---|---|---|
-| Strength | 60% | estimated 1RM against bodyweight-relative elite standards, averaged over your best 10 movements |
-| Consistency | 18% | sessions logged in the last 28 days |
-| Volume | 12% | 28-day tonnage, log-scaled |
-| Balance | 10% | Shannon evenness across the seven muscle groups |
+| Rank | Needs, in every exercise you train |
+|---|---|
+| Wood | — |
+| Stone | 8% of a world record |
+| Bronze | 16% |
+| Iron | 26% |
+| Silver | 38% |
+| Gold | 52% |
+| Platinum | 72% |
+| **Diamond** | **99% — a world record in all of them** |
 
-1RM uses Epley up to 10 reps and an Epley/Brzycki average beyond that, where Epley alone starts to overestimate.
+Records are stored as a 1RM-to-bodyweight ratio at an 80 kg reference and re-scaled allometrically (strength ≈ mass^⅔), because absolute strength tracks cross-sectional area. A 60 kg lifter is therefore held to a higher bodyweight multiple than a 120 kg lifter for the same rank. 1RM uses Epley up to 10 reps and an Epley/Brzycki average beyond that, where Epley alone starts to overestimate.
 
-**Diamond has an extra gate.** Points alone are not enough: it also needs at least 12 distinct movements logged, at least 5 muscle groups trained, and the *weakest* trained group scoring 70+. That is what makes the top tier mean "elite across everything you do" instead of "one enormous deadlift".
+For scale: a 80 kg lifter benching 100×5, squatting 140×5, pulling 180×5 and curling 20 kg lands at **Bronze** — held there by the curl at 24% of its record.
+
+**Not everything is rank-bearing.** A movement counts toward the floor only if it carries a recorded external load, or is a bodyweight movement whose whole point is maximal effort (pull-up, dip, push-up, pistol). A plank is scored and shown but cannot set your rank, since holding a position is not a one-rep max and crediting it with full bodyweight would let it outscore a real lift.
+
+Standards are held per movement *pattern*, not per exercise, so a lat pulldown is measured against the vertical-pull record rather than against a pulldown-specific one. That is a deliberate approximation — the alternative is a hand-maintained record for all 408 movements.
 
 ---
 
@@ -103,6 +114,12 @@ The app is designed for a phone first and widens from there. Three rules do most
 - **Charts measure, they never scale.** Each chart reads its container width and builds its viewBox at that exact pixel size, so one SVG unit is always one CSS pixel and a `ResizeObserver` redraws on rotation. Scaling a fixed-width viewBox to fit compressed the whole plot — tick labels included — by about 2.5x on a phone.
 
 Breakpoints: 1100px (sidebar layout loosens), 860px (sidebar becomes a bottom tab bar), 760px (figure panels stack), 560px (denser list rows), 344px (tiles go single column). A `(hover: none)` block makes row actions permanent and grows hit areas, since a phone never fires hover.
+
+### Running inside a web-to-app wrapper
+
+The app is commonly wrapped as a native shell, where a normal link opens in the shell's own webview and traps you there. Every external link is therefore a `linkRow`: the full URL is shown and selectable, **Open** tries `_system`, then a `rel="external"` anchor click, then `window.open`, and **Copy link** is always there because none of those is guaranteed.
+
+Copying is equally defensive. `U.copy()` tries the async Clipboard API, then `ClipboardItem`, then a contenteditable Range (which is what iOS webviews need — a readonly textarea will not take a selection), then `execCommand` on a textarea. If all four fail, `U.copyOrShow()` puts the text on screen pre-selected with a Share button, so there is always a route to it.
 
 ---
 

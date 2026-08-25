@@ -67,7 +67,7 @@
     return list;
   }
 
-  /** Rank medal + progress bar. */
+  /** Rank medal + progress bar, expressed against world-record percentages. */
   function rankCard(r, opts) {
     opts = opts || {};
     const next = r.next;
@@ -81,61 +81,120 @@
           U.h('.rank-name', { text: r.rank.name + (r.rank.elite ? ' · Elite' : '') }),
           U.h('.u-xs.u-muted', {
             text: next
-              ? U.num(r.toNext, 0) + ' points to ' + next.name
+              ? '+' + U.num(r.toNext, 1) + '% of world record needed for ' + next.name
               : 'Top rank reached'
           })
         ]),
         opts.hidePoints ? null : U.h('div', { style: { textAlign: 'right' } }, [
-          U.h('.stat-value.is-sm', { text: U.num(r.points, 0) }),
-          U.h('.stat-label', 'points')
+          U.h('.stat-value.is-sm', { text: U.num(r.floor, 1) + '%' }),
+          U.h('.stat-label', 'of WR')
         ])
       ]),
       U.h('.rank-bar', [
         U.h('i.rank-fill', { style: { width: (r.progress * 100).toFixed(1) + '%' } })
       ]),
       U.h('.rank-scale', [
-        U.h('span', { text: r.rank.name }),
-        U.h('span', { text: next ? next.name : 'Max' })
+        U.h('span', { text: r.rank.name + ' · ' + r.rank.wr + '%' }),
+        U.h('span', { text: next ? next.name + ' · ' + next.wr + '%' : 'Max' })
       ]),
       opts.showLadder === false ? null : rankLadder(r),
+      opts.showExplainer === false ? null : wrExplainer(r),
       opts.showIndices === false ? null : U.h('.grid.grid-4', { style: { marginTop: '4px' } }, [
-        statTile('Strength', r.indices.strength, '/100'),
+        statTile('Best lift', r.indices.strength, '% WR'),
         statTile('Consistency', r.indices.consistency, '/100'),
         statTile('Volume', r.indices.volume, '/100'),
         statTile('Balance', r.indices.balance, '/100')
-      ]),
-      (opts.showGate !== false && r.next && r.next.elite) ? eliteGateNote(r) : null
+      ])
+    ]);
+  }
+
+  /** Says plainly which lift is holding the rank down, and by how much. */
+  function wrExplainer(r) {
+    if (!r.weakest) {
+      return U.h('.callout', [
+        U.h('.callout-bar'),
+        U.h('div', [U.h('strong', 'Nothing scored yet.'),
+          ' Log a working set and every movement gets measured against the world ' +
+          'record for your bodyweight.'])
+      ]);
+    }
+    const units = App.Store.getSettings().units;
+    return U.h('.callout', [
+      U.h('.callout-bar'),
+      U.h('div', [
+        U.h('div', [
+          U.h('strong', 'Your rank is set by your weakest lift: '),
+          r.weakest.name, ' at ', U.num(r.weakest.score, 1), '% of the world record',
+          r.weakest.record ? ' (' + U.num(r.weakest.e1rm, 0) + ' / ' +
+            U.num(r.weakest.record, 0) + ' ' + units + ')' : ''
+        ]),
+        U.h('.u-xs.u-muted', { style: { marginTop: '4px' },
+          text: 'Every rank needs that percentage in every exercise you train. ' +
+            'Diamond is 99% — a world record in all of them.' })
+      ])
     ]);
   }
 
   function rankLadder(r) {
     const idx = App.Ranks.RANKS.indexOf(r.rank);
-    const bar = U.h('.rank-ladder', { title: App.Ranks.RANKS.map(function (x) {
-      return x.name + ' (' + x.min + ')'; }).join('  ·  ') });
+    const bar = U.h("div.rank-ladder", { title: App.Ranks.RANKS.map(function (x) {
+      return x.name + " " + x.wr + "% WR"; }).join("  ·  ") });
     App.Ranks.RANKS.forEach(function (x, i) {
-      bar.appendChild(U.h('i.rank-step' + (i <= idx ? '.is-done' : ''), {
-        style: { '--rank-color': x.color }
+      bar.appendChild(U.h("i.rank-step" + (i <= idx ? ".is-done" : ""), {
+        style: { "--rank-color": x.color }
       }));
     });
     return bar;
   }
 
-  /** Explains why Diamond is still locked, when it is. */
-  function eliteGateNote(r) {
-    if (r.eliteGate) return null;
-    const missing = [];
-    if (r.breadth < 12) missing.push((12 - r.breadth) + ' more distinct movements logged');
-    if (r.weakestGroupScore < 70) missing.push('weakest muscle group at ' + r.weakestGroupScore +
-      '/70 strength score');
-    if (!missing.length) return null;
-    return U.h('.callout', [
-      U.h('.callout-bar'),
-      U.h('div', [
-        U.h('div', [U.h('strong', 'Diamond is elite across everything.'),
-          ' Beyond points, it needs:']),
-        U.h('ul.u-xs.u-muted', { style: { margin: '6px 0 0', paddingLeft: '18px' } },
-          missing.map(function (m) { return U.h('li', { text: m }); }))
-      ])
+  /* ---------------------------------------------------------------------------
+     EXTERNAL LINK
+     ------------------------------------------------------------------------ */
+
+  /**
+   * A link out of the app: shows the full URL, an Open button that tries to
+   * reach the real browser, and a Copy button. The URL is always visible and
+   * always copyable because in a web-to-app shell "Open" may still land back
+   * inside the shell — the copy route is the guaranteed one.
+   *
+   * linkRow(url, { label, hint, primary })
+   */
+  function linkRow(url, opts) {
+    opts = opts || {};
+    const urlEl = U.h('.link-url', { text: url, title: url, tabindex: '0', role: 'textbox',
+      'aria-readonly': 'true' });
+
+    /* Tapping the URL itself selects it, for manual copy on stubborn devices. */
+    urlEl.addEventListener('click', function () {
+      const range = document.createRange();
+      range.selectNodeContents(urlEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    });
+
+    return U.h('.link-row', [
+      opts.label ? U.h('.link-label', { text: opts.label }) : null,
+      urlEl,
+      U.h('.link-actions', [
+        U.h('button.btn.btn-sm' + (opts.primary ? '.btn-primary' : ''), {
+          type: 'button', html: U.icon('link') + '<span>Open</span>',
+          onclick: function () {
+            const ok = U.openExternal(url);
+            if (!ok) {
+              U.toast('Could not open a browser', 'Use Copy and paste it into your browser.', 'bad');
+            }
+          }
+        }),
+        U.h('button.btn.btn-sm', {
+          type: 'button', html: U.icon('copy') + '<span>Copy link</span>',
+          onclick: function () {
+            U.copyOrShow(url, { label: 'Link copied — paste it into your browser.',
+              title: 'Copy this link' });
+          }
+        })
+      ]),
+      opts.hint ? U.h('.hint', { text: opts.hint }) : null
     ]);
   }
 
@@ -561,6 +620,7 @@
     muscleList: muscleList,
     rankCard: rankCard,
     rankLadder: rankLadder,
+    linkRow: linkRow,
     heatPanel: heatPanel,
     pickExercise: pickExercise,
     editExercise: editExercise,

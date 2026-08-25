@@ -13,6 +13,7 @@
   const DEFAULT_SETTINGS = {
     mode: 'dark',              /* light | dark | amoled */
     scheme: 'ember',
+    background: 'plain',       /* see App.Shell.BACKGROUNDS */
     units: 'kg',               /* kg | lb */
     bodyweight: 80,
     name: '',

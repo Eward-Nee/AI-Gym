@@ -1,0 +1,270 @@
+/* =============================================================================
+   backgrounds.css — optional decorative page backgrounds
+
+   Eight options, set with data-bg on <html>: four static, four animated. All of
+   them are built purely from the active colour scheme's palette (--c1..--c5),
+   so they follow the scheme and the light / dark / AMOLED mode automatically
+   and never introduce a colour of their own.
+
+   Intensity is mode-aware: on light backgrounds a tint reads much stronger than
+   the same value does against dark, so --bg-alpha is turned down there. AMOLED
+   goes lowest of all, since the whole point of that mode is unlit pixels.
+
+   The layers are fixed, pointer-events:none, and sit behind content at z-index
+   -1. Cards get a slight translucency and a blur so the background is visible
+   through the page rather than only in the gutters.
+   ============================================================================= */
+
+:root {
+  --bg-alpha: 0.16;      /* layer opacity, overridden per mode */
+  --bg-blur: 70px;
+}
+[data-mode='dark']   { --bg-alpha: 0.30; }
+[data-mode='amoled'] { --bg-alpha: 0.20; }
+
+/* The two painting layers. Both are inert until a background is selected. */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: -10%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 400ms var(--ease);
+}
+
+/* Let the page show through once a decorative background is on. */
+[data-bg]:not([data-bg='plain']) .card {
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+[data-bg]:not([data-bg='plain']) .stat-tile,
+[data-bg]:not([data-bg='plain']) .wo-block {
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+}
+
+/* =============================================================================
+   STATIC
+   ============================================================================= */
+
+/* --- 1. Mesh: three soft colour pools, the classic modern app wash ---------- */
+[data-bg='mesh'] body::before {
+  opacity: 1;
+  background:
+    radial-gradient(42vw 42vw at 12% 8%,  var(--c3), transparent 62%),
+    radial-gradient(46vw 46vw at 88% 22%, var(--c2), transparent 60%),
+    radial-gradient(50vw 50vw at 50% 96%, var(--c4), transparent 64%);
+  filter: blur(var(--bg-blur));
+  opacity: var(--bg-alpha);
+}
+
+/* --- 2. Grid: engineering paper, tinted by the scheme ---------------------- */
+[data-bg='grid'] body::before {
+  opacity: calc(var(--bg-alpha) * 0.9);
+  background:
+    linear-gradient(to right, var(--c3) 1px, transparent 1px) 0 0 / 46px 46px,
+    linear-gradient(to bottom, var(--c3) 1px, transparent 1px) 0 0 / 46px 46px;
+  mask-image: radial-gradient(120% 90% at 50% 0%, #000 25%, transparent 78%);
+  -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, #000 25%, transparent 78%);
+}
+[data-bg='grid'] body::after {
+  opacity: var(--bg-alpha);
+  background: radial-gradient(70vw 50vh at 50% -10%, var(--c2), transparent 70%);
+  filter: blur(40px);
+}
+
+/* --- 3. Glow: a single light source from the top, vignetted --------------- */
+[data-bg='glow'] body::before {
+  opacity: var(--bg-alpha);
+  background:
+    radial-gradient(60vw 40vh at 50% -6%, var(--c4), transparent 68%),
+    radial-gradient(80vw 60vh at 50% 110%, var(--c1), transparent 72%);
+  filter: blur(50px);
+}
+
+/* --- 4. Strata: diagonal bands, quiet and graphic ------------------------- */
+[data-bg='strata'] body::before {
+  opacity: calc(var(--bg-alpha) * 0.85);
+  background: repeating-linear-gradient(
+    128deg,
+    var(--c1) 0 3px,
+    transparent 3px 68px,
+    var(--c3) 68px 70px,
+    transparent 70px 150px
+  );
+  mask-image: linear-gradient(160deg, #000 5%, transparent 85%);
+  -webkit-mask-image: linear-gradient(160deg, #000 5%, transparent 85%);
+}
+
+/* =============================================================================
+   ANIMATED
+   Transform and opacity only, so these stay on the compositor and do not
+   repaint the page while you scroll.
+   ============================================================================= */
+
+/* --- 5. Aurora: two broad sheets drifting past each other ----------------- */
+[data-bg='aurora'] body::before {
+  opacity: var(--bg-alpha);
+  background:
+    radial-gradient(48vw 40vw at 25% 30%, var(--c3), transparent 62%),
+    radial-gradient(52vw 44vw at 75% 65%, var(--c4), transparent 64%);
+  filter: blur(var(--bg-blur));
+  animation: bg-aurora-a 26s ease-in-out infinite alternate;
+}
+[data-bg='aurora'] body::after {
+  opacity: calc(var(--bg-alpha) * 0.8);
+  background: radial-gradient(60vw 50vw at 55% 15%, var(--c2), transparent 66%);
+  filter: blur(var(--bg-blur));
+  animation: bg-aurora-b 34s ease-in-out infinite alternate;
+}
+@keyframes bg-aurora-a {
+  from { transform: translate3d(-6%, -4%, 0) scale(1); }
+  to   { transform: translate3d(7%, 6%, 0) scale(1.18); }
+}
+@keyframes bg-aurora-b {
+  from { transform: translate3d(5%, 3%, 0) scale(1.12); }
+  to   { transform: translate3d(-7%, -5%, 0) scale(1); }
+}
+
+/* --- 6. Orbs: discrete bodies on slow independent orbits ------------------ */
+[data-bg='orbs'] body::before {
+  opacity: var(--bg-alpha);
+  background:
+    radial-gradient(15vw 15vw at 20% 25%, var(--c4), transparent 58%),
+    radial-gradient(11vw 11vw at 78% 38%, var(--c2), transparent 58%),
+    radial-gradient(18vw 18vw at 62% 82%, var(--c3), transparent 58%);
+  filter: blur(46px);
+  animation: bg-orbs 30s ease-in-out infinite alternate;
+}
+[data-bg='orbs'] body::after {
+  opacity: calc(var(--bg-alpha) * 0.7);
+  background: radial-gradient(9vw 9vw at 38% 62%, var(--c5), transparent 58%);
+  filter: blur(38px);
+  animation: bg-orbs-2 22s ease-in-out infinite alternate;
+}
+@keyframes bg-orbs {
+  from { transform: translate3d(-4%, 3%, 0) rotate(0deg); }
+  to   { transform: translate3d(5%, -4%, 0) rotate(8deg); }
+}
+@keyframes bg-orbs-2 {
+  from { transform: translate3d(6%, -5%, 0); }
+  to   { transform: translate3d(-5%, 6%, 0); }
+}
+
+/* --- 7. Pulse: a slow breath from the centre, like a heartbeat ------------ */
+[data-bg='pulse'] body::before {
+  opacity: var(--bg-alpha);
+  background: radial-gradient(38vw 38vw at 50% 42%, var(--c4), transparent 62%);
+  filter: blur(56px);
+  animation: bg-pulse 9s ease-in-out infinite;
+}
+[data-bg='pulse'] body::after {
+  opacity: calc(var(--bg-alpha) * 0.65);
+  background: radial-gradient(58vw 58vw at 50% 42%, var(--c2), transparent 66%);
+  filter: blur(70px);
+  animation: bg-pulse 9s ease-in-out infinite reverse;
+}
+@keyframes bg-pulse {
+  0%, 100% { transform: scale(0.94); }
+  50%      { transform: scale(1.14); }
+}
+
+/* --- 8. Tide: broad horizontal sweep, left to right ----------------------- */
+[data-bg='tide'] body::before {
+  opacity: var(--bg-alpha);
+  background: linear-gradient(100deg,
+    transparent 0%, var(--c2) 22%, var(--c4) 46%, var(--c3) 68%, transparent 92%);
+  background-size: 260% 100%;
+  filter: blur(58px);
+  animation: bg-tide 28s linear infinite;
+}
+[data-bg='tide'] body::after {
+  opacity: calc(var(--bg-alpha) * 0.6);
+  background: radial-gradient(70vw 34vh at 50% 104%, var(--c1), transparent 72%);
+  filter: blur(46px);
+}
+@keyframes bg-tide {
+  from { background-position: 0% 50%; }
+  to   { background-position: 260% 50%; }
+}
+
+/* =============================================================================
+   REDUCED MOTION — keep the look, drop the movement
+   ============================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  body::before, body::after { animation: none !important; }
+}
+
+/* Swatches used by the picker in the Control Panel. Each is a miniature of the
+   real thing so the choice is legible before it is applied. */
+.bg-swatch {
+  height: 46px; border-radius: var(--r-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  position: relative; overflow: hidden;
+}
+.bg-swatch::after {
+  content: ''; position: absolute; inset: 0;
+  opacity: 0.85;
+}
+.bg-swatch[data-preview='plain']::after { background: var(--surface-2); opacity: 1; }
+.bg-swatch[data-preview='mesh']::after {
+  background:
+    radial-gradient(60% 60% at 15% 10%, var(--c3), transparent 65%),
+    radial-gradient(60% 60% at 85% 25%, var(--c2), transparent 65%),
+    radial-gradient(70% 70% at 50% 100%, var(--c4), transparent 68%);
+  filter: blur(6px);
+}
+.bg-swatch[data-preview='grid']::after {
+  background:
+    linear-gradient(to right, var(--c3) 1px, transparent 1px) 0 0 / 11px 11px,
+    linear-gradient(to bottom, var(--c3) 1px, transparent 1px) 0 0 / 11px 11px,
+    radial-gradient(80% 70% at 50% 0%, var(--c2), transparent 70%);
+  opacity: 0.6;
+}
+.bg-swatch[data-preview='glow']::after {
+  background:
+    radial-gradient(75% 70% at 50% -10%, var(--c4), transparent 70%),
+    radial-gradient(90% 80% at 50% 115%, var(--c1), transparent 72%);
+  filter: blur(5px);
+}
+.bg-swatch[data-preview='strata']::after {
+  background: repeating-linear-gradient(128deg,
+    var(--c1) 0 1px, transparent 1px 14px, var(--c3) 14px 15px, transparent 15px 30px);
+  opacity: 0.75;
+}
+.bg-swatch[data-preview='aurora']::after {
+  background:
+    radial-gradient(60% 60% at 28% 32%, var(--c3), transparent 64%),
+    radial-gradient(64% 64% at 74% 66%, var(--c4), transparent 64%);
+  filter: blur(7px);
+  animation: bg-aurora-a 26s ease-in-out infinite alternate;
+}
+.bg-swatch[data-preview='orbs']::after {
+  background:
+    radial-gradient(26% 26% at 22% 28%, var(--c4), transparent 60%),
+    radial-gradient(20% 20% at 76% 40%, var(--c2), transparent 60%),
+    radial-gradient(30% 30% at 60% 82%, var(--c3), transparent 60%);
+  filter: blur(5px);
+  animation: bg-orbs 30s ease-in-out infinite alternate;
+}
+.bg-swatch[data-preview='pulse']::after {
+  background: radial-gradient(48% 48% at 50% 46%, var(--c4), transparent 64%);
+  filter: blur(6px);
+  animation: bg-pulse 9s ease-in-out infinite;
+}
+.bg-swatch[data-preview='tide']::after {
+  background: linear-gradient(100deg,
+    transparent 0%, var(--c2) 22%, var(--c4) 46%, var(--c3) 68%, transparent 92%);
+  background-size: 260% 100%;
+  filter: blur(6px);
+  animation: bg-tide 28s linear infinite;
+}
+.bg-swatch .bg-live {
+  position: absolute; right: 5px; top: 5px; z-index: 1;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 1px 5px; border-radius: var(--r-full);
+  background: var(--ink); color: var(--bg);
+}
