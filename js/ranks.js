@@ -22,18 +22,21 @@
   'use strict';
 
   /* `wr` is the percentage of a world record required in EVERY trained
-     movement to hold the rank. */
-  /* Stone starts at 30% and Platinum sits at 90% — "close to complete" — with
-     the middle tiers spread evenly between them. The percentages look linear
-     but the difficulty is not: closing 78% -> 90% of a world record is a far
-     larger job than 30% -> 42%. */
+     movement to hold the rank.
+
+     Platinum stays at 90% ("close to complete") and Diamond at 99%, both fixed
+     by request. The rungs below them are eased so the early climb is not one
+     enormous first step: a committed amateur should be able to leave Wood, and
+     the ladder still gets brutal near the top, where the percentages look
+     evenly spaced but the difficulty is anything but — closing 72% -> 90% of a
+     world record is a far larger job than 22% -> 33%. */
   const RANKS = [
     { id: 'wood',     name: 'Wood',     wr: 0,  color: '#8a6242' },
-    { id: 'stone',    name: 'Stone',    wr: 30, color: '#8d9299' },
-    { id: 'bronze',   name: 'Bronze',   wr: 42, color: '#c1793a' },
-    { id: 'iron',     name: 'Iron',     wr: 54, color: '#6b7480' },
-    { id: 'silver',   name: 'Silver',   wr: 65, color: '#b9c2cc' },
-    { id: 'gold',     name: 'Gold',     wr: 78, color: '#e0b23c' },
+    { id: 'stone',    name: 'Stone',    wr: 22, color: '#8d9299' },
+    { id: 'bronze',   name: 'Bronze',   wr: 33, color: '#c1793a' },
+    { id: 'iron',     name: 'Iron',     wr: 45, color: '#6b7480' },
+    { id: 'silver',   name: 'Silver',   wr: 57, color: '#b9c2cc' },
+    { id: 'gold',     name: 'Gold',     wr: 72, color: '#e0b23c' },
     { id: 'platinum', name: 'Platinum', wr: 90, color: '#63d3c4' },
     { id: 'diamond',  name: 'Diamond',  wr: 99, color: '#7fc4f5', elite: true }
   ];
@@ -159,6 +162,31 @@
   }
 
   /**
+   * The record for a specific exercise. A per-exercise record entered by the
+   * user wins over the pattern estimate, because "the vertical-pull record" is
+   * a coarse stand-in for 400 different movements and the person doing the lift
+   * knows their sport better than a lookup table does.
+   *
+   * A custom record is stored with the bodyweight it applies to, so it can be
+   * re-scaled allometrically the same way the built-in ratios are — otherwise
+   * changing your bodyweight would silently change how close to a record you
+   * appear to be.
+   */
+  function exerciseRecord(exercise, bodyweight) {
+    const bw = Math.max(30, Number(bodyweight) || REF_BW);
+    const custom = exercise && exercise.wr;
+    if (custom && Number(custom.value) > 0) {
+      const at = Math.max(30, Number(custom.bodyweight) || REF_BW);
+      return Number(custom.value) * Math.pow(bw / at, ALLOMETRIC);
+    }
+    return worldRecord(
+      exercise && exercise.pattern,
+      bw,
+      !!(exercise && exercise.equipment === 'bodyweight')
+    );
+  }
+
+  /**
    * What fraction of the world record this lift represents, as a percentage.
    * Bodyweight movements count the athlete's own mass as load, which is what
    * makes an unweighted pull-up score at all.
@@ -166,7 +194,6 @@
   function wrPercent(exercise, best, bodyweight) {
     const bw = Math.max(30, Number(bodyweight) || REF_BW);
     const isBw = !!(exercise && exercise.equipment === 'bodyweight');
-    const pattern = (exercise && exercise.pattern) || 'other';
 
     let load = (best && best.e1rm) || 0;
     if (isBw) load += bw;
@@ -179,7 +206,7 @@
       return Math.min(20, (reps / 40) * 20);
     }
 
-    const record = worldRecord(pattern, bw, isBw);
+    const record = exerciseRecord(exercise, bw);
     if (!record) return 0;
     return Math.max(0, (load / record) * 100);
   }
@@ -281,7 +308,7 @@
         pattern: ex.pattern,
         score: pct,                 /* % of world record */
         wrPercent: pct,
-        record: worldRecord(ex.pattern || 'other', bw, ex.equipment === 'bodyweight'),
+        record: exerciseRecord(ex, bw),
         e1rm: bestByEx[id].e1rm,
         sessions: bestByEx[id].sessions,
         lastDate: bestByEx[id].lastDate,
@@ -365,6 +392,7 @@
     bestE1RM: bestE1RM,
     volumeOf: volumeOf,
     worldRecord: worldRecord,
+    exerciseRecord: exerciseRecord,
     wrPercent: wrPercent,
     isRankBearing: isRankBearing,
     strengthScore: strengthScore,

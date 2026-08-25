@@ -399,11 +399,19 @@
    */
   function editExercise(ex, onSaved) {
     const isNew = !ex;
+    const settings = App.Store.getSettings();
     const draft = Object.assign({
       name: '', equipment: 'barbell', pattern: 'other', unilateral: false,
-      muscles: {}, image: null, notes: ''
+      muscles: {}, image: null, notes: '', wr: null
     }, ex || {});
     draft.muscles = Object.assign({}, draft.muscles);
+    draft.wr = draft.wr ? Object.assign({}, draft.wr) : null;
+
+    /* Ranks are scored against a world record, so every exercise needs one.
+       The field is pre-filled from the movement pattern and re-fills whenever
+       the pattern or equipment changes — until the value is edited by hand,
+       after which it is left alone. */
+    let wrTouched = !!(draft.wr && Number(draft.wr.value) > 0);
 
     const figWrap = U.h('.anat-wrap');
     const sumEl = U.h('.u-xs.u-muted');
@@ -423,7 +431,7 @@
     });
 
     const equipSel = U.h('select.select', {
-      onchange: function () { draft.equipment = this.value; }
+      onchange: function () { draft.equipment = this.value; refillWr(); }
     }, Object.keys(App.Equipment).map(function (k) {
       return U.h('option', { value: k, selected: draft.equipment === k }, App.Equipment[k]);
     }));
@@ -435,11 +443,50 @@
       'glute-isolation', 'leg-isolation', 'calf-isolation', 'neck-isolation', 'other'];
 
     const patternSel = U.h('select.select', {
-      onchange: function () { draft.pattern = this.value; }
+      onchange: function () { draft.pattern = this.value; refillWr(); }
     }, PATTERNS.map(function (p) {
       return U.h('option', { value: p, selected: draft.pattern === p },
         p.replace(/-/g, ' ').replace(/^./, function (c) { return c.toUpperCase(); }));
     }));
+
+    /* --- world record ------------------------------------------------- */
+
+    const wrInput = U.h('input.input.input-num', {
+      type: 'number', min: '0', step: '0.5', inputmode: 'decimal',
+      oninput: function () { wrTouched = true; syncWrHint(); }
+    });
+    const wrBwInput = U.h('input.input.input-num', {
+      type: 'number', min: '30', max: '400', step: '0.5', inputmode: 'decimal',
+      value: (draft.wr && draft.wr.bodyweight) || settings.bodyweight || 80,
+      oninput: syncWrHint
+    });
+    const wrHint = U.h('.hint');
+
+    function suggestedWr() {
+      return App.Ranks.worldRecord(draft.pattern, Number(wrBwInput.value) || settings.bodyweight,
+        draft.equipment === 'bodyweight');
+    }
+    function refillWr() {
+      if (wrTouched) { syncWrHint(); return; }
+      wrInput.value = Math.round(suggestedWr());
+      syncWrHint();
+    }
+    function syncWrHint() {
+      const isBw = draft.equipment === 'bodyweight';
+      const v = Number(wrInput.value) || 0;
+      wrHint.textContent = (isBw
+        ? 'For a bodyweight movement this is the TOTAL load — the athlete plus any added weight. '
+        : 'The heaviest single rep anyone has done at that bodyweight. ') +
+        (v > 0
+          ? 'Scaled to your ' + settings.bodyweight + ' ' + settings.units + ': ' +
+            Math.round(App.Ranks.exerciseRecord(
+              { pattern: draft.pattern, equipment: draft.equipment,
+                wr: { value: v, bodyweight: Number(wrBwInput.value) || settings.bodyweight } },
+              settings.bodyweight)) + ' ' + settings.units + '.'
+          : 'Required — this is what your rank is measured against.');
+    }
+    if (draft.wr && Number(draft.wr.value) > 0) wrInput.value = draft.wr.value;
+    else wrInput.value = Math.round(suggestedWr());
 
     /* --- image --- */
     const imgPreview = U.h('.ex-thumb', { style: { width: '64px', height: '64px' } });
@@ -517,6 +564,22 @@
         ]));
 
         body.appendChild(U.h('.field', [
+          U.h('label.label', 'World record 1RM'),
+          U.h('.grid.grid-2', [
+            U.h('.row', [
+              wrInput,
+              U.h('span.u-sm.u-muted', { text: settings.units })
+            ]),
+            U.h('.row', [
+              U.h('span.u-sm.u-muted.u-nowrap', 'at bodyweight'),
+              wrBwInput,
+              U.h('span.u-sm.u-muted', { text: settings.units })
+            ])
+          ]),
+          wrHint
+        ]));
+
+        body.appendChild(U.h('.field', [
           U.h('label.label', 'Image or GIF'),
           U.h('.row', [
             imgPreview,
@@ -562,6 +625,7 @@
 
         drawMuscles();
         redrawFigure();
+        syncWrHint();
       },
       actions: [
         { label: 'Cancel' },
@@ -571,6 +635,18 @@
             if (!Object.keys(draft.muscles).length) {
               U.toast('Muscles required', 'Assign at least one muscle.', 'bad'); return;
             }
+            const wrValue = Number(wrInput.value) || 0;
+            if (wrValue <= 0) {
+              U.toast('World record required',
+                'Ranks are scored against it, so every exercise needs one.', 'bad');
+              wrInput.focus();
+              return;
+            }
+            draft.wr = {
+              value: wrValue,
+              bodyweight: Number(wrBwInput.value) || settings.bodyweight || 80,
+              units: settings.units
+            };
             draft.name = draft.name.trim();
             App.Store.saveExercise(draft).then(function (saved) {
               close();

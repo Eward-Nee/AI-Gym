@@ -148,6 +148,8 @@
       muscles: {},
       image: null,
       notes: '',
+      /* {value, bodyweight, units} — overrides the pattern estimate when set */
+      wr: null,
       builtin: false,
       favorite: false,
       createdAt: now

@@ -87,26 +87,34 @@ The yardstick is the **world record for your bodyweight**, and your rank is set 
 | Rank | Needs, in every exercise you train |
 |---|---|
 | Wood | — |
-| Stone | 30% of a world record |
-| Bronze | 42% |
-| Iron | 54% |
-| Silver | 65% |
-| Gold | 78% |
+| Stone | 22% of a world record |
+| Bronze | 33% |
+| Iron | 45% |
+| Silver | 57% |
+| Gold | 72% |
 | Platinum | 90% — close to complete |
 | **Diamond** | **99% — a world record in all of them** |
 
 Records are stored as a 1RM-to-bodyweight ratio at an 80 kg reference and re-scaled allometrically (strength ≈ mass^⅔), because absolute strength tracks cross-sectional area. A 60 kg lifter is therefore held to a higher bodyweight multiple than a 120 kg lifter for the same rank. 1RM uses Epley up to 10 reps and an Epley/Brzycki average beyond that, where Epley alone starts to overestimate.
 
-The ladder is deliberately punishing. For an 80 kg lifter, held back by their curl in every case:
+The ladder is steep at the top and gentler at the bottom. For an 80 kg lifter, held back by their curl in every case:
 
 | Lifter | Bench / Squat / Deadlift / Curl | Floor | Rank |
 |---|---|---|---|
-| Novice | 40 / 60 / — / 10 | 12% | Wood |
-| Intermediate | 100 / 140 / 180 / 20 | 24% | Wood |
+| Beginner | 40 / 60 / — / 10 | 12% | Wood |
+| Novice | 70 / 100 / 120 / 15 | 18% | Wood |
+| Intermediate | 100 / 140 / 180 / 20 | 24% | Stone |
+| Strong amateur | 130 / 180 / 230 / 32 | 39% | Bronze |
 | Advanced | 150 / 210 / 260 / 45 | 55% | Iron |
 | Near-elite | 200 / 290 / 330 / 75 | 91% | Platinum |
 
-Reaching Stone means 30% of a world record in *everything* you train, so most people sit at Wood for a long time. The percentages look evenly spaced but the difficulty is not — closing 78% → 90% is a far larger job than 30% → 42%.
+The percentages look evenly spaced but the difficulty is anything but — closing 72% → 90% is a far larger job than 22% → 33%.
+
+### Per-exercise records
+
+Every exercise carries its own world record, entered when you create it and pre-filled from the movement pattern. It is stored alongside the bodyweight it applies to, so it re-scales allometrically exactly like the built-in ratios do — otherwise gaining or losing weight would silently change how close to a record you appear to be.
+
+The pattern table is only a fallback. "The vertical-pull record" is a coarse stand-in for a hundred different movements, and the person doing the lift knows their sport better than a lookup table does, so a record you enter always wins.
 
 **Not everything is rank-bearing.** A movement counts toward the floor only if it carries a recorded external load, or is a bodyweight movement whose whole point is maximal effort (pull-up, dip, push-up, pistol). A plank is scored and shown but cannot set your rank, since holding a position is not a one-rep max and crediting it with full bodyweight would let it outscore a real lift.
 
