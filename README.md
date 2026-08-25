@@ -13,7 +13,7 @@ A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No
 - **Eight ranks scored against world records** for your bodyweight — Diamond is 99% of a world record in *every* exercise you train
 - **Friends and head-to-head comparison** through a shared hub
 - **Three storage tiers**: IndexedDB always, your own Supabase optionally, a shared hub only for friends
-- **Light / dark / AMOLED**, eight colour schemes that also drive the heat gradient, and eight page backgrounds (four static, four animated) built from that same palette
+- **Light / dark / AMOLED**, eight colour schemes that also drive the heat gradient, and eight page backgrounds (four static, four animated) built from that same palette — with every panel going translucent so the background reads through the whole page
 
 ---
 
@@ -123,6 +123,12 @@ The app is designed for a phone first and widens from there. Three rules do most
 - **Charts measure, they never scale.** Each chart reads its container width and builds its viewBox at that exact pixel size, so one SVG unit is always one CSS pixel and a `ResizeObserver` redraws on rotation. Scaling a fixed-width viewBox to fit compressed the whole plot — tick labels included — by about 2.5x on a phone.
 
 Breakpoints: 1100px (sidebar layout loosens), 860px (sidebar becomes a bottom tab bar), 760px (figure panels stack), 560px (denser list rows), 344px (tiles go single column). A `(hover: none)` block makes row actions permanent and grows hit areas, since a phone never fires hover.
+
+### Translucent surfaces
+
+When a decorative background is selected, every container that would otherwise be an opaque slab — cards, modals, tiles, table headers, the topbar and nav — goes translucent with a backdrop blur, so the background is visible through the page rather than only in the gutters. Selecting **None** restores fully opaque surfaces.
+
+`--surface-alpha` in [css/backgrounds.css](css/backgrounds.css) is the single knob, and it is mode-aware: dark text on a washed-out light panel loses contrast much faster than light text on a dark one, so light mode keeps more body than dark. The shipped values were checked against all 144 mode × scheme × palette-stop combinations — worst-case body text lands at 6.4:1, comfortably past the WCAG AA 4.5:1 threshold. Pushing the alpha much lower starts to fail it, which is why this stops at clearly translucent rather than going fully glassy.
 
 ### Running inside a web-to-app wrapper
 

@@ -375,7 +375,7 @@
       r.scored.length ? U.h('.table-wrap', [U.h('table.tbl', [
         U.h('thead', [U.h('tr', [
           U.h('th', 'Movement'), U.h('th.num', 'Your 1RM'), U.h('th.num', 'World record'),
-          U.h('th.num', '% WR'), U.h('th', '')
+          U.h('th.num', '% WR'), U.h('th.bar-cell', '')
         ])]),
         U.h('tbody', r.scored.slice(0, 30).map(function (s) {
           const units = App.Store.getSettings().units;
@@ -391,7 +391,7 @@
             U.h('td.num', { text: U.num(s.e1rm, 0) + ' ' + units }),
             U.h('td.num.u-muted', { text: U.num(s.record, 0) + ' ' + units }),
             U.h('td.num', { text: U.num(s.score, 1) + '%' }),
-            U.h('td', { style: { width: '26%' } }, [
+            U.h('td.bar-cell', [
               U.h('.mlist-bar', [
                 U.h('i.mlist-fill', {
                   style: { width: Math.min(100, s.score) + '%',

@@ -16,11 +16,13 @@
    ============================================================================= */
 
 :root {
-  --bg-alpha: 0.16;      /* layer opacity, overridden per mode */
+  --bg-alpha: 0.24;      /* layer opacity, overridden per mode */
   --bg-blur: 70px;
 }
-[data-mode='dark']   { --bg-alpha: 0.30; }
-[data-mode='amoled'] { --bg-alpha: 0.20; }
+[data-mode='dark']   { --bg-alpha: 0.34; }
+/* AMOLED stays lower on purpose: the point of the mode is unlit pixels, so the
+   background is present but never lights up a large area of the panel. */
+[data-mode='amoled'] { --bg-alpha: 0.24; }
 
 /* The two painting layers. Both are inert until a background is selected. */
 body::before,
@@ -34,15 +36,91 @@ body::after {
   transition: opacity 400ms var(--ease);
 }
 
-/* Let the page show through once a decorative background is on. */
-[data-bg]:not([data-bg='plain']) .card {
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+/* =============================================================================
+   TRANSLUCENT SURFACES
+
+   Once a decorative background is on, every container that would otherwise be
+   an opaque slab goes see-through with a backdrop blur, so the background is
+   visible through the whole page rather than only in the gutters.
+
+   --surface-alpha is the single knob. It is mode-aware because the same alpha
+   does not read the same on both grounds: dark text on a washed-out light
+   panel loses contrast far faster than light text on a dark one. These values
+   keep body text above the WCAG AA 4.5:1 ratio over any of the eight
+   backgrounds; pushing them much lower starts to fail it, which is why this
+   stops at "clearly translucent" rather than going fully glassy.
+   ============================================================================= */
+:root {
+  --surface-alpha: 80%;    /* cards, modals, topbar */
+  --surface2-alpha: 72%;   /* nested blocks, tiles, table headers */
+  --surface-blur: 14px;
 }
+[data-mode='dark'] {
+  --surface-alpha: 74%;
+  --surface2-alpha: 64%;
+}
+[data-mode='amoled'] {
+  --surface-alpha: 70%;
+  --surface2-alpha: 58%;
+}
+
+[data-bg]:not([data-bg='plain']) {
+  /* Cards and anything card-like */
+  --glass-1: color-mix(in srgb, var(--surface) var(--surface-alpha), transparent);
+  --glass-2: color-mix(in srgb, var(--surface-2) var(--surface2-alpha), transparent);
+  --glass-3: color-mix(in srgb, var(--surface-3) var(--surface2-alpha), transparent);
+}
+
+[data-bg]:not([data-bg='plain']) .card,
+[data-bg]:not([data-bg='plain']) .modal {
+  background: var(--glass-1);
+  backdrop-filter: blur(var(--surface-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--surface-blur)) saturate(1.4);
+}
+
+/* Nested surfaces sit on top of an already-translucent card, so they use the
+   lighter alpha and no blur of their own — stacking blurs muddies the text. */
 [data-bg]:not([data-bg='plain']) .stat-tile,
-[data-bg]:not([data-bg='plain']) .wo-block {
-  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+[data-bg]:not([data-bg='plain']) .wo-block,
+[data-bg]:not([data-bg='plain']) .link-row,
+[data-bg]:not([data-bg='plain']) .callout,
+[data-bg]:not([data-bg='plain']) .code-head,
+[data-bg]:not([data-bg='plain']) .modal-foot,
+[data-bg]:not([data-bg='plain']) .nav-status {
+  background: var(--glass-2);
+}
+
+[data-bg]:not([data-bg='plain']) .wo-block-head,
+[data-bg]:not([data-bg='plain']) .btn-group,
+[data-bg]:not([data-bg='plain']) .scheme-opt,
+[data-bg]:not([data-bg='plain']) .mode-opt,
+[data-bg]:not([data-bg='plain']) .btn:not(.btn-primary):not(.btn-ghost) {
+  background: var(--glass-1);
+}
+
+/* Sticky table headers must match the card they float over, or they read as an
+   opaque band sliding across a translucent panel. */
+[data-bg]:not([data-bg='plain']) .tbl th {
+  background: var(--glass-1);
+  backdrop-filter: blur(var(--surface-blur));
+  -webkit-backdrop-filter: blur(var(--surface-blur));
+}
+
+/* Inputs, the code block and the exercise thumbnail keep more body: they carry
+   small text or fine detail that a washed ground makes hard to read. */
+[data-bg]:not([data-bg='plain']) .input,
+[data-bg]:not([data-bg='plain']) .select,
+[data-bg]:not([data-bg='plain']) .textarea,
+[data-bg]:not([data-bg='plain']) .code,
+[data-bg]:not([data-bg='plain']) .link-url,
+[data-bg]:not([data-bg='plain']) .ex-thumb {
+  background: color-mix(in srgb, var(--bg-2) 88%, transparent);
+}
+
+/* The shell chrome already blurs; just let more through. */
+[data-bg]:not([data-bg='plain']) .topbar,
+[data-bg]:not([data-bg='plain']) .nav {
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
 }
 
 /* =============================================================================

@@ -360,8 +360,11 @@ a:hover { text-decoration: underline; }
 .stat { display: flex; flex-direction: column; gap: 2px; }
 .stat-label { font-size: var(--fs-xs); color: var(--text-3); font-weight: 560;
   letter-spacing: 0.04em; text-transform: uppercase; }
+/* 1.2 rather than a tighter figure: below about 1.15 the content box is shorter
+   than the glyph em box at these sizes, so the numerals spill past their own
+   line box and sit cramped under the label. */
 .stat-value { font-size: var(--fs-2xl); font-weight: 680; letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums; line-height: 1.1; }
+  font-variant-numeric: tabular-nums; line-height: 1.2; }
 .stat-value.is-sm { font-size: var(--fs-xl); }
 .stat-unit { font-size: var(--fs-sm); color: var(--text-3); font-weight: 500; margin-left: 3px; }
 .stat-delta { font-size: var(--fs-xs); font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
@@ -392,6 +395,13 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 .tbl tbody tr:hover { background: var(--surface-2); }
 .tbl .num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
 .tbl .shrink { width: 1%; white-space: nowrap; }
+/* A proportional bar needs real room; below that it collapses to nothing and
+   reads as missing data rather than as a small value. The adjacent number
+   already carries the information, so the bar is dropped instead. */
+.tbl .bar-cell { width: 26%; min-width: 90px; }
+
+/* Never let a non-zero value render as an invisible sliver. */
+.mlist-fill { min-width: 3px; }
 
 /* =============================================================================
    MODAL / DRAWER
@@ -1002,9 +1012,21 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   .vs-grid { grid-template-columns: 1fr; gap: var(--sp-3); }
   .vs-mark { display: none; }
 
-  /* Modals become bottom sheets — reachable with a thumb. */
+  /* Modals become bottom sheets — reachable with a thumb.
+     The sheet slides up rather than using the desktop pop-and-scale: scaling a
+     bottom-anchored element moves its edges, so an interrupted or throttled
+     animation can leave the footer sitting below the viewport. A translate can
+     only ever leave it lower down, which is where a sheet lives anyway. */
   .modal-root { padding: 0; align-items: flex-end; }
-  .modal, .modal.is-wide { width: 100%; max-height: 92dvh; border-radius: var(--r-xl) var(--r-xl) 0 0; }
+  .modal, .modal.is-wide {
+    width: 100%; max-height: 92dvh;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    animation: sheet-up 220ms var(--ease);
+  }
+  @keyframes sheet-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
   .modal-head { padding: var(--sp-4) var(--sp-4) var(--sp-3); }
   .modal-body { padding: var(--sp-4); }
   .modal-foot { padding: var(--sp-3) var(--sp-4) calc(var(--sp-3) + env(safe-area-inset-bottom, 0px));
@@ -1064,6 +1086,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   .scheme-grid { grid-template-columns: repeat(2, 1fr); }
   .bg-grid { grid-template-columns: repeat(2, 1fr); }
   .vs-bar { grid-template-columns: 1fr 72px 1fr; gap: var(--sp-2); }
+  .tbl .bar-cell { display: none; }
 }
 
 /* Genuinely tiny screens only. 375px is the commonest phone width, so the
