@@ -143,15 +143,17 @@
      ANATOMY PANEL
      ------------------------------------------------------------------------ */
 
-  /** Figure + ranked list side by side, the app's standard "how hard" panel. */
+  /**
+   * Figure + ranked list, the app's standard "how hard did this work me" panel.
+   * Side by side where there is room; stacked below ~760px so the figures keep
+   * a usable width instead of being crushed into the leftover column.
+   */
   function heatPanel(heat, opts) {
     opts = opts || {};
     const fig = U.h('.anat-wrap');
-    const wrap = U.h('.grid', {
-      style: { gridTemplateColumns: opts.stack ? '1fr' : 'minmax(0,1fr) 210px', alignItems: 'start' }
-    }, [
+    const wrap = U.h('.heat-panel' + (opts.stack ? '.is-stacked' : ''), [
       fig,
-      opts.list === false ? null : U.h('div', [
+      opts.list === false ? null : U.h('.heat-panel-list', [
         U.h('.label', { text: opts.listLabel || 'Muscle load' }),
         muscleList(heat, opts.limit || 9)
       ])
@@ -478,15 +480,14 @@
             'Large images are resized automatically.')
         ]));
 
-        body.appendChild(U.h('.grid', {
-          style: { gridTemplateColumns: 'minmax(0,1fr) 240px', alignItems: 'start' }
-        }, [
-          U.h('div', [
+        body.appendChild(U.h('.editor-split', [
+          U.h('div', { style: { minWidth: 0 } }, [
             U.h('.label', { style: { marginBottom: '8px' } }, 'Muscle involvement'),
             musclesWrap,
-            U.h('.row', { style: { marginTop: '10px' } }, [addMuscleSel, U.h('.spacer'), sumEl])
+            U.h('.row.row-wrap', { style: { marginTop: '10px' } },
+              [addMuscleSel, U.h('.spacer'), sumEl])
           ]),
-          U.h('div', [
+          U.h('div', { style: { minWidth: 0 } }, [
             U.h('.label', { style: { marginBottom: '8px' } }, 'Preview'),
             figWrap
           ])

@@ -8,6 +8,9 @@
 
 html, body { height: 100%; }
 
+/* Anything the app scrolls to programmatically must clear the sticky topbar. */
+[data-scroll-target] { scroll-margin-top: 76px; }
+
 body {
   font-family: var(--font-sans);
   font-size: var(--fs-md);
@@ -19,7 +22,11 @@ body {
   overflow-x: hidden;
 }
 
-img, svg, video { display: block; max-width: 100%; }
+img, video { display: block; max-width: 100%; }
+/* NOT max-width on every svg: icons carry intrinsic width/height, and a blanket
+   max-width lets a tight flex or grid cell squash them horizontally while the
+   height holds — which reads as a smeared icon. Sized SVGs opt in below. */
+svg { display: block; }
 button, input, select, textarea { font: inherit; color: inherit; }
 h1, h2, h3, h4 { line-height: 1.2; font-weight: 650; letter-spacing: -0.015em; }
 a { color: var(--accent); text-decoration: none; }
@@ -226,7 +233,7 @@ a:hover { text-decoration: underline; }
 .btn-block { width: 100%; }
 .btn-icon { padding: 8px; width: 34px; height: 34px; }
 .btn-icon.btn-sm { width: 28px; height: 28px; padding: 5px; }
-.btn svg { width: 16px; height: 16px; flex: none; }
+.btn svg { width: 16px; height: 16px; min-width: 16px; flex: none; }
 
 .btn-group { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--r-md);
   overflow: hidden; background: var(--surface); }
@@ -481,11 +488,33 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
    ANATOMY
    ============================================================================= */
 
-.anat-wrap { position: relative; }
-.anat-pair { display: flex; gap: var(--sp-5); justify-content: center; align-items: flex-end; }
-.anat-fig { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); min-width: 0; }
-.anat-svg { height: clamp(220px, 34vh, 420px); width: auto; }
-.anat-pair.is-compact .anat-svg { height: clamp(140px, 20vh, 210px); }
+.anat-wrap { position: relative; min-width: 0; }
+.anat-pair { display: flex; gap: var(--sp-4); justify-content: center; align-items: flex-end; }
+.anat-fig { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2);
+  min-width: 0; flex: 1 1 0; }
+/* Width-led, not height-led: each figure takes half the row and derives its
+   height from the 220:520 aspect. Sizing by height instead let a narrow column
+   crush the figure to a sliver while keeping it full height. */
+.anat-svg { width: 100%; max-width: 190px; height: auto; aspect-ratio: 220 / 520; margin-inline: auto; }
+.anat-pair.is-compact .anat-svg { max-width: 132px; }
+
+/* Muscle editor: controls beside the live preview, stacked on a phone. */
+.editor-split { display: grid; gap: var(--sp-4); align-items: start;
+  grid-template-columns: minmax(0, 1fr) 240px; }
+@media (max-width: 700px) {
+  .editor-split { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Figure + muscle list. Stacks early so the figures never get squeezed. */
+.heat-panel { display: grid; gap: var(--sp-4); align-items: start;
+  grid-template-columns: minmax(0, 1fr) 210px; }
+.heat-panel.is-stacked { grid-template-columns: minmax(0, 1fr); }
+.heat-panel-list { min-width: 0; }
+@media (max-width: 760px) {
+  .heat-panel { grid-template-columns: minmax(0, 1fr); }
+  .anat-svg { max-width: 168px; }
+  .anat-pair.is-compact .anat-svg { max-width: 148px; }
+}
 .anat-fig figcaption {
   font-size: var(--fs-xs); color: var(--text-3); letter-spacing: 0.08em;
   text-transform: uppercase; font-weight: 600;
@@ -545,8 +574,9 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
    CHARTS
    ============================================================================= */
 
-.chart { width: 100%; }
-.chart svg { width: 100%; height: auto; overflow: visible; }
+.chart { width: 100%; min-width: 0; }
+.chart svg { width: 100%; height: auto; max-width: 100%; overflow: visible; }
+.spark { max-width: 100%; height: auto; }
 .ch-grid line { stroke: var(--line); stroke-width: 1; shape-rendering: crispEdges; }
 .ch-axis line, .ch-axis path { stroke: var(--line-strong); stroke-width: 1; fill: none; }
 .ch-tick { font-size: 10px; fill: var(--text-3); font-family: var(--font-mono); }
@@ -729,11 +759,13 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 }
 .code-head {
   display: flex; align-items: center; gap: var(--sp-2);
+  flex-wrap: wrap;
   padding: 7px var(--sp-3);
   border-bottom: 1px solid var(--line);
   background: var(--surface-2);
   font-size: var(--fs-xs); color: var(--text-3); font-weight: 600;
 }
+.code-head > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .code pre {
   margin: 0; padding: var(--sp-3);
   overflow-x: auto; max-height: 320px; overflow-y: auto;
@@ -810,6 +842,31 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* -----------------------------------------------------------------------------
+   TOUCH
+   Coarse pointers never fire hover, so anything revealed on hover is invisible
+   on a phone. Row actions become permanent, and hit areas grow to ~44px.
+   -------------------------------------------------------------------------- */
+@media (hover: none), (pointer: coarse) {
+  .ex-actions { opacity: 1; }
+  .btn { padding: 11px 16px; }
+  .btn-sm { padding: 9px 13px; }
+  .btn-icon { width: 40px; height: 40px; padding: 9px; }
+  .btn-icon.btn-sm { width: 36px; height: 36px; padding: 8px; }
+  .input, .select, .textarea { padding: 11px 12px; font-size: 16px; } /* 16px stops iOS zoom-on-focus */
+  .input-sm { padding: 8px 10px; font-size: 15px; }
+  /* Re-reserve the caret gutter the padding shorthand above just wiped out,
+     otherwise the arrow is drawn on top of the selected text. */
+  .select { padding-right: 34px; }
+  .select.input-sm { padding-right: 30px; }
+  .nav-link { padding: 9px 4px; }
+  .chip-btn { padding: 8px 13px; }
+  .card-link:hover { transform: none; }
+}
+
+/* -----------------------------------------------------------------------------
+   PHONE
+   -------------------------------------------------------------------------- */
 @media (max-width: 860px) {
   .app { grid-template-columns: 1fr; }
 
@@ -830,22 +887,109 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   .nav-ico { width: 21px; height: 21px; }
   .nav-link.is-active { background: transparent; color: var(--accent); }
 
-  .main { padding-bottom: 72px; }
-  .page { padding: var(--sp-4); }
-  .topbar { padding: var(--sp-3) var(--sp-4); }
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: minmax(0, 1fr); }
-  .anat-pair { gap: var(--sp-3); }
-  .modal { max-height: 92vh; }
-  .toasts { left: var(--sp-3); right: var(--sp-3); bottom: 80px; }
+  .main { padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
+  .page { padding: var(--sp-4) var(--sp-3); }
+  .page > * + * { margin-top: var(--sp-4); }
+  .card { padding: var(--sp-4); border-radius: var(--r-md); }
+
+  /* Topbar: title on one line, actions wrapping onto the next rather than
+     colliding with it. */
+  .topbar { padding: var(--sp-3); flex-wrap: wrap; gap: var(--sp-2); row-gap: var(--sp-3); }
+  .topbar h1 { font-size: var(--fs-lg); }
+  .topbar-sub { display: none; }
+  .topbar-actions { margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+
+  /* Single column for anything with real content... */
+  .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr); }
+  .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+  .grid-auto { grid-template-columns: minmax(0, 1fr); }
+  /* ...but a pair of compact stat tiles still reads fine side by side, and a
+     row each makes the card needlessly tall. Falls back to one column where
+     :has() is unsupported, which is the safe direction. */
+  .grid-2:has(> .stat-tile) { grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-3); }
+
+  .card-head { flex-wrap: wrap; }
+  .card-head .spacer { margin-left: auto; }
+  .sec-head { flex-wrap: wrap; }
+
+  .anat-pair { gap: var(--sp-2); }
+
+  .toasts { left: var(--sp-3); right: var(--sp-3);
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
   .toast { max-width: none; }
-  .vs-grid { grid-template-columns: 1fr; }
+
+  .vs-grid { grid-template-columns: 1fr; gap: var(--sp-3); }
   .vs-mark { display: none; }
+
+  /* Modals become bottom sheets — reachable with a thumb. */
+  .modal-root { padding: 0; align-items: flex-end; }
+  .modal, .modal.is-wide { width: 100%; max-height: 92dvh; border-radius: var(--r-xl) var(--r-xl) 0 0; }
+  .modal-head { padding: var(--sp-4) var(--sp-4) var(--sp-3); }
+  .modal-body { padding: var(--sp-4); }
+  .modal-foot { padding: var(--sp-3) var(--sp-4) calc(var(--sp-3) + env(safe-area-inset-bottom, 0px));
+    border-radius: 0; flex-wrap: wrap; }
+  .modal-foot .btn { flex: 1 1 auto; }
+  .list-scroll { max-height: 52vh; }
+
+  /* Horizontal rails: let them scroll rather than overflow the page. */
+  .btn-group { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .btn-group::-webkit-scrollbar { display: none; }
+  .btn-group .btn { flex: 0 0 auto; }
+
+  .table-wrap { -webkit-overflow-scrolling: touch; }
+  .tbl th, .tbl td { padding: 9px var(--sp-2); }
+  .tbl th { font-size: 10px; }
+
+  .mode-grid { gap: var(--sp-2); }
+  .mode-opt { padding: var(--sp-2); font-size: var(--fs-xs); }
+  .scheme-grid { grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
+
+  .step { grid-template-columns: 24px minmax(0, 1fr); gap: var(--sp-2); }
+  .code pre { font-size: 10px; max-height: 240px; }
+
+  .rank-medal.is-lg { width: 66px; height: 66px; font-size: var(--fs-xl); }
 }
 
-@media (max-width: 520px) {
-  .set-grid { grid-template-columns: 26px repeat(3, minmax(44px, 1fr)) auto; gap: 6px; }
+@media (max-width: 560px) {
+  /* Sets: weight and reps are what you actually tap, so they take the slack
+     and the fixed columns (index, e1RM / rest, action) give it up. */
+  .set-grid {
+    grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) 44px 38px;
+    gap: 5px;
+  }
+
   .stat-value { font-size: var(--fs-xl); }
+  .stat-value.is-sm { font-size: var(--fs-lg); }
+  .stat-tile { padding: var(--sp-3); }
+
+  .ex-row { grid-template-columns: 40px minmax(0, 1fr) auto; gap: var(--sp-2);
+    padding: 9px var(--sp-2); }
+  .ex-thumb { width: 40px; height: 40px; }
+  .ex-meta { gap: 6px; }
+  /* The strip is a decorative preview and the detail view shows the real
+     figure, so on a phone its width is better spent on the name. */
+  .ex-row .heat-strip { display: none; }
+  /* Wrap to two lines rather than truncating — "45-Degree Ba…" tells you
+     nothing, and there are three exercises that start that way. */
+  .ex-name {
+    white-space: normal;
+    display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .ex-meta { flex-wrap: nowrap; overflow: hidden; }
+  .ex-meta > span { white-space: nowrap; }
+
   .scheme-grid { grid-template-columns: repeat(2, 1fr); }
+  .vs-bar { grid-template-columns: 1fr 72px 1fr; gap: var(--sp-2); }
+}
+
+/* Genuinely tiny screens only. 375px is the commonest phone width, so the
+   two-up tile grid has to survive above this. */
+@media (max-width: 344px) {
+  .grid-4 { grid-template-columns: minmax(0, 1fr); }
+  .page { padding: var(--sp-3) 10px; }
+  .stat-label { font-size: 10px; }
 }
 
 /* ---- print --------------------------------------------------------------- */

@@ -5,6 +5,12 @@
    chromatic element is the themed heat ramp, used for the series that carries
    the value being measured. Forecasts are drawn dashed with a grey confidence
    band so a projection can never be mistaken for recorded data.
+
+   Responsiveness: every chart measures its container and builds the viewBox at
+   that exact pixel width, so one SVG unit is always one CSS pixel and nothing
+   is ever scaled non-uniformly. A ResizeObserver redraws on rotation or layout
+   change. (An earlier fixed-width viewBox with preserveAspectRatio="none"
+   squeezed the whole plot — labels included — by ~2.5x on a phone.)
    ============================================================================= */
 (function (App) {
   'use strict';
@@ -22,6 +28,34 @@
   }
 
   function f(n) { return Math.round(n * 100) / 100; }
+
+  /** Usable width of a container, with a sane floor before first layout. */
+  function measure(container) {
+    const w = container.getBoundingClientRect().width ||
+      (container.parentElement ? container.parentElement.getBoundingClientRect().width : 0);
+    return Math.max(220, Math.round(w) || 320);
+  }
+
+  /**
+   * Draw now, and again whenever the container changes width. The observer is
+   * attached once per container and keyed so repeated calls replace, never
+   * stack up.
+   */
+  function responsive(container, draw) {
+    let last = 0;
+    function run() {
+      const w = measure(container);
+      if (Math.abs(w - last) < 2) return;
+      last = w;
+      draw(w);
+    }
+    run();
+    if (container.__chartRO) container.__chartRO.disconnect();
+    if (typeof ResizeObserver !== 'undefined') {
+      container.__chartRO = new ResizeObserver(run);
+      container.__chartRO.observe(container);
+    }
+  }
 
   /* ---------------------------------------------------------------------------
      SCALES & TICKS
@@ -63,9 +97,9 @@
   function regress(points) {
     const n = points.length;
     if (n < 2) return null;
-    let sx = 0, sy = 0, sxy = 0, sxx = 0, syy = 0;
+    let sx = 0, sy = 0, sxy = 0, sxx = 0;
     points.forEach(function (p) {
-      sx += p.x; sy += p.y; sxy += p.x * p.y; sxx += p.x * p.x; syy += p.y * p.y;
+      sx += p.x; sy += p.y; sxy += p.x * p.y; sxx += p.x * p.x;
     });
     const d = n * sxx - sx * sx;
     if (!d) return null;
@@ -95,20 +129,25 @@
    *  bands:    [{ points:[{x, lo, hi}] }]   grey confidence regions
    *  xType:    'date' | 'number'
    *  yFormat:  fn(value) -> string
-   *  height:   px (default 220)
+   *  height:   px (default 220; shrinks on narrow screens)
    */
   function line(container, opts) {
     opts = opts || {};
     const series = (opts.series || []).filter(function (s) { return s.points && s.points.length; });
-    const bands = opts.bands || [];
-    const H = opts.height || 220;
-    const Wv = 720;                                  /* viewBox width; scales via CSS */
-    const pad = { t: 12, r: 14, b: 26, l: 46 };
 
     if (!series.length) {
       container.innerHTML = '<div class="empty"><p>Not enough data yet.</p></div>';
       return null;
     }
+    responsive(container, function (Wv) { drawLine(container, opts, series, Wv); });
+  }
+
+  function drawLine(container, opts, series, Wv) {
+    const bands = opts.bands || [];
+    const narrow = Wv < 420;
+    const H = opts.height ? (narrow ? Math.max(150, opts.height - 40) : opts.height)
+                          : (narrow ? 180 : 220);
+    const pad = { t: 12, r: narrow ? 10 : 14, b: narrow ? 22 : 26, l: narrow ? 38 : 46 };
 
     let xs = [], ys = [];
     series.forEach(function (s) {
@@ -121,7 +160,7 @@
     const xMin = Math.min.apply(null, xs), xMax = Math.max.apply(null, xs);
     const yScale = niceScale(
       opts.yMin !== undefined ? opts.yMin : Math.min.apply(null, ys),
-      Math.max.apply(null, ys), opts.yTicks || 4);
+      Math.max.apply(null, ys), narrow ? 3 : (opts.yTicks || 4));
     if (opts.yMin !== undefined) yScale.min = Math.min(yScale.min, opts.yMin);
 
     const iw = Wv - pad.l - pad.r, ih = H - pad.t - pad.b;
@@ -132,9 +171,10 @@
       return pad.t + ih - ((y - yScale.min) / (yScale.max - yScale.min)) * ih;
     };
 
-    const svg = el('svg', { viewBox: '0 0 ' + Wv + ' ' + H, preserveAspectRatio: 'none',
+    const svg = el('svg', { viewBox: '0 0 ' + Wv + ' ' + H,
+      width: Wv, height: H,
+      preserveAspectRatio: 'xMidYMid meet',
       role: 'img', 'aria-label': opts.label || 'chart' });
-    svg.style.height = H + 'px';
 
     /* --- gridlines + y axis --- */
     const grid = el('g', { class: 'ch-grid' });
@@ -142,7 +182,7 @@
     ticksFor(yScale).forEach(function (v) {
       const y = sy(v);
       grid.appendChild(el('line', { x1: pad.l, y1: f(y), x2: Wv - pad.r, y2: f(y) }));
-      const t = el('text', { class: 'ch-tick', x: pad.l - 7, y: f(y) + 3, 'text-anchor': 'end' });
+      const t = el('text', { class: 'ch-tick', x: pad.l - 6, y: f(y) + 3, 'text-anchor': 'end' });
       t.textContent = opts.yFormat ? opts.yFormat(v) : U.compact(v);
       axis.appendChild(t);
     });
@@ -152,11 +192,11 @@
     svg.appendChild(axis);
 
     /* --- x ticks --- */
-    const xTickCount = Math.min(6, Math.max(2, Math.floor(iw / 110)));
+    const xTickCount = Math.min(6, Math.max(2, Math.floor(iw / (narrow ? 78 : 110))));
     const xAxis = el('g', { class: 'ch-axis' });
     for (let i = 0; i < xTickCount; i++) {
       const v = xMin + ((xMax - xMin) * i) / (xTickCount - 1);
-      const t = el('text', { class: 'ch-tick', x: f(sx(v)), y: H - 8, 'text-anchor':
+      const t = el('text', { class: 'ch-tick', x: f(sx(v)), y: H - 6, 'text-anchor':
         i === 0 ? 'start' : i === xTickCount - 1 ? 'end' : 'middle' });
       t.textContent = opts.xType === 'date'
         ? U.fmtDate(new Date(v).toISOString().slice(0, 10), 'short')
@@ -190,23 +230,25 @@
         class: 'ch-line' + (s.accent ? ' is-accent' : '') + (s.dash ? ' is-dash' : ''),
         d: d
       }));
-      if (s.dots !== false && s.points.length <= 60) {
+      /* Dots get noisy once they are closer together than a fingertip. */
+      const spacing = iw / Math.max(1, s.points.length - 1);
+      if (s.dots !== false && spacing > (narrow ? 14 : 9)) {
         s.points.forEach(function (p) {
           svg.appendChild(el('circle', {
             class: 'ch-dot' + (s.accent ? ' is-accent' : ''),
-            cx: f(sx(p.x)), cy: f(sy(p.y)), r: 2.8
+            cx: f(sx(p.x)), cy: f(sy(p.y)), r: narrow ? 2.4 : 2.8
           }));
         });
       }
     });
 
-    /* --- hover readout --- */
+    /* --- hover / touch readout --- */
     const wrap = U.h('.chart-wrap');
     const tip = U.h('.chart-tip');
     const cursor = el('line', { class: 'ch-cursor', y1: pad.t, y2: pad.t + ih, opacity: 0 });
     svg.appendChild(cursor);
 
-    const hit = el('rect', { class: 'ch-hit', x: pad.l, y: pad.t, width: iw, height: ih });
+    const hit = el('rect', { class: 'ch-hit', x: pad.l, y: pad.t, width: Math.max(0, iw), height: Math.max(0, ih) });
     svg.appendChild(hit);
 
     const flat = [];
@@ -214,7 +256,7 @@
       s.points.forEach(function (p) { flat.push({ x: p.x, y: p.y, name: s.name, dash: s.dash }); });
     });
 
-    hit.addEventListener('pointermove', function (e) {
+    function readout(e) {
       const r = svg.getBoundingClientRect();
       const vx = ((e.clientX - r.left) / r.width) * Wv;
       const xv = xMin + ((vx - pad.l) / iw) * (xMax - xMin);
@@ -236,11 +278,15 @@
       tip.style.left = ((sx(best.x) / Wv) * 100) + '%';
       tip.style.top = ((sy(best.y) / H) * 100) + '%';
       tip.classList.add('is-on');
-    });
-    hit.addEventListener('pointerleave', function () {
+    }
+    function clear() {
       tip.classList.remove('is-on');
       cursor.setAttribute('opacity', 0);
-    });
+    }
+    hit.addEventListener('pointermove', readout);
+    hit.addEventListener('pointerdown', readout);
+    hit.addEventListener('pointerleave', clear);
+    hit.addEventListener('pointercancel', clear);
 
     const chart = U.h('.chart');
     chart.appendChild(svg);
@@ -278,25 +324,30 @@
       return;
     }
     if (opts.horizontal) return hbars(container, opts);
+    responsive(container, function (Wv) { drawBars(container, opts, data, Wv); });
+  }
 
-    const H = opts.height || 200;
-    const Wv = 720;
-    const pad = { t: 12, r: 12, b: 30, l: 46 };
+  function drawBars(container, opts, data, Wv) {
+    const narrow = Wv < 420;
+    const H = opts.height ? (narrow ? Math.max(140, opts.height - 30) : opts.height)
+                          : (narrow ? 170 : 200);
+    const pad = { t: 12, r: narrow ? 8 : 12, b: narrow ? 26 : 30, l: narrow ? 38 : 46 };
     const iw = Wv - pad.l - pad.r, ih = H - pad.t - pad.b;
 
-    const yScale = niceScale(0, Math.max.apply(null, data.map(function (d) { return d.value; })), 4);
+    const yScale = niceScale(0, Math.max.apply(null, data.map(function (d) { return d.value; })),
+      narrow ? 3 : 4);
     const bw = iw / data.length;
-    const barW = Math.max(3, Math.min(46, bw * 0.62));
+    const barW = Math.max(2, Math.min(46, bw * 0.62));
 
-    const svg = el('svg', { viewBox: '0 0 ' + Wv + ' ' + H, preserveAspectRatio: 'none' });
-    svg.style.height = H + 'px';
+    const svg = el('svg', { viewBox: '0 0 ' + Wv + ' ' + H, width: Wv, height: H,
+      preserveAspectRatio: 'xMidYMid meet' });
 
     const grid = el('g', { class: 'ch-grid' });
     const axis = el('g', { class: 'ch-axis' });
     ticksFor(yScale).forEach(function (v) {
       const y = pad.t + ih - (v / (yScale.max || 1)) * ih;
       grid.appendChild(el('line', { x1: pad.l, y1: f(y), x2: Wv - pad.r, y2: f(y) }));
-      const t = el('text', { class: 'ch-tick', x: pad.l - 7, y: f(y) + 3, 'text-anchor': 'end' });
+      const t = el('text', { class: 'ch-tick', x: pad.l - 6, y: f(y) + 3, 'text-anchor': 'end' });
       t.textContent = opts.yFormat ? opts.yFormat(v) : U.compact(v);
       axis.appendChild(t);
     });
@@ -304,7 +355,7 @@
     svg.appendChild(grid);
     svg.appendChild(axis);
 
-    const step = Math.ceil(data.length / Math.max(2, Math.floor(iw / 70)));
+    const step = Math.ceil(data.length / Math.max(2, Math.floor(iw / (narrow ? 44 : 70))));
     data.forEach(function (d, i) {
       const x = pad.l + bw * i + (bw - barW) / 2;
       const hgt = yScale.max ? (d.value / yScale.max) * ih : 0;
@@ -318,7 +369,7 @@
       svg.appendChild(rect);
 
       if (i % step === 0) {
-        const t = el('text', { class: 'ch-tick', x: f(x + barW / 2), y: H - 10,
+        const t = el('text', { class: 'ch-tick', x: f(x + barW / 2), y: H - 8,
           'text-anchor': 'middle' });
         t.textContent = d.label;
         svg.appendChild(t);

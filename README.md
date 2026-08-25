@@ -1,7 +1,8 @@
 # AI-Gym
 
-An offline-first training log in plain HTML, CSS and JavaScript. No build step, no framework, no npm install, no CDN — open it and it works.
+A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No build step, no framework, no npm install, no CDN — open it and it works.
 
+- **Built for the phone**: bottom tab bar, bottom-sheet dialogs, 40px+ touch targets, one column by default, and charts that measure their container instead of being scaled to fit
 - **408 built-in exercises**, each with a weighted muscle split and an equipment tag
 - **Anatomical heat figures** (anterior + posterior) on every exercise, workout, session and report
 - **Workout builder** with sets, reps, load, per-set and per-exercise rest, drag reordering and smart push/pull/legs grouping
@@ -90,6 +91,18 @@ Points run 0–3200 and blend four indices, so a rank describes an athlete rathe
 1RM uses Epley up to 10 reps and an Epley/Brzycki average beyond that, where Epley alone starts to overestimate.
 
 **Diamond has an extra gate.** Points alone are not enough: it also needs at least 12 distinct movements logged, at least 5 muscle groups trained, and the *weakest* trained group scoring 70+. That is what makes the top tier mean "elite across everything you do" instead of "one enormous deadlift".
+
+---
+
+## Layout rules
+
+The app is designed for a phone first and widens from there. Three rules do most of the work:
+
+- **Stack by default, go horizontal only when it fits.** Multi-column grids collapse to one column below 860px. The exceptions are compact stat tiles, which stay two-up because a row each just makes cards taller.
+- **Nothing is sized to a fixed pixel width in JS.** Layout lives in CSS so it can respond; inline `gridTemplateColumns` was what squeezed the anatomy figures to 28px wide before this was fixed.
+- **Charts measure, they never scale.** Each chart reads its container width and builds its viewBox at that exact pixel size, so one SVG unit is always one CSS pixel and a `ResizeObserver` redraws on rotation. Scaling a fixed-width viewBox to fit compressed the whole plot — tick labels included — by about 2.5x on a phone.
+
+Breakpoints: 1100px (sidebar layout loosens), 860px (sidebar becomes a bottom tab bar), 760px (figure panels stack), 560px (denser list rows), 344px (tiles go single column). A `(hover: none)` block makes row actions permanent and grows hit areas, since a phone never fires hover.
 
 ---
 

@@ -231,6 +231,20 @@
       r.classList.toggle('is-sel', r.dataset.id === id);
     });
     redrawDetail();
+
+    /* Once the detail panel stacks under the list it is off-screen, so a tap
+       would look like nothing happened. Bring it into view on narrow layouts;
+       side by side on desktop it is already visible, so leave the scroll alone.
+       The offset is computed rather than left to scroll-margin so the panel
+       always clears the sticky topbar whatever height it currently is. */
+    if (window.matchMedia('(max-width: 1100px)').matches && detailEl) {
+      requestAnimationFrame(function () {
+        const bar = document.querySelector('.topbar');
+        const offset = (bar ? bar.getBoundingClientRect().height : 0) + 8;
+        const y = window.scrollY + detailEl.getBoundingClientRect().top - offset;
+        window.scrollTo(0, Math.max(0, Math.round(y)));
+      });
+    }
   }
 
   /* ---------------------------------------------------------------------------
@@ -240,7 +254,7 @@
   let detailEl = null;
 
   function detailCard() {
-    detailEl = U.h('.stack');
+    detailEl = U.h('.stack', { 'data-scroll-target': '' });
     setTimeout(redrawDetail, 0);
     return detailEl;
   }

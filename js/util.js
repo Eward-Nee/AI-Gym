@@ -181,10 +181,15 @@
     save: '<path d="M5 4h11l4 4v12H5z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/>'
   };
 
+  /**
+   * Inline icon. Always carries width/height so an unstyled call site gets a
+   * sane intrinsic size instead of the SVG default replaced-element box; any
+   * CSS rule (.btn svg, .nav-ico, …) still overrides these attributes.
+   */
   function icon(name, cls) {
-    return '<svg class="' + (cls || '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
-      'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-      (PATHS[name] || '') + '</svg>';
+    return '<svg class="' + (cls || '') + '" viewBox="0 0 24 24" width="18" height="18" ' +
+      'fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" ' +
+      'stroke-linejoin="round" aria-hidden="true">' + (PATHS[name] || '') + '</svg>';
   }
 
   /* ---------------------------------------------------------------------------
