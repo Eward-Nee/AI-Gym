@@ -497,26 +497,188 @@
     return (ex && ex.muscles) ? ex.muscles : {};
   }
 
+  /* ---------------------------------------------------------------------------
+     HEAT — AN ABSOLUTE SCALE, NOT A RELATIVE ONE
+
+     Heat used to be normalised so that whatever muscle got the most work read
+     100%. That answers "which muscle did I train hardest", which sounds useful
+     and is not: it moves under you. Train nothing but calves and your calves
+     read 100%. Add one heavy squat day and the same calf work drops to 30% —
+     the calves did not change, the comparison did. Nothing could be read across
+     two figures, because no two figures were on the same scale.
+
+     Heat is now measured against a fixed requirement: **how much work a muscle
+     needs in order to get stronger**, for a person of this bodyweight. 100%
+     means "this muscle got the training it needs". Below is under-trained,
+     above is more than the minimum. That number means the same thing on every
+     figure in the app, this week and next.
+
+     The unit is the HARD SET, which is how training volume is actually
+     prescribed. Roughly ten to twenty hard sets per muscle per week is the
+     productive range; twelve is the working figure here.
+
+     What makes a set "hard" has three parts:
+
+       * How heavy it was FOR A BODY THIS SIZE. The world record for the
+         movement is already re-scaled allometrically to the lifter's
+         bodyweight (see ranks.js), so the fraction of it a set represents is a
+         size-fair measure of load. It moves the credit within a band rather
+         than scaling it outright — a beginner training hard is still training
+         hard, and must still be able to fill the figure.
+
+       * How long the set was. Strength work lives in roughly three to fifteen
+         reps. A heavy single and a set of thirty both contribute less per set
+         than a set in that range.
+
+       * WHETHER IT ENDED IN FAILURE. This is the part a volume count misses.
+         Falling short of the reps that were planned does not mean the set was
+         worse — it means the set could not be finished, which is the clearest
+         evidence available that the muscle was taken to its limit. Coming up
+         short therefore earns MORE credit per set, not less.
+     ------------------------------------------------------------------------ */
+
+  /** Hard sets a muscle needs per week to be trained for strength. */
+  const HARD_SETS_PER_WEEK = 12;
+
+  /** Ceiling on a reported percentage, so "well past the requirement" is still
+      a readable number rather than a runaway one. */
+  const HEAT_MAX = 150;
+
   /**
-   * Heat for a workout: each movement contributes its muscle split weighted by
-   * the work it carries (sets x reps x weight, or sets x reps when unloaded),
-   * so a 5x5 squat outweighs a single set of curls.
+   * One set's contribution, in hard-set equivalents.
+   *
+   * @param {Object} set          {weight, reps}
+   * @param {number} plannedReps  reps the plan asked for, or 0 if unknown
+   * @param {Object} ex           the exercise
+   * @param {number} bw           bodyweight
+   * @param {Object} settings
+   * @returns {number} usually 0.5 - 1.6
    */
-  function workoutHeat(workout) {
-    const heat = Object.create(null);
-    let total = 0;
-    (workout.items || []).forEach(function (it) {
-      const ex = getExercise(it.exerciseId);
-      if (!ex) return;
-      const work = itemWork(it);
-      total += work;
-      for (const m in ex.muscles) {
-        heat[m] = (heat[m] || 0) + work * (ex.muscles[m] / 100);
-      }
-    });
-    return normaliseHeat(heat, total);
+  function setStimulus(set, plannedReps, ex, bw, settings) {
+    const reps = Number(set.reps) || 0;
+    if (reps <= 0) return 0;
+
+    /* Three to fifteen reps is the productive band; outside it a set still
+       counts, just for less. */
+    const repFactor = reps < 3 ? 0.6 + reps * 0.13
+      : reps <= 15 ? 1
+      : Math.max(0.7, 1 - (reps - 15) * 0.02);
+
+    /* Falling short of the plan is evidence of failure, not of a poor set. */
+    const effort = plannedReps > 0
+      ? 1 + 0.6 * Math.min(1, Math.max(0, (plannedReps - reps) / plannedReps))
+      : 1;
+
+    /* What the body actually moved: a per-hand entry is half of it, and a
+       bodyweight movement carries the athlete as well as the added plate. */
+    let load = (Number(set.weight) || 0) * App.Ranks.loadFactor(ex, settings);
+    if (ex.equipment === 'bodyweight') load += bw;
+
+    if (load <= 0) {
+      /* An unloaded set still trains the muscle; there is simply nothing to
+         judge its heaviness by, so it sits at the bottom of the band. */
+      return 0.5 * repFactor * effort;
+    }
+
+    const ceiling = App.Ranks.exerciseRecord(ex, bw);
+    const rel = ceiling > 0 ? Math.min(1.2, App.Ranks.e1rm(load, reps) / ceiling) : 0.4;
+    /* A band, not a multiplier: load shifts the credit between 0.55 and 1.25
+       rather than deciding it outright. */
+    const quality = 0.55 + 0.7 * Math.min(1, Math.max(0, rel / 0.55));
+
+    return quality * repFactor * effort;
   }
 
+  /**
+   * The planned reps for each exercise of a session, from the workout it was
+   * run from — the baseline the failure bonus is measured against.
+   */
+  function planFor(session) {
+    if (!session || !session.workoutId) return null;
+    const w = getWorkout(session.workoutId);
+    if (!w) return null;
+    const map = Object.create(null);
+    (w.items || []).forEach(function (it) { map[it.exerciseId] = it.sets || []; });
+    return map;
+  }
+
+  /**
+   * @param {Array}  groups  [{entries, plan}]
+   * @param {Object} opts    {days} — the window the requirement is scaled to
+   */
+  function heatFrom(groups, opts) {
+    const settings = state.settings;
+    const bw = Math.max(30, Number(settings.bodyweight) || 80);
+    const acc = Object.create(null);
+
+    groups.forEach(function (g) {
+      (g.entries || []).forEach(function (en) {
+        const ex = getExercise(en.exerciseId);
+        if (!ex || !ex.muscles) return;
+
+        /* Shares are renormalised against the exercise's OWN prime mover, so a
+           set of bench is one hard set for the chest and a fraction of one for
+           the triceps. Taken as raw shares of a hundred, a set would only ever
+           be worth 0.35 of a hard set to anything, and no amount of realistic
+           training would reach the requirement. */
+        let top = 0;
+        for (const m in ex.muscles) top = Math.max(top, Number(ex.muscles[m]) || 0);
+        if (top <= 0) return;
+
+        const plan = g.plan && g.plan[en.exerciseId];
+        (en.sets || []).forEach(function (st, i) {
+          if (st.done === false) return;
+          const planned = plan && plan[i] ? Number(plan[i].reps) || 0 : 0;
+          const stim = setStimulus(st, planned, ex, bw, settings);
+          if (!stim) return;
+          for (const m in ex.muscles) {
+            const share = Math.min(1, (Number(ex.muscles[m]) || 0) / top);
+            acc[m] = (acc[m] || 0) + stim * share;
+          }
+        });
+      });
+    });
+
+    /* A window shorter than a week is still judged against a week's
+       requirement — you do not need less training because you looked at a
+       smaller slice of the calendar, and a single session read against a
+       single day's share would saturate every figure in the app. */
+    const days = Math.max(7, Number(opts && opts.days) || 7);
+    const target = HARD_SETS_PER_WEEK * days / 7;
+
+    const out = Object.create(null);
+    for (const k in acc) {
+      const v = Math.round((acc[k] / target) * 1000) / 10;
+      if (v >= 0.5) out[k] = Math.min(HEAT_MAX, v);
+    }
+    return out;
+  }
+
+  /**
+   * Heat for a workout as PLANNED. No failure bonus — nothing has happened yet,
+   * so there is no shortfall to read anything into.
+   */
+  function workoutHeat(workout) {
+    return heatFrom([{
+      entries: (workout.items || []).map(function (it) {
+        return { exerciseId: it.exerciseId, sets: it.sets };
+      }),
+      plan: null
+    }], { days: 7 });
+  }
+
+  /**
+   * Heat across logged sessions.
+   * @param {Array}  sessions
+   * @param {Object} opts  {days} — how long a window these sessions cover
+   */
+  function sessionsHeat(sessions, opts) {
+    return heatFrom((sessions || []).map(function (s) {
+      return { entries: s.entries, plan: planFor(s) };
+    }), opts);
+  }
+
+  /** Volume-weighted work for a single entry — still used for duration maths. */
   function itemWork(it) {
     let w = 0;
     (it.sets || []).forEach(function (s) {
@@ -525,38 +687,6 @@
       w += reps * (load > 0 ? load : 12);   /* unloaded sets get a nominal load */
     });
     return w || 1;
-  }
-
-  /** Heat across a set of logged sessions. */
-  function sessionsHeat(sessions) {
-    const heat = Object.create(null);
-    let total = 0;
-    sessions.forEach(function (s) {
-      (s.entries || []).forEach(function (en) {
-        const ex = getExercise(en.exerciseId);
-        if (!ex) return;
-        const work = itemWork(en);
-        total += work;
-        for (const m in ex.muscles) {
-          heat[m] = (heat[m] || 0) + work * (ex.muscles[m] / 100);
-        }
-      });
-    });
-    return normaliseHeat(heat, total);
-  }
-
-  /** Scale so the hardest-worked muscle reads 100. */
-  function normaliseHeat(heat, total) {
-    if (!total) return {};
-    let max = 0;
-    for (const k in heat) max = Math.max(max, heat[k]);
-    if (!max) return {};
-    const out = Object.create(null);
-    for (const k in heat) {
-      const v = Math.round((heat[k] / max) * 1000) / 10;
-      if (v > 0.4) out[k] = v;
-    }
-    return out;
   }
 
   /* --- workout statistics --------------------------------------------------- */
@@ -777,6 +907,7 @@
     allFriends: allFriends, saveFriend: saveFriend, deleteFriend: deleteFriend,
 
     exerciseHeat: exerciseHeat, workoutHeat: workoutHeat, sessionsHeat: sessionsHeat,
+    HEAT_MAX: HEAT_MAX, HARD_SETS_PER_WEEK: HARD_SETS_PER_WEEK,
     workoutStats: workoutStats, chainSplit: chainSplit, suggestSplit: suggestSplit,
     exerciseHistory: exerciseHistory, personalRecords: personalRecords, rank: rank,
 

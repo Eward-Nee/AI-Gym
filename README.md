@@ -1,12 +1,12 @@
 # AI-Gym
 
-**Version 0.6.0**
+**Version 0.6.1**
 
 A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No build step, no framework, no npm install, no CDN — open it and it works.
 
 - **Built for the phone**: bottom tab bar, bottom-sheet dialogs, 40px+ touch targets, one column by default, and charts that measure their container instead of being scaled to fit
 - **468 built-in exercises**, each with a weighted muscle split, an equipment tag and its own world record — including wide/close grip variants across the bar movements
-- **Anatomical heat figures** (anterior + posterior) on every exercise, workout, session and report
+- **Anatomical heat figures** (anterior + posterior) on every exercise, workout, session and report, scored against **what each muscle actually needs** rather than against whichever muscle you hit hardest
 - **Workout builder** with sets, reps, load, per-set and per-exercise rest (all in seconds, and it says so), **drag reordering that works with a thumb**, and smart push/pull/legs grouping, in a **muscle-group order you set** — with templates that apply to the exact splits you run
 - **Session runner** with a rest timer and live volume
 - **Progression reports** with least-squares trend lines and a 60-day forecast band, **training load filtered by the kind of session it was**, plus a **ranking chart** tracking your points and your friends' against the tier thresholds
@@ -42,7 +42,7 @@ index.html            loads everything in dependency order
 css/
   theme.css           design tokens, 3 modes, 8 schemes, the heat ramp
   app.css             reset, app shell, component kit
-  backgrounds.css     8 page backgrounds, all derived from the scheme palette
+  backgrounds.css     12 page backgrounds, all derived from the scheme palette
 js/
   data/muscles.js     38-region muscle taxonomy — the shared vocabulary
   data/exercises.js   GENERATED — do not hand edit
@@ -133,6 +133,54 @@ Standards are held per movement *pattern*, not per exercise, so a lat pulldown i
 
 ---
 
+## What the heat figures mean
+
+100% on a figure is **the training that muscle needs to get stronger**, for a
+person of your bodyweight. It is not "the most-worked muscle here".
+
+That distinction is the whole point. Heat used to be normalised so the
+hardest-worked muscle read 100%, which sounds useful and is not, because the
+scale moved underneath you. Train nothing but calves and the calves read 100%.
+Add one heavy squat day and the same calf work drops to 30% — the calves did not
+change, the comparison did. Nothing could be read across two figures, because no
+two figures were ever on the same scale.
+
+The unit is the **hard set**, which is how training volume is actually
+prescribed. Ten to twenty hard sets per muscle per week is the productive range;
+twelve is the figure the app measures against. A window shorter than a week is
+still judged against a week's requirement — you do not need less training because
+you looked at a smaller slice of the calendar.
+
+Three things decide what a set is worth:
+
+- **How heavy it was, for a body this size.** The world record for the movement
+  is already re-scaled allometrically to your bodyweight (see *How ranks work*),
+  so the fraction of it a set represents is a size-fair measure of load. It moves
+  the credit within a band rather than scaling it outright: a beginner training
+  hard is still training hard, and must still be able to fill the figure.
+- **How long the set was.** Strength work lives in roughly three to fifteen reps.
+  A heavy single and a set of thirty each contribute less per set than one inside
+  that band.
+- **Whether it ended in failure.** This is the part a volume count misses.
+  **Falling short of the reps the plan asked for earns *more* credit, not less** —
+  a set that could not be finished is the clearest evidence available that the
+  muscle was taken to its limit. The plan's reps are the baseline, so this only
+  applies to a session run from a workout.
+
+Shares are renormalised against each exercise's own prime mover, so a set of
+bench press is one hard set for the chest and a fraction of one for the triceps.
+Taken as raw shares of a hundred, a set would only ever be worth about a third of
+a hard set to anything, and no amount of realistic training would reach the
+requirement.
+
+Two consequences worth knowing. Muscle-group figures are **averaged**, not
+summed — four chest regions at 80% each is a chest trained to 80%, not to 320%.
+And an exercise's own figure in the library still scales to itself, because there
+the numbers are a *composition* (a muscle split adding to 100) rather than a
+dose, and the largest share genuinely is the reference.
+
+---
+
 ## Forecasting, and why the line bends
 
 The Report's **Forecast** tab answers "where will this lift be in a year". A least-squares line answers it by assuming the last three months repeat forever, which is fine over sixty days and dishonest over three hundred and sixty-five: progress against a ceiling slows as the gap to it closes, and the training that adds 10 kg to a 60 kg bench adds a fraction of that to a 160 kg one.
@@ -162,6 +210,23 @@ The app is designed for a phone first and widens from there. Three rules do most
 - **Charts measure, they never scale.** Each chart reads its container width and builds its viewBox at that exact pixel size, so one SVG unit is always one CSS pixel and a `ResizeObserver` redraws on rotation. Scaling a fixed-width viewBox to fit compressed the whole plot — tick labels included — by about 2.5x on a phone.
 
 Breakpoints: 1100px (sidebar layout loosens), 860px (sidebar becomes a bottom tab bar), 760px (figure panels stack), 560px (denser list rows), 344px (tiles go single column). A `(hover: none)` block makes row actions permanent and grows hit areas, since a phone never fires hover.
+
+### The plan is a starting point, the log is the memory
+
+Starting a workout opens it with **what you actually did last time** — the same
+weights, the same reps, and the same number of sets — falling back to the plan
+only for a movement that has never been logged. A session never rewrites the
+plan's sets and reps, and never needs to, because the log already remembers.
+Previously the set *count* came from the plan even though the weights came from
+the log, so a fourth set added last week quietly disappeared this week while its
+weights were still being carried forward.
+
+One thing does still belong to the plan: **which movements are in it**. Adding or
+dropping an exercise is a change to the workout itself rather than to one day of
+it, so finishing a session whose movement list differs from the plan asks whether
+to write that change back — naming what would be added and what would be removed.
+It only asks when something actually differs; a dialog that appears after every
+session to report that nothing changed is a tap and nothing else.
 
 ### Dragging to reorder
 
@@ -198,6 +263,28 @@ Backgrounds are six absolutely-positioned layers in a fixed host, each built fro
 Two knobs in [css/backgrounds.css](css/backgrounds.css), both mode-aware: `--bg-alpha` (how strong the background reads) and `--surface-alpha` (how transparent panels are). Dark text on a washed-out light panel loses contrast much faster than light text on a dark one, so the values differ per mode, and dark modes also lift `--text-2`/`--text-3` a step while a background is active — a bold background washes a dark panel *lighter*, which eats light-on-dark contrast. Checked across all 144 mode × scheme × palette-stop combinations: worst-case body text 6.2:1, worst muted text 3.2:1, zero WCAG AA failures.
 
 **The motion budget.** An animated background is pure fill rate — every frame repaints a viewport-sized layer per moving element — and six of them at once is fine on a desktop and is not fine on a five-year-old phone. So how many layers are *allowed to move* is a setting (`Background motion` in the Control Panel), resolved onto `data-bgmotion`. **Automatic** reads `deviceMemory` and `hardwareConcurrency`, which are crude but honest in the direction that matters, and treats a browser that answers neither as old enough to be careful with. **Light** keeps one or two layers moving per background and slows them; **Still** freezes them. Layers are stilled, never hidden — a background that looks *different* on an old phone would be a worse outcome than one that moves less. Animations also pause on `visibilitychange`, because a web-to-app shell is not a tab and does not reliably get the throttling a tab would.
+
+**Building a city out of gradients.** The first Skyline and Neon City used three
+`repeating-linear-gradient`s per band, which can only ever produce one rectangle
+repeated at one height — so the city read as three ruled rows of identical
+blocks. Every tower is now its own background image with its own width, height,
+position and darkness, generated once from a fixed seed so the skyline is
+irregular but stable, and each tower is darker at street level than at the roof.
+Windows are a separate layer: a dot grid **masked by the same tower shapes**, so
+light can only appear on a building, and each window is a bright core with a
+short falloff so it lights the wall immediately around it. Positions are
+percentages, so the city redistributes across a phone and a desktop instead of
+running out of buildings on a wide screen. Orbs went the same way — thirty small
+bodies at varied sizes and brightnesses read as orbs; three large ones read as a
+gradient — grouped onto three layers so the field still costs three animations
+rather than thirty.
+
+**A phone is not a small desktop.** Hologrid's lane fan and rung spacing are both
+absolute — an angle and a pixel period — so a narrow, tall viewport sees a slice
+of the same fan rather than a scaled version of it, which on a phone meant a
+handful of near-vertical lanes and three or four rungs. Narrow screens get a
+tighter fan, a lower horizon, a shorter rung period, and their own keyframe so
+the loop still travels exactly one period.
 
 Two gotchas worth recording. `radial-gradient(closest-side …)` anchored at an edge (`at 50% 0%`) collapses to a zero radius and paints nothing, so every gradient here uses explicit size pairs. And **`perspective()` + `rotateX()` on a viewport-sized layer is not affordable**: the first Hologrid built its receding grid that way and froze the renderer outright on a desktop, because a 64° tilt throws the near edge of the layer far enough towards the camera that the raster area explodes. The perspective is now *drawn* — a `repeating-conic-gradient` fired from the vanishing point gives converging lanes for one static paint, and the rungs are a uniform grid translating by exactly one period under a fade-to-horizon mask. The eye reads perspective; the compositor reads two flat layers.
 

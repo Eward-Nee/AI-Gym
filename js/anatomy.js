@@ -428,11 +428,18 @@
     return p.join('');
   }
 
-  function legendHTML(max) {
+  /**
+   * On an absolute scale the top of the ramp is a fixed requirement rather than
+   * "whatever the biggest number happened to be", so the legend has to say so —
+   * otherwise 100% reads as "the most" instead of "enough".
+   */
+  function legendHTML(max, absolute) {
     return '<div class="anat-legend">' +
-      '<span class="anat-legend-label">0%</span>' +
+      '<span class="anat-legend-label">' + (absolute ? 'none' : '0%') + '</span>' +
       '<i class="anat-legend-ramp"></i>' +
-      '<span class="anat-legend-label">' + (max ? Math.round(max) + '%' : 'max') + '</span>' +
+      '<span class="anat-legend-label">' +
+        (absolute ? 'trained' : (max ? Math.round(max) + '%' : 'max')) +
+      '</span>' +
     '</div>';
   }
 
@@ -446,7 +453,7 @@
    * between those renders — only the fills do — so the figure is now built once
    * and repainted in place, which is a couple of attribute writes per region.
    */
-  function repaint(root, heat, max) {
+  function repaint(root, heat, max, absolute) {
     heat = App.Muscles.expand(heat || {});
     if (!max) max = 1;
 
@@ -478,7 +485,9 @@
     }
 
     const labels = root.querySelectorAll('.anat-legend-label');
-    if (labels.length > 1) labels[1].textContent = max > 1 ? Math.round(max) + '%' : 'max';
+    if (labels.length > 1 && !absolute) {
+      labels[1].textContent = max > 1 ? Math.round(max) + '%' : 'max';
+    }
   }
 
   /**
@@ -518,16 +527,28 @@
     if (!el) return;
     opts = opts || {};
     heat = heat || {};
-    const shown = App.Muscles.expand(heat);
-    let max = 0;
-    for (const k in shown) max = Math.max(max, shown[k] || 0);
+
+    /* An explicit max is what puts a figure on an ABSOLUTE scale: the top of
+       the colour ramp becomes a fixed requirement rather than whatever the
+       largest value in this particular map happened to be. Without it the same
+       muscle, doing the same work, changes colour whenever something else in
+       the session changes — and no two figures in the app can be compared.
+       Maps that really are compositions (an exercise's own muscle split) still
+       scale to themselves, because there the largest share IS the reference. */
+    let max = Number(opts.max) || 0;
+    const absolute = max > 0;
+    if (!absolute) {
+      const shown = App.Muscles.expand(heat);
+      for (const k in shown) max = Math.max(max, shown[k] || 0);
+    }
 
     const compact = !!opts.compact;
     const legend = opts.legend !== false;
+    const shape = compact + '/' + legend + '/' + absolute;
 
     /* Same container, same shape of figure — repaint rather than rebuild. */
-    if (el.__anatShape === compact + '/' + legend && el.querySelector('.anat-pair')) {
-      repaint(el, heat, max);
+    if (el.__anatShape === shape && el.querySelector('.anat-pair')) {
+      repaint(el, heat, max, absolute);
     } else {
       el.innerHTML =
         '<div class="anat-pair' + (compact ? ' is-compact' : '') + '">' +
@@ -536,8 +557,8 @@
           '<figure class="anat-fig">' + figureSVG('back', heat, { max: max }) +
             '<figcaption>Back</figcaption></figure>' +
         '</div>' +
-        (legend ? legendHTML(max) : '');
-      el.__anatShape = compact + '/' + legend;
+        (legend ? legendHTML(max, absolute) : '');
+      el.__anatShape = shape;
       el.__anatKey = null;
       el.__anatBound = false;
     }
@@ -561,6 +582,7 @@
        repaint must not stack another set of handlers on the same figure. */
     const cfg = root.__anatCfg || (root.__anatCfg = {});
     cfg.compare = compare;
+    cfg.absolute = !!(opts && Number(opts.max) > 0);
     cfg.onLongPress = opts && opts.onLongPress;
     cfg.onSelect = opts && opts.onSelect;
     if (root.__anatBound) return;
@@ -590,8 +612,14 @@
     }
 
     function text(id, v) {
-      let out = App.Muscles.label(id, true) + '  ·  ' +
-        (v > 0 ? (Math.round(v * 10) / 10) + '% of this workload' : 'not worked');
+      const pct = Math.round(v * 10) / 10;
+      /* On the absolute scale the number is a fraction of what this muscle
+         NEEDS, so saying "of this workload" would describe the old meaning. */
+      let out = App.Muscles.label(id, true) + '  ·  ' + (v > 0
+        ? (cfg.absolute
+            ? pct + '% of what it needs' + (v >= 100 ? ' — trained' : '')
+            : pct + '% of this workload')
+        : 'not worked');
       if (cfg.compare) {
         const was = Number(cfg.compare[id]) || 0;
         const d = v - was;

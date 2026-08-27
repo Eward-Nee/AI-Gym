@@ -232,24 +232,31 @@
   /* Everything below the training-load chart, which always describes the WHOLE
      range: the filter narrows one question, not the page. */
   function drawDistribution(sessions) {
-    const heat = App.Store.sessionsHeat(sessions);
-    const priorHeat = App.Store.sessionsHeat(priorRangeSessions());
-    const groups = App.Muscles.groupTotals(heat);
+    const days = C.rangeById(view.range).days;
+    const heat = App.Store.sessionsHeat(sessions, { days: days });
+    const priorHeat = App.Store.sessionsHeat(priorRangeSessions(), { days: days });
+    const groups = App.Muscles.groupAverages(heat);
 
     root.appendChild(U.h('.grid.grid-main', [
       U.h('.card', [
         U.h('.card-head', [
           U.h('div', [
             U.h('h2', 'Where the work landed'),
-            U.h('.card-sub', 'Normalised so the hardest-worked muscle reads 100%. ' +
-              'Tap a muscle for its share and how it has moved.')
+            U.h('.card-sub', '100% is the training a muscle needs to get stronger ' +
+              'at your bodyweight, not the hardest-worked muscle here. ' +
+              'Tap one for its share and how it has moved.')
           ])
         ]),
         C.heatPanel(heat, { limit: 12, compare: priorHeat })
       ]),
       U.h('.stack', [
         U.h('.card', [
-          U.h('.card-head', [U.h('h2', 'By muscle group')]),
+          U.h('.card-head', [
+            U.h('div', [
+              U.h('h2', 'By muscle group'),
+              U.h('.card-sub', 'Averaged across each group, against what it needs.')
+            ])
+          ]),
           groupBars(groups)
         ]),
         U.h('.card', [
@@ -380,7 +387,7 @@
           U.h('td.num', { text: U.compact(vol) + ' ' + units }),
           U.h('td.num', { text: String(sets) }),
           U.h('td.num', { text: s.durationSec ? U.dur(s.durationSec) : '—' }),
-          U.h('td', [C.heatStrip(App.Store.sessionsHeat([s]))]),
+          U.h('td', [C.heatStrip(App.Store.sessionsHeat([s]), { absolute: true })]),
           U.h('td.shrink', [
             U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
               type: 'button', 'aria-label': 'Delete session', html: U.icon('trash'),
@@ -1209,8 +1216,8 @@
         ])
       ]));
       setTimeout(function () {
-        App.Anatomy.render(a, mineHeat, { compact: true, compare: theirHeat });
-        App.Anatomy.render(b, theirHeat, { compact: true, compare: mineHeat });
+        App.Anatomy.render(a, mineHeat, { compact: true, compare: theirHeat, max: 100 });
+        App.Anatomy.render(b, theirHeat, { compact: true, compare: mineHeat, max: 100 });
       }, 0);
     }
 

@@ -93,7 +93,7 @@
     const figWrap = U.h('.anat-wrap');
     App.Anatomy.reserve(figWrap, { compact: true });
     setTimeout(function () {
-      App.Anatomy.render(figWrap, st.heat, { compact: true, legend: false });
+      App.Anatomy.render(figWrap, st.heat, { compact: true, legend: false, max: 100 });
     }, 0);
 
     return U.h('.card', { 'data-drag-item': '', dataset: { id: w.id } }, [
@@ -208,7 +208,7 @@
         ]),
         figWrap,
         U.h('.label', { style: { marginTop: '12px' } }, 'Muscle load'),
-        C.muscleList(st.heat, 10)
+        C.muscleList(st.heat, 10, { absolute: true })
       ]));
 
       statsWrap.appendChild(U.h('.card', [
@@ -564,27 +564,50 @@
     const startedAt = resume ? resume.startedAt : Date.now();
     const units = App.Store.getSettings().units;
 
-    /* Prefill from the plan, and from the last time this workout was done. */
+    /* -------------------------------------------------------------------------
+       THE PLAN IS A STARTING POINT, THE LOG IS THE MEMORY
+
+       A session opens with WHAT YOU ACTUALLY DID LAST TIME — the same weights,
+       the same reps, and the same NUMBER of sets — falling back to the plan only
+       for a movement that has never been logged. The plan's own sets and reps
+       are therefore what the workout looked like on day one and nothing more;
+       they are never rewritten by a session, and never need to be, because the
+       log already remembers.
+
+       Only one thing still belongs to the plan: WHICH MOVEMENTS are in it.
+       Adding or dropping an exercise is a change to the workout itself rather
+       than to one day of it, so that — and only that — is offered back to the
+       template when the session is finished.
+
+       Previously the set COUNT came from the plan even though the weights came
+       from the log, so a fourth set added last week quietly disappeared this
+       week while its weights were still being carried forward.
+       ---------------------------------------------------------------------- */
     const previous = App.Store.allSessions().find(function (s) { return s.workoutId === w.id; });
     const previousHeat = previous ? App.Store.sessionsHeat([previous]) : null;
+
+    function openingSets(it) {
+      const prev = previous && (previous.entries || [])
+        .find(function (e) { return e.exerciseId === it.exerciseId; });
+      const source = (prev && prev.sets && prev.sets.length) ? prev.sets : (it.sets || []);
+      return source.map(function (s) {
+        return { weight: Number(s.weight) || 0, reps: Number(s.reps) || 0, done: false };
+      });
+    }
+
     const session = resume ? resume.session : {
       workoutId: w.id,
       name: w.name,
       date: U.today(),
       entries: (w.items || []).map(function (it) {
-        const prev = previous && (previous.entries || [])
-          .find(function (e) { return e.exerciseId === it.exerciseId; });
-        return {
-          exerciseId: it.exerciseId,
-          sets: it.sets.map(function (s, i) {
-            const p = prev && prev.sets[i];
-            return { weight: (p ? p.weight : s.weight) || 0,
-                     reps: (p ? p.reps : s.reps) || 0, done: false };
-          }),
-          note: ''
-        };
+        return { exerciseId: it.exerciseId, sets: openingSets(it), note: '' };
       })
     };
+
+    if (!resume && previous) {
+      U.toast('Picked up from last time',
+        'Sets, reps and weights are what you did on ' + U.fmtDate(previous.date) + '.');
+    }
 
     /* Snapshot on every edit. Debounced because ticking through a set of ten
        should not mean ten writes. */
@@ -638,6 +661,46 @@
       })
     ]);
 
+    /**
+     * How the movements in this session differ from the plan it came from.
+     * Compared against every entry on screen, not only the ones with a ticked
+     * set: adding a movement and getting through none of it is still a
+     * statement about what the workout should contain, and the dialog asks
+     * before acting on it either way.
+     */
+    function templateDiff() {
+      const planIds = (w.items || []).map(function (it) { return it.exerciseId; });
+      const nowIds = session.entries.map(function (en) { return en.exerciseId; });
+      return {
+        added: nowIds.filter(function (id) { return planIds.indexOf(id) < 0; }),
+        removed: planIds.filter(function (id) { return nowIds.indexOf(id) < 0; })
+      };
+    }
+
+    function nameOf(id) {
+      const ex = App.Store.getExercise(id);
+      return ex ? ex.name : 'a deleted movement';
+    }
+
+    /** Write the session's MOVEMENT LIST back to the plan. Sets are untouched. */
+    function applyToTemplate() {
+      const items = session.entries.map(function (en) {
+        const existing = (w.items || []).find(function (it) {
+          return it.exerciseId === en.exerciseId;
+        });
+        /* Keep an existing item whole — its rest values and planned sets are
+           the user's, and this is not the place to overwrite them. */
+        if (existing) return existing;
+        return {
+          exerciseId: en.exerciseId,
+          sets: en.sets.map(function (s) {
+            return { weight: s.weight, reps: s.reps };
+          })
+        };
+      });
+      return App.Store.saveWorkout(Object.assign({}, w, { items: items }));
+    }
+
     function finish() {
       const done = session.entries.map(function (en) {
         return Object.assign({}, en, {
@@ -651,6 +714,7 @@
       }
       stop();
       App.Update.clearSnapshot();
+
       App.Store.saveSession(Object.assign({}, session, {
         entries: done,
         endedAt: new Date().toISOString(),
@@ -660,7 +724,41 @@
         done.forEach(function (en) { vol += App.Ranks.volumeOf(en.sets); });
         U.toast('Session saved', U.compact(vol) + ' ' + units + ' of volume', 'good');
         if (App.Sync.signedIn()) App.Sync.publishStats();
+        return askAboutTemplate();
+      }).then(function () {
         App.Shell.navigate('report');
+      });
+    }
+
+    /**
+     * Offered only when the movement list actually changed. A dialog that
+     * appears after every session to report that nothing is different is a tap
+     * to dismiss and nothing else.
+     */
+    function askAboutTemplate() {
+      const diff = templateDiff();
+      if (!diff.added.length && !diff.removed.length) return Promise.resolve();
+
+      const parts = [];
+      if (diff.added.length) {
+        parts.push('Add ' + diff.added.map(nameOf).join(', '));
+      }
+      if (diff.removed.length) {
+        parts.push('Remove ' + diff.removed.map(nameOf).join(', '));
+      }
+
+      return U.confirm({
+        title: 'Update "' + w.name + '"?',
+        message: parts.join('. ') + '. Your sets, reps and weights stay out of ' +
+          'the plan either way — next time this workout opens with what you ' +
+          'actually did today.',
+        confirmLabel: 'Update the plan',
+        cancelLabel: 'Leave it as it is'
+      }).then(function (ok) {
+        if (!ok) return;
+        return applyToTemplate().then(function () {
+          U.toast('Plan updated', w.name, 'good');
+        });
       });
     }
 
@@ -675,7 +773,7 @@
       const heat = App.Store.sessionsHeat([live]);
       /* Measured against the last time this workout was run, so tapping a
          muscle answers "am I hitting it harder than last time?" */
-      App.Anatomy.render(heatWrap, heat, { compact: true, legend: false,
+      App.Anatomy.render(heatWrap, heat, { compact: true, legend: false, max: 100,
         compare: previousHeat });
 
       let vol = 0, sets = 0;
@@ -702,9 +800,17 @@
     const listWrap = U.h('.stack');
 
     /* Rest between sets: the plan's value for a planned exercise, the account
-       default for one added mid-session. */
+       default for one added mid-session.
+
+       Looked up BY MOVEMENT, not by position. The runner's list and the plan's
+       list stop lining up the moment an exercise is added, dropped or moved,
+       and an index into the plan then hands back the rest interval belonging to
+       whatever movement happens to sit at that slot. */
     function restFor(ei) {
-      const it = (w.items || [])[ei];
+      const en = session.entries[ei];
+      const it = en && (w.items || []).find(function (x) {
+        return x.exerciseId === en.exerciseId;
+      });
       return (it && it.restSets) || App.Store.getSettings().restDefault;
     }
 
@@ -715,8 +821,10 @@
       });
       const prevEntry = prevSession && prevSession.entries
         .find(function (e) { return e.exerciseId === exerciseId; });
+      /* However many sets it was done in last time, not a fixed three. */
+      const n = (prevEntry && prevEntry.sets && prevEntry.sets.length) || count;
       const out = [];
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < n; i++) {
         const pr = prevEntry && prevEntry.sets[i];
         out.push({ weight: (pr && pr.weight) || 0, reps: (pr && pr.reps) || 0, done: false });
       }

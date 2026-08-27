@@ -23,12 +23,26 @@
     ]);
   }
 
-  /** Compact 6-cell heat preview for dense list rows. */
-  function heatStrip(muscles) {
-    const groups = App.Muscles.groupTotals(muscles || {});
+  /**
+   * Compact 6-cell heat preview for dense list rows.
+   *
+   * `opts.absolute` says the values are already on the shared 0-100 scale
+   * (App.Store.sessionsHeat), in which case the cells are coloured against that
+   * fixed scale and the groups are AVERAGED. Without it the input is a
+   * composition — an exercise's own muscle split — which sums and scales to
+   * itself, because there the largest share genuinely is the reference.
+   */
+  function heatStrip(muscles, opts) {
+    opts = opts || {};
+    const groups = opts.absolute
+      ? App.Muscles.groupAverages(muscles || {})
+      : App.Muscles.groupTotals(muscles || {});
     const order = ['chest', 'back', 'shoulders', 'arms', 'legs', 'core'];
-    let max = 0;
-    order.forEach(function (g) { max = Math.max(max, groups[g] || 0); });
+    let max = 100;
+    if (!opts.absolute) {
+      max = 0;
+      order.forEach(function (g) { max = Math.max(max, groups[g] || 0); });
+    }
     const wrap = U.h('.heat-strip', { title: order.map(function (g) {
       return App.Muscles.GROUPS[g].name + ' ' + Math.round(groups[g] || 0) + '%';
     }).join('  ·  ') });
@@ -42,7 +56,8 @@
   }
 
   /** Ranked muscle list with bars — the text companion to the figure. */
-  function muscleList(heat, limit) {
+  function muscleList(heat, limit, opts) {
+    opts = opts || {};
     const rows = Object.keys(heat || {})
       .map(function (k) { return { id: k, v: heat[k] }; })
       .sort(function (a, b) { return b.v - a.v; })
@@ -50,7 +65,11 @@
 
     if (!rows.length) return U.h('.empty', [U.h('p', 'No muscle data yet.')]);
 
-    const max = rows[0].v || 1;
+    /* On the absolute scale a bar is "how much of the requirement", so the bar
+       has to be drawn against that requirement. Scaling to the biggest value
+       present would put the least-trained session and the hardest one side by
+       side looking identical. */
+    const max = opts.absolute ? 100 : (rows[0].v || 1);
     const list = U.h('.mlist');
     rows.forEach(function (r) {
       list.appendChild(U.h('.mlist-row', [
@@ -224,14 +243,17 @@
     const wrap = U.h('.heat-panel' + (opts.stack ? '.is-stacked' : ''), [
       fig,
       opts.list === false ? null : U.h('.heat-panel-list', [
-        U.h('.label', { text: opts.listLabel || 'Muscle load' }),
-        muscleList(heat, opts.limit || 9)
+        U.h('.label', { text: opts.listLabel ||
+          (opts.absolute === false ? 'Muscle load' : 'Share of what it needs') }),
+        muscleList(heat, opts.limit || 9, { absolute: opts.absolute !== false })
       ])
     ]);
     /* render after the node exists so measurements are correct */
     setTimeout(function () {
       App.Anatomy.render(fig, heat, { compact: opts.compact, legend: opts.legend,
-        compare: opts.compare || null });
+        compare: opts.compare || null,
+        /* Absolute unless a caller explicitly opts out. */
+        max: opts.absolute === false ? 0 : (opts.max || 100) });
     }, 0);
     return wrap;
   }

@@ -30,7 +30,7 @@
 
     const sessions = App.Store.allSessions();
     const last30 = App.Store.sessionsBetween(U.daysAgo(30), U.today());
-    const heat = App.Store.sessionsHeat(last30);
+    const heat = App.Store.sessionsHeat(last30, { days: 30 });
     const rank = App.Store.rank();
     const settings = App.Store.getSettings();
 
@@ -77,7 +77,8 @@
           U.h('div', [
             U.h('h2', 'Last 30 days'),
             U.h('.card-sub', last30.length
-              ? 'Where the work actually landed, across ' + last30.length + ' sessions.'
+              ? 'How much of what each muscle needs it actually got, across ' +
+                last30.length + ' sessions.'
               : 'Log a session and this figure fills in.')
           ]),
           U.h('.spacer'),
@@ -147,8 +148,8 @@
   /** Suggests the group that has had the least attention lately. */
   function nextUpCard() {
     const last14 = App.Store.sessionsBetween(U.daysAgo(14), U.today());
-    const heat = App.Store.sessionsHeat(last14);
-    const groups = App.Muscles.groupTotals(heat);
+    const heat = App.Store.sessionsHeat(last14, { days: 14 });
+    const groups = App.Muscles.groupAverages(heat);
     const all = Object.keys(App.Muscles.GROUPS).filter(function (g) { return g !== 'neck'; });
     const ranked = all.map(function (g) { return { g: g, v: groups[g] || 0 }; })
       .sort(function (a, b) { return a.v - b.v; });
@@ -166,15 +167,23 @@
     }
 
     return U.h('.card', [
-      U.h('.card-head', [U.h('h2', 'Least trained · 14d')]),
+      U.h('.card-head', [
+        U.h('div', [
+          U.h('h2', 'Least trained · 14d'),
+          U.h('.card-sub', 'Share of the training each group needs.')
+        ])
+      ]),
+      /* Bars run against the requirement, not against each other. Scaling to
+         the best-trained group would draw the same picture whether everything
+         was well trained or nothing was. */
       U.h('.mlist', ranked.slice(0, 4).map(function (r) {
-        const max = ranked[ranked.length - 1].v || 1;
+        const t = Math.min(1, r.v / 100);
         return U.h('.mlist-row', [
           U.h('span.mlist-name', { text: App.Muscles.GROUPS[r.g].name }),
           U.h('span.mlist-pct', { text: U.num(r.v, 0) + '%' }),
           U.h('span.mlist-bar', [
-            U.h('i.mlist-fill', { style: { width: ((r.v / max) * 100) + '%',
-              background: App.Anatomy.heatColor(r.v / max) } })
+            U.h('i.mlist-fill', { style: { width: (t * 100) + '%',
+              background: App.Anatomy.heatColor(t) } })
           ])
         ]);
       }))
@@ -207,7 +216,7 @@
           sets += (en.sets || []).length;
         });
         const heat = App.Store.sessionsHeat([s]);
-        const groups = App.Muscles.groupTotals(heat);
+        const groups = App.Muscles.groupAverages(heat);
         const top = Object.keys(groups).sort(function (a, b) { return groups[b] - groups[a]; })[0];
 
         return U.h('tr', [
@@ -221,7 +230,7 @@
           U.h('td.num', { text: String(sets) }),
           U.h('td.num', { text: s.durationSec ? U.dur(s.durationSec) : '—' }),
           U.h('td', [top ? U.h('span.chip', { text: App.Muscles.GROUPS[top].name }) : '—']),
-          U.h('td.shrink', [C.heatStrip(heat)])
+          U.h('td.shrink', [C.heatStrip(heat, { absolute: true })])
         ]);
       }))
     ]);
@@ -276,7 +285,7 @@
                 split ? U.h('span', { text: split.label }) : null
               ])
             ]),
-            C.heatStrip(st.heat)
+            C.heatStrip(st.heat, { absolute: true })
           ]);
         })));
       },

@@ -115,8 +115,8 @@
 [data-bg='pulse']  .bg-fx > i,
 [data-bg='tide']   .bg-l1, [data-bg='tide'] .bg-l2,
 [data-bg='neon']   .bg-l1, [data-bg='neon'] .bg-l2, [data-bg='neon'] .bg-l3,
-[data-bg='neon']   .bg-l5,
-[data-bg='hologrid'] .bg-l1, [data-bg='hologrid'] .bg-l3 {
+[data-bg='neon']   .bg-l4, [data-bg='neon'] .bg-l5,
+[data-bg='hologrid'] .bg-l3 {
   will-change: transform;
 }
 
@@ -314,19 +314,59 @@
   50%      { transform: scale(1.22); opacity: .72; }
 }
 
-/* --- 6. Orbs: discrete bodies on slow independent orbits --------------------- */
+/* --- 6. Orbs: many small bodies on slow independent orbits -------------------
+   Three large blobs read as a gradient, not as orbs. Thirty-odd small ones,
+   each with its own size and its own brightness of the scheme colour, read as
+   what the name says. They are grouped onto three layers so the whole field
+   still costs three animations rather than thirty.
+   -------------------------------------------------------------------------- */
 [data-bg='orbs'] .bg-l1 {
-  background: radial-gradient(30% 30% at 24% 28%, var(--c4), transparent 100%);
+  background-image:
+    radial-gradient(4.3% 5.8% at 35.7% 72.7%, color-mix(in srgb, var(--c3) 85%, transparent), transparent 100%),
+    radial-gradient(6.0% 8.1% at 67.2% 10.3%, color-mix(in srgb, var(--c3) 34%, transparent), transparent 100%),
+    radial-gradient(4.2% 5.7% at 85.5% 18.2%, color-mix(in srgb, var(--c4) 61%, transparent), transparent 100%),
+    radial-gradient(4.8% 6.5% at 4.0% 85.4%, color-mix(in srgb, var(--c4) 44%, transparent), transparent 100%),
+    radial-gradient(3.8% 5.1% at 36.7% 31.8%, color-mix(in srgb, var(--c3) 73%, transparent), transparent 100%),
+    radial-gradient(4.8% 6.5% at 86.0% 11.9%, color-mix(in srgb, var(--c4) 36%, transparent), transparent 100%),
+    radial-gradient(5.8% 7.8% at 20.3% 77.3%, color-mix(in srgb, var(--c4) 90%, transparent), transparent 100%),
+    radial-gradient(5.3% 7.2% at 29.8% 68.6%, color-mix(in srgb, var(--c4) 51%, transparent), transparent 100%),
+    radial-gradient(4.6% 6.2% at 43.4% 82.6%, color-mix(in srgb, var(--c4) 77%, transparent), transparent 100%),
+    radial-gradient(5.8% 7.8% at 92.0% 85.9%, color-mix(in srgb, var(--c3) 89%, transparent), transparent 100%),
+    radial-gradient(6.1% 8.3% at 89.3% 81.9%, color-mix(in srgb, var(--c3) 60%, transparent), transparent 100%);
   animation: orb-1 21s ease-in-out infinite alternate;
 }
 [data-bg='orbs'] .bg-l2 {
-  background: radial-gradient(26% 26% at 76% 42%, var(--c4), transparent 100%);
+  background-image:
+    radial-gradient(4.0% 5.4% at 42.2% 77.2%, color-mix(in srgb, var(--c4) 91%, transparent), transparent 100%),
+    radial-gradient(5.5% 7.4% at 16.3% 80.2%, color-mix(in srgb, var(--c4) 89%, transparent), transparent 100%),
+    radial-gradient(3.2% 4.3% at 48.2% 49.5%, color-mix(in srgb, var(--c4) 78%, transparent), transparent 100%),
+    radial-gradient(5.9% 8.0% at 82.3% 15.1%, color-mix(in srgb, var(--c3) 46%, transparent), transparent 100%),
+    radial-gradient(5.6% 7.5% at 52.4% 30.9%, color-mix(in srgb, var(--c4) 50%, transparent), transparent 100%),
+    radial-gradient(4.6% 6.2% at 33.4% 55.1%, color-mix(in srgb, var(--c3) 40%, transparent), transparent 100%),
+    radial-gradient(5.7% 7.6% at 55.2% 29.1%, color-mix(in srgb, var(--c4) 34%, transparent), transparent 100%),
+    radial-gradient(5.7% 7.6% at 7.8% 57.6%, color-mix(in srgb, var(--c4) 50%, transparent), transparent 100%),
+    radial-gradient(4.0% 5.3% at 71.8% 81.4%, color-mix(in srgb, var(--c4) 79%, transparent), transparent 100%),
+    radial-gradient(5.2% 7.0% at 56.6% 19.5%, color-mix(in srgb, var(--c4) 30%, transparent), transparent 100%),
+    radial-gradient(6.0% 8.1% at 25.1% 58.9%, color-mix(in srgb, var(--c4) 36%, transparent), transparent 100%),
+    radial-gradient(3.0% 4.0% at 85.1% 26.8%, color-mix(in srgb, var(--c4) 73%, transparent), transparent 100%);
   animation: orb-2 29s ease-in-out infinite alternate;
 }
 [data-bg='orbs'] .bg-l3 {
-  background: radial-gradient(34% 34% at 56% 80%, var(--c3), transparent 100%);
+  background-image:
+    radial-gradient(3.7% 4.9% at 32.9% 21.3%, color-mix(in srgb, var(--c4) 39%, transparent), transparent 100%),
+    radial-gradient(3.9% 5.2% at 49.9% 7.7%, color-mix(in srgb, var(--c3) 84%, transparent), transparent 100%),
+    radial-gradient(3.3% 4.4% at 46.5% 22.7%, color-mix(in srgb, var(--c4) 87%, transparent), transparent 100%),
+    radial-gradient(5.0% 6.8% at 71.3% 81.7%, color-mix(in srgb, var(--c3) 71%, transparent), transparent 100%),
+    radial-gradient(4.6% 6.2% at 46.5% 88.3%, color-mix(in srgb, var(--c3) 88%, transparent), transparent 100%),
+    radial-gradient(3.6% 4.8% at 57.1% 61.0%, color-mix(in srgb, var(--c4) 88%, transparent), transparent 100%),
+    radial-gradient(4.4% 6.0% at 80.6% 30.8%, color-mix(in srgb, var(--c4) 60%, transparent), transparent 100%),
+    radial-gradient(3.0% 4.1% at 67.9% 65.2%, color-mix(in srgb, var(--c3) 80%, transparent), transparent 100%),
+    radial-gradient(5.7% 7.7% at 69.0% 62.7%, color-mix(in srgb, var(--c4) 45%, transparent), transparent 100%),
+    radial-gradient(5.6% 7.5% at 75.0% 46.9%, color-mix(in srgb, var(--c3) 44%, transparent), transparent 100%);
   animation: orb-3 25s ease-in-out infinite alternate;
 }
+
+
 @keyframes orb-1 {
   from { transform: translate3d(-14%, 10%, 0) scale(0.9); }
   to   { transform: translate3d(16%, -14%, 0) scale(1.25); }
@@ -396,49 +436,158 @@
 
 /* --- 9. Skyline: a sci-fi city under a horizon glow (static) -----------------
 
-   SIX tower heights, not three. Each layer carries two column sets rather than
-   one, at different widths, spacings, offsets and heights. With one set per
-   layer every tower in a band topped out at exactly the same y, and the result
-   read as three ruled lines rather than as a skyline.
+   EVERY TOWER IS ITS OWN BACKGROUND IMAGE, and that is the whole point of the
+   rewrite. The previous version used three `repeating-linear-gradient`s, which
+   can only ever produce one rectangle repeated at one height — so the city read
+   as three ruled rows of identical blocks rather than as buildings.
 
-   `inset: 0` on these, unlike the drifting layers elsewhere in this file: they
-   never move, so the 30% overhang would only push the bottom of the city below
-   the fold and make every height mean something other than what it says. */
-[data-bg='skyline'] .bg-l1 {          /* far towers — tall, thin, faint */
+   Each tower now carries its own width, its own height, its own position and
+   its own darkness, hand-generated once from a fixed seed so the skyline is
+   irregular but stable. Every tower is also darker at street level than at the
+   roof, which is the same bottom-dark / top-light reading the Grid and Hologrid
+   backgrounds use.
+
+   Windows are a separate layer: a dot grid MASKED BY THE SAME TOWER SHAPES, so
+   light can only ever appear on a building. Each window is a bright core with a
+   short falloff, so it lights the wall immediately around it instead of sitting
+   on it as a flat dot.
+
+   Positions are percentages, so the city redistributes across a phone and a
+   desktop instead of running out of buildings on a wide screen.
+   -------------------------------------------------------------------------- */
+[data-bg='skyline'] .bg-l1 {
   inset: 0;
-  background:
-    repeating-linear-gradient(90deg, var(--c3) 0 9px, transparent 9px 38px)
-      left bottom / 100% 62% repeat-x,
-    repeating-linear-gradient(90deg, var(--c3) 0 7px, transparent 7px 44px)
-      left 19px bottom / 100% 51% repeat-x;
-  opacity: calc(var(--bg-alpha) * 0.5);
-}
-[data-bg='skyline'] .bg-l2 {          /* mid block */
-  inset: 0;
-  background:
-    repeating-linear-gradient(90deg, var(--c4) 0 17px, transparent 17px 59px)
-      left 23px bottom / 100% 44% repeat-x,
-    repeating-linear-gradient(90deg, var(--c4) 0 13px, transparent 13px 67px)
-      left 47px bottom / 100% 36% repeat-x;
-}
-[data-bg='skyline'] .bg-l3 {          /* near block — wide and short */
-  inset: 0;
-  background:
-    repeating-linear-gradient(90deg, var(--c4) 0 27px, transparent 27px 91px)
-      left 11px bottom / 100% 28% repeat-x,
-    repeating-linear-gradient(90deg, var(--c4) 0 21px, transparent 21px 103px)
-      left 63px bottom / 100% 21% repeat-x;
-}
-[data-bg='skyline'] .bg-l4 {          /* lit windows, confined to the towers */
-  inset: 0;
-  background: radial-gradient(circle at 50% 50%, var(--c5) 0 1.1px, transparent 1.6px)
-    0 0 / 13px 19px;
-  -webkit-mask-image: linear-gradient(to top, #000 4%, #000 30%, transparent 58%);
-          mask-image: linear-gradient(to top, #000 4%, #000 30%, transparent 58%);
   opacity: calc(var(--bg-alpha) * 0.62);
+    background-image:
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 20%, transparent), color-mix(in srgb, var(--c3) 28%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 14%, transparent), color-mix(in srgb, var(--c3) 18%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 24%, transparent), color-mix(in srgb, var(--c3) 33%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 13%, transparent), color-mix(in srgb, var(--c3) 25%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 11%, transparent), color-mix(in srgb, var(--c3) 21%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 22%, transparent), color-mix(in srgb, var(--c3) 35%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 12%, transparent), color-mix(in srgb, var(--c3) 21%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 13%, transparent), color-mix(in srgb, var(--c3) 17%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 22%, transparent), color-mix(in srgb, var(--c3) 30%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 25%, transparent), color-mix(in srgb, var(--c3) 30%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 17%, transparent), color-mix(in srgb, var(--c3) 30%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 20%, transparent), color-mix(in srgb, var(--c3) 31%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 21%, transparent), color-mix(in srgb, var(--c3) 32%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 20%, transparent), color-mix(in srgb, var(--c3) 29%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 19%, transparent), color-mix(in srgb, var(--c3) 32%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 21%, transparent), color-mix(in srgb, var(--c3) 35%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 12%, transparent), color-mix(in srgb, var(--c3) 25%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 22%, transparent), color-mix(in srgb, var(--c3) 28%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 15%, transparent), color-mix(in srgb, var(--c3) 22%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 21%, transparent), color-mix(in srgb, var(--c3) 35%, transparent));
+  background-size: 13px 238px, 12px 323px, 13px 208px, 10px 136px, 7px 259px, 14px 217px, 8px 162px, 12px 155px, 10px 159px, 9px 225px, 12px 245px, 8px 197px, 9px 252px, 14px 256px, 11px 164px, 8px 164px, 8px 302px, 14px 301px, 9px 189px, 12px 288px;
+  background-position: 13.6% bottom, 69.3% bottom, 38.6% bottom, 6.1% bottom, 27.1% bottom, 43.6% bottom, 62.7% bottom, 0.1% bottom, 95.8% bottom, 75.3% bottom, 83.2% bottom, 22.0% bottom, 59.3% bottom, 88.5% bottom, 35.0% bottom, 54.9% bottom, 48.5% bottom, 84.6% bottom, 30.8% bottom, 78.8% bottom;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
 }
-[data-bg='skyline'] .bg-l5 {          /* the light the city sits under */
-  background: radial-gradient(90% 46% at 50% 78%, var(--c4), transparent 100%);
+[data-bg='skyline'] .bg-l2 {
+  inset: 0;
+    background-image:
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 28%, transparent), color-mix(in srgb, var(--c4) 41%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 23%, transparent), color-mix(in srgb, var(--c4) 32%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 33%, transparent), color-mix(in srgb, var(--c4) 44%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 24%, transparent), color-mix(in srgb, var(--c4) 35%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 27%, transparent), color-mix(in srgb, var(--c4) 45%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 37%, transparent), color-mix(in srgb, var(--c4) 47%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 25%, transparent), color-mix(in srgb, var(--c4) 46%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 22%, transparent), color-mix(in srgb, var(--c4) 31%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 30%, transparent), color-mix(in srgb, var(--c4) 44%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 35%, transparent), color-mix(in srgb, var(--c4) 51%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 37%, transparent), color-mix(in srgb, var(--c4) 50%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 21%, transparent), color-mix(in srgb, var(--c4) 32%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 32%, transparent), color-mix(in srgb, var(--c4) 45%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 26%, transparent), color-mix(in srgb, var(--c4) 41%, transparent));
+  background-size: 35px 122px, 27px 142px, 30px 180px, 20px 227px, 20px 159px, 33px 183px, 20px 134px, 32px 163px, 19px 227px, 35px 232px, 33px 154px, 19px 124px, 22px 175px, 21px 183px;
+  background-position: 12.9% bottom, 29.6% bottom, 19.9% bottom, 50.4% bottom, 77.1% bottom, 88.5% bottom, 97.2% bottom, 63.2% bottom, 82.6% bottom, 56.2% bottom, 39.7% bottom, 70.2% bottom, 2.8% bottom, 28.5% bottom;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+}
+[data-bg='skyline'] .bg-l3 {
+  inset: 0;
+    background-image:
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 38%, transparent), color-mix(in srgb, var(--c3) 54%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 29%, transparent), color-mix(in srgb, var(--c3) 46%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 30%, transparent), color-mix(in srgb, var(--c3) 55%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 37%, transparent), color-mix(in srgb, var(--c3) 53%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 38%, transparent), color-mix(in srgb, var(--c3) 49%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 50%, transparent), color-mix(in srgb, var(--c3) 75%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 49%, transparent), color-mix(in srgb, var(--c3) 72%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 39%, transparent), color-mix(in srgb, var(--c3) 55%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 33%, transparent), color-mix(in srgb, var(--c3) 46%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 32%, transparent), color-mix(in srgb, var(--c3) 46%, transparent));
+  background-size: 56px 86px, 40px 87px, 51px 100px, 47px 107px, 40px 122px, 38px 99px, 32px 70px, 61px 63px, 48px 63px, 37px 62px;
+  background-position: 93.2% bottom, 65.6% bottom, 49.5% bottom, 1.6% bottom, 26.4% bottom, 40.3% bottom, 14.2% bottom, 81.1% bottom, 96.1% bottom, 69.2% bottom;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+}
+[data-bg='skyline'] .bg-l4 {
+  inset: 0;
+  opacity: calc(var(--bg-alpha) * 0.9);
+  background: radial-gradient(circle at 50% 50%,
+    color-mix(in srgb, var(--c5) 96%, transparent) 0 0.9px,
+    color-mix(in srgb, var(--c5) 52%, transparent) 0.9px 1.9px,
+    color-mix(in srgb, var(--c4) 20%, transparent) 1.9px 3.6px,
+    transparent 3.6px) 0 0 / 11px 15px;
+  -webkit-mask-image:
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000);
+  -webkit-mask-size: 35px 122px, 27px 142px, 30px 180px, 20px 227px, 20px 159px, 33px 183px, 20px 134px, 32px 163px, 19px 227px, 35px 232px, 33px 154px, 19px 124px, 22px 175px, 21px 183px, 56px 86px, 40px 87px, 51px 100px, 47px 107px, 40px 122px, 38px 99px, 32px 70px, 61px 63px, 48px 63px, 37px 62px;
+  -webkit-mask-position: 12.9% bottom, 29.6% bottom, 19.9% bottom, 50.4% bottom, 77.1% bottom, 88.5% bottom, 97.2% bottom, 63.2% bottom, 82.6% bottom, 56.2% bottom, 39.7% bottom, 70.2% bottom, 2.8% bottom, 28.5% bottom, 93.2% bottom, 65.6% bottom, 49.5% bottom, 1.6% bottom, 26.4% bottom, 40.3% bottom, 14.2% bottom, 81.1% bottom, 96.1% bottom, 69.2% bottom;
+  -webkit-mask-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  mask-image:
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000);
+  mask-size: 35px 122px, 27px 142px, 30px 180px, 20px 227px, 20px 159px, 33px 183px, 20px 134px, 32px 163px, 19px 227px, 35px 232px, 33px 154px, 19px 124px, 22px 175px, 21px 183px, 56px 86px, 40px 87px, 51px 100px, 47px 107px, 40px 122px, 38px 99px, 32px 70px, 61px 63px, 48px 63px, 37px 62px;
+  mask-position: 12.9% bottom, 29.6% bottom, 19.9% bottom, 50.4% bottom, 77.1% bottom, 88.5% bottom, 97.2% bottom, 63.2% bottom, 82.6% bottom, 56.2% bottom, 39.7% bottom, 70.2% bottom, 2.8% bottom, 28.5% bottom, 93.2% bottom, 65.6% bottom, 49.5% bottom, 1.6% bottom, 26.4% bottom, 40.3% bottom, 14.2% bottom, 81.1% bottom, 96.1% bottom, 69.2% bottom;
+  mask-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+}
+[data-bg='skyline'] .bg-l5 {
+  background: radial-gradient(94% 44% at 50% 82%, var(--c4), transparent 100%);
 }
 
 /* --- 10. Circuit: a cyberpunk board (static) ---------------------------------
@@ -472,73 +621,176 @@
     radial-gradient(64% 44% at 50% 10%, var(--c4), transparent 100%);
 }
 
-/* --- 11. Neon: the same city, alive (animated) -------------------------------
-   Three tower layers on a PARALLAX: the near block travels furthest per second
-   and the far block barely moves, which is what makes a flat drift read as
-   depth. Only `transform` is animated, and each band travels less than its own
-   column period so the loop never announces itself. */
-/* The overhang is horizontal only. These bands are anchored to the bottom of
-   their own box, so a vertical overhang would push the city off the fold; the
-   sideways room is what lets them travel a full column period without ever
-   showing an edge. */
+/* --- 11. Neon City: the same city, alive (animated) --------------------------
+   Three tower bands on a PARALLAX — the near block travels furthest per second
+   and the far block barely moves, which is what turns a flat drift into depth.
+   Each lit-window layer carries the same animation as the band it is masked by,
+   or the lights would slide off their own buildings.
+   -------------------------------------------------------------------------- */
 [data-bg='neon'] .bg-l1 {
-  inset: 0 -20%;
-  background:
-    repeating-linear-gradient(90deg, var(--c3) 0 9px, transparent 9px 38px)
-      left bottom / 100% 64% repeat-x,
-    repeating-linear-gradient(90deg, var(--c3) 0 7px, transparent 7px 44px)
-      left 19px bottom / 100% 53% repeat-x;
-  opacity: calc(var(--bg-alpha) * 0.46);
+  inset: 0 -22%;
+  opacity: calc(var(--bg-alpha) * 0.58);
   animation: city-far 74s linear infinite;
+    background-image:
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 20%, transparent), color-mix(in srgb, var(--c3) 28%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 14%, transparent), color-mix(in srgb, var(--c3) 18%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 24%, transparent), color-mix(in srgb, var(--c3) 33%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 13%, transparent), color-mix(in srgb, var(--c3) 25%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 11%, transparent), color-mix(in srgb, var(--c3) 21%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 22%, transparent), color-mix(in srgb, var(--c3) 35%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 12%, transparent), color-mix(in srgb, var(--c3) 21%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 13%, transparent), color-mix(in srgb, var(--c3) 17%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 22%, transparent), color-mix(in srgb, var(--c3) 30%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 25%, transparent), color-mix(in srgb, var(--c3) 30%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 17%, transparent), color-mix(in srgb, var(--c3) 30%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 20%, transparent), color-mix(in srgb, var(--c3) 31%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 21%, transparent), color-mix(in srgb, var(--c3) 32%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 20%, transparent), color-mix(in srgb, var(--c3) 29%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 19%, transparent), color-mix(in srgb, var(--c3) 32%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 21%, transparent), color-mix(in srgb, var(--c3) 35%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 12%, transparent), color-mix(in srgb, var(--c3) 25%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 22%, transparent), color-mix(in srgb, var(--c3) 28%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 15%, transparent), color-mix(in srgb, var(--c3) 22%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c3) 21%, transparent), color-mix(in srgb, var(--c3) 35%, transparent));
+  background-size: 13px 238px, 12px 323px, 13px 208px, 10px 136px, 7px 259px, 14px 217px, 8px 162px, 12px 155px, 10px 159px, 9px 225px, 12px 245px, 8px 197px, 9px 252px, 14px 256px, 11px 164px, 8px 164px, 8px 302px, 14px 301px, 9px 189px, 12px 288px;
+  background-position: 13.6% bottom, 69.3% bottom, 38.6% bottom, 6.1% bottom, 27.1% bottom, 43.6% bottom, 62.7% bottom, 0.1% bottom, 95.8% bottom, 75.3% bottom, 83.2% bottom, 22.0% bottom, 59.3% bottom, 88.5% bottom, 35.0% bottom, 54.9% bottom, 48.5% bottom, 84.6% bottom, 30.8% bottom, 78.8% bottom;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
 }
 [data-bg='neon'] .bg-l2 {
-  inset: 0 -20%;
-  background:
-    repeating-linear-gradient(90deg, var(--c4) 0 17px, transparent 17px 59px)
-      left 23px bottom / 100% 46% repeat-x,
-    repeating-linear-gradient(90deg, var(--c4) 0 13px, transparent 13px 67px)
-      left 47px bottom / 100% 37% repeat-x;
+  inset: 0 -22%;
   animation: city-mid 47s linear infinite;
+    background-image:
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 28%, transparent), color-mix(in srgb, var(--c4) 41%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 23%, transparent), color-mix(in srgb, var(--c4) 32%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 33%, transparent), color-mix(in srgb, var(--c4) 44%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 24%, transparent), color-mix(in srgb, var(--c4) 35%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 27%, transparent), color-mix(in srgb, var(--c4) 45%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 37%, transparent), color-mix(in srgb, var(--c4) 47%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 25%, transparent), color-mix(in srgb, var(--c4) 46%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 22%, transparent), color-mix(in srgb, var(--c4) 31%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 30%, transparent), color-mix(in srgb, var(--c4) 44%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 35%, transparent), color-mix(in srgb, var(--c4) 51%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 37%, transparent), color-mix(in srgb, var(--c4) 50%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 21%, transparent), color-mix(in srgb, var(--c4) 32%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 32%, transparent), color-mix(in srgb, var(--c4) 45%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 26%, transparent), color-mix(in srgb, var(--c4) 41%, transparent));
+  background-size: 35px 122px, 27px 142px, 30px 180px, 20px 227px, 20px 159px, 33px 183px, 20px 134px, 32px 163px, 19px 227px, 35px 232px, 33px 154px, 19px 124px, 22px 175px, 21px 183px;
+  background-position: 12.9% bottom, 29.6% bottom, 19.9% bottom, 50.4% bottom, 77.1% bottom, 88.5% bottom, 97.2% bottom, 63.2% bottom, 82.6% bottom, 56.2% bottom, 39.7% bottom, 70.2% bottom, 2.8% bottom, 28.5% bottom;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
 }
 [data-bg='neon'] .bg-l3 {
-  inset: 0 -20%;
-  background:
-    repeating-linear-gradient(90deg, var(--c4) 0 27px, transparent 27px 91px)
-      left 11px bottom / 100% 29% repeat-x,
-    repeating-linear-gradient(90deg, var(--c4) 0 21px, transparent 21px 103px)
-      left 63px bottom / 100% 22% repeat-x;
+  inset: 0 -22%;
   animation: city-near 29s linear infinite;
+    background-image:
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 38%, transparent), color-mix(in srgb, var(--c3) 54%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 29%, transparent), color-mix(in srgb, var(--c3) 46%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 30%, transparent), color-mix(in srgb, var(--c3) 55%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 37%, transparent), color-mix(in srgb, var(--c3) 53%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 38%, transparent), color-mix(in srgb, var(--c3) 49%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 50%, transparent), color-mix(in srgb, var(--c3) 75%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 49%, transparent), color-mix(in srgb, var(--c3) 72%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 39%, transparent), color-mix(in srgb, var(--c3) 55%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 33%, transparent), color-mix(in srgb, var(--c3) 46%, transparent)),
+      linear-gradient(to top, color-mix(in srgb, var(--c4) 32%, transparent), color-mix(in srgb, var(--c3) 46%, transparent));
+  background-size: 56px 86px, 40px 87px, 51px 100px, 47px 107px, 40px 122px, 38px 99px, 32px 70px, 61px 63px, 48px 63px, 37px 62px;
+  background-position: 93.2% bottom, 65.6% bottom, 49.5% bottom, 1.6% bottom, 26.4% bottom, 40.3% bottom, 14.2% bottom, 81.1% bottom, 96.1% bottom, 69.2% bottom;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
 }
-[data-bg='neon'] .bg-l4 {             /* windows: static, so they belong to the mid block */
-  inset: 0;
-  background: radial-gradient(circle at 50% 50%, var(--c5) 0 1.1px, transparent 1.6px)
-    0 0 / 13px 19px;
-  -webkit-mask-image: linear-gradient(to top, #000 4%, #000 30%, transparent 58%);
-          mask-image: linear-gradient(to top, #000 4%, #000 30%, transparent 58%);
-  opacity: calc(var(--bg-alpha) * 0.56);
+[data-bg='neon'] .bg-l4 {
+  inset: 0 -22%;
+  opacity: calc(var(--bg-alpha) * 0.9);
+  animation: city-mid 47s linear infinite;
+  background: radial-gradient(circle at 50% 50%,
+    color-mix(in srgb, var(--c5) 96%, transparent) 0 0.9px,
+    color-mix(in srgb, var(--c5) 52%, transparent) 0.9px 1.9px,
+    color-mix(in srgb, var(--c4) 20%, transparent) 1.9px 3.6px,
+    transparent 3.6px) 0 0 / 11px 15px;
+  -webkit-mask-image:
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000);
+  -webkit-mask-size: 35px 122px, 27px 142px, 30px 180px, 20px 227px, 20px 159px, 33px 183px, 20px 134px, 32px 163px, 19px 227px, 35px 232px, 33px 154px, 19px 124px, 22px 175px, 21px 183px;
+  -webkit-mask-position: 12.9% bottom, 29.6% bottom, 19.9% bottom, 50.4% bottom, 77.1% bottom, 88.5% bottom, 97.2% bottom, 63.2% bottom, 82.6% bottom, 56.2% bottom, 39.7% bottom, 70.2% bottom, 2.8% bottom, 28.5% bottom;
+  -webkit-mask-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  mask-image:
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000);
+  mask-size: 35px 122px, 27px 142px, 30px 180px, 20px 227px, 20px 159px, 33px 183px, 20px 134px, 32px 163px, 19px 227px, 35px 232px, 33px 154px, 19px 124px, 22px 175px, 21px 183px;
+  mask-position: 12.9% bottom, 29.6% bottom, 19.9% bottom, 50.4% bottom, 77.1% bottom, 88.5% bottom, 97.2% bottom, 63.2% bottom, 82.6% bottom, 56.2% bottom, 39.7% bottom, 70.2% bottom, 2.8% bottom, 28.5% bottom;
+  mask-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
 }
-[data-bg='neon'] .bg-l5 {             /* a sign sweep crossing the skyline */
-  inset: -30% -80%;
-  background: linear-gradient(96deg,
-    transparent 0%, var(--c5) 44%, var(--c4) 52%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 72%);
-          mask-image: linear-gradient(to top, #000 0%, transparent 72%);
-  opacity: calc(var(--bg-alpha) * 0.55);
-  animation: neon-sweep 23s ease-in-out infinite alternate;
+[data-bg='neon'] .bg-l5 {
+  inset: 0 -22%;
+  opacity: calc(var(--bg-alpha) * 0.9);
+  animation: city-near 29s linear infinite;
+  background: radial-gradient(circle at 50% 50%,
+    color-mix(in srgb, var(--c5) 92%, transparent) 0 1.1px,
+    color-mix(in srgb, var(--c5) 46%, transparent) 1.1px 2.3px,
+    color-mix(in srgb, var(--c4) 18%, transparent) 2.3px 4.2px,
+    transparent 4.2px) 0 0 / 14px 19px;
+  -webkit-mask-image:
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000);
+  -webkit-mask-size: 56px 86px, 40px 87px, 51px 100px, 47px 107px, 40px 122px, 38px 99px, 32px 70px, 61px 63px, 48px 63px, 37px 62px;
+  -webkit-mask-position: 93.2% bottom, 65.6% bottom, 49.5% bottom, 1.6% bottom, 26.4% bottom, 40.3% bottom, 14.2% bottom, 81.1% bottom, 96.1% bottom, 69.2% bottom;
+  -webkit-mask-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  mask-image:
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000),
+    linear-gradient(#000, #000);
+  mask-size: 56px 86px, 40px 87px, 51px 100px, 47px 107px, 40px 122px, 38px 99px, 32px 70px, 61px 63px, 48px 63px, 37px 62px;
+  mask-position: 93.2% bottom, 65.6% bottom, 49.5% bottom, 1.6% bottom, 26.4% bottom, 40.3% bottom, 14.2% bottom, 81.1% bottom, 96.1% bottom, 69.2% bottom;
+  mask-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
 }
-[data-bg='neon'] .bg-l6 {             /* the glow the city throws up */
-  background: radial-gradient(92% 48% at 50% 80%, var(--c4), transparent 100%);
+[data-bg='neon'] .bg-l6 {
+  background: radial-gradient(96% 46% at 50% 84%, var(--c4), transparent 100%);
 }
+
+
 @keyframes city-far  { from { transform: translate3d(0, 0, 0); }
                        to   { transform: translate3d(38px, 0, 0); } }
 @keyframes city-mid  { from { transform: translate3d(0, 0, 0); }
                        to   { transform: translate3d(-59px, 0, 0); } }
 @keyframes city-near { from { transform: translate3d(0, 0, 0); }
                        to   { transform: translate3d(-91px, 0, 0); } }
-@keyframes neon-sweep {
-  from { transform: translate3d(-26%, 0, 0); }
-  to   { transform: translate3d(26%, 0, 0); }
-}
 
 /* --- 12. Hologrid: a grid running to the horizon (animated) ------------------
 
@@ -582,6 +834,40 @@
 [data-bg='hologrid'] .bg-l2 {         /* the horizon they run to */
   background: radial-gradient(74% 24% at 50% 34%, var(--c5), transparent 100%);
 }
+/* A PHONE IS NOT A SMALL DESKTOP HERE.
+   The lane fan and the rung spacing are both absolute — an angle and a pixel
+   period — so a narrow, tall viewport sees a slice of the same fan rather than
+   a scaled version of it. On a phone that meant a handful of near-vertical
+   lanes and three or four rungs, which reads as stripes rather than as a grid
+   running away from you. Narrow screens get a tighter fan, a lower horizon and
+   a shorter rung period, and their own keyframe so the loop still travels
+   exactly one period. */
+@media (max-width: 700px) {
+  [data-bg='hologrid'] .bg-l1 {
+    background: repeating-linear-gradient(90deg,
+      var(--c4) 0 2px, transparent 2px 40px);
+    background: repeating-conic-gradient(from 205deg at 50% 30%,
+      var(--c4) 0 0.42deg, transparent 0.42deg 2.9deg);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 26%, #000 40%, #000 100%);
+            mask-image: linear-gradient(to bottom, transparent 26%, #000 40%, #000 100%);
+  }
+  [data-bg='hologrid'] .bg-l2 {
+    background: radial-gradient(96% 18% at 50% 30%, var(--c5), transparent 100%);
+  }
+  [data-bg='hologrid'] .bg-l3 {
+    inset: 0 0 -40px 0;
+    background: repeating-linear-gradient(to bottom,
+      var(--c4) 0 1.5px, transparent 1.5px 40px);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 30%, #000 54%, #000 100%);
+            mask-image: linear-gradient(to bottom, transparent 30%, #000 54%, #000 100%);
+    animation-name: holo-run-narrow;
+  }
+}
+@keyframes holo-run-narrow {
+  from { transform: translate3d(0, -40px, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+
 /* Exactly one grid period, so the loop has no seam. */
 @keyframes holo-run {
   from { transform: translate3d(0, -60px, 0); }
@@ -624,16 +910,19 @@
 [data-bgmotion='low'][data-bg='pulse']  .bg-l2,
 [data-bgmotion='low'][data-bg='pulse']  .bg-l3,
 [data-bgmotion='low'][data-bg='tide']   .bg-l2,
+/* Neon keeps the NEAR band and its windows, and stills the other two. A band
+   and the lights masked to it have to be stilled together or the windows slide
+   off the buildings they belong to. */
 [data-bgmotion='low'][data-bg='neon']   .bg-l1,
 [data-bgmotion='low'][data-bg='neon']   .bg-l2,
-[data-bgmotion='low'][data-bg='neon']   .bg-l5,
-[data-bgmotion='low'][data-bg='hologrid'] .bg-l3 {
+[data-bgmotion='low'][data-bg='neon']   .bg-l4 {
   animation: none;
 }
 /* Nothing that has stopped moving should still be holding a compositor layer. */
 [data-bgmotion='low'] .bg-fx > i { will-change: auto; }
 [data-bgmotion='low'][data-bg='neon'] .bg-l3,
-[data-bgmotion='low'][data-bg='hologrid'] .bg-l1,
+[data-bgmotion='low'][data-bg='neon'] .bg-l5,
+[data-bgmotion='low'][data-bg='hologrid'] .bg-l3,
 [data-bgmotion='low'][data-bg='aurora'] .bg-l4,
 [data-bgmotion='low'][data-bg='orbs'] .bg-l1,
 [data-bgmotion='low'][data-bg='pulse'] .bg-l1,
@@ -714,12 +1003,23 @@
    at full size the city would show one and a half buildings. */
 .bg-swatch[data-preview='skyline']::after {
   inset: 0;
-  background:
-    repeating-linear-gradient(90deg, var(--c3) 0 3px, transparent 3px 11px)
-      left bottom / 100% 62% repeat-x,
-    repeating-linear-gradient(90deg, var(--c4) 0 5px, transparent 5px 17px)
-      left 7px bottom / 100% 42% repeat-x,
-    radial-gradient(90% 46% at 50% 82%, var(--c4), transparent 100%);
+  background-image:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--c5) 95%, transparent) 0 0.6px, color-mix(in srgb, var(--c5) 40%, transparent) 0.6px 1.3px, transparent 2.2px),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 20%, transparent), color-mix(in srgb, var(--c4) 34%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 14%, transparent), color-mix(in srgb, var(--c4) 24%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 30%, transparent), color-mix(in srgb, var(--c4) 48%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 22%, transparent), color-mix(in srgb, var(--c4) 38%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 34%, transparent), color-mix(in srgb, var(--c4) 52%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 16%, transparent), color-mix(in srgb, var(--c4) 27%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 28%, transparent), color-mix(in srgb, var(--c4) 46%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 20%, transparent), color-mix(in srgb, var(--c4) 35%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 32%, transparent), color-mix(in srgb, var(--c4) 50%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 15%, transparent), color-mix(in srgb, var(--c4) 26%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 26%, transparent), color-mix(in srgb, var(--c4) 42%, transparent)),
+    radial-gradient(88% 40% at 50% 84%, var(--c4), transparent 100%);
+  background-size: 6px 8px, 5px 52%, 4px 76%, 7px 40%, 5px 62%, 8px 34%, 4px 70%, 9px 46%, 5px 58%, 7px 36%, 4px 66%, 6px 44%, 100% 100%;
+  background-position: 0 0, 4% bottom, 13% bottom, 21% bottom, 31% bottom, 39% bottom, 50% bottom, 57% bottom, 69% bottom, 77% bottom, 87% bottom, 94% bottom, 0 0;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
 }
 .bg-swatch[data-preview='circuit']::after {
   inset: 0;
@@ -733,12 +1033,23 @@
    swatch: `city-near` travels 91px, which is the whole thumbnail. */
 .bg-swatch[data-preview='neon']::after {
   inset: 0 -110%;
-  background:
-    repeating-linear-gradient(90deg, var(--c3) 0 3px, transparent 3px 11px)
-      left bottom / 100% 62% repeat-x,
-    repeating-linear-gradient(90deg, var(--c4) 0 5px, transparent 5px 17px)
-      left 7px bottom / 100% 42% repeat-x,
-    radial-gradient(40% 46% at 50% 82%, var(--c5), transparent 100%);
+  background-image:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--c5) 95%, transparent) 0 0.6px, color-mix(in srgb, var(--c5) 40%, transparent) 0.6px 1.3px, transparent 2.2px),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 20%, transparent), color-mix(in srgb, var(--c4) 34%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 14%, transparent), color-mix(in srgb, var(--c4) 24%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 30%, transparent), color-mix(in srgb, var(--c4) 48%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 22%, transparent), color-mix(in srgb, var(--c4) 38%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 34%, transparent), color-mix(in srgb, var(--c4) 52%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 16%, transparent), color-mix(in srgb, var(--c4) 27%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 28%, transparent), color-mix(in srgb, var(--c4) 46%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 20%, transparent), color-mix(in srgb, var(--c4) 35%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 32%, transparent), color-mix(in srgb, var(--c4) 50%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 15%, transparent), color-mix(in srgb, var(--c4) 26%, transparent)),
+    linear-gradient(to top, color-mix(in srgb, var(--c4) 26%, transparent), color-mix(in srgb, var(--c4) 42%, transparent)),
+    radial-gradient(88% 40% at 50% 84%, var(--c4), transparent 100%);
+  background-size: 6px 8px, 5px 52%, 4px 76%, 7px 40%, 5px 62%, 8px 34%, 4px 70%, 9px 46%, 5px 58%, 7px 36%, 4px 66%, 6px 44%, 100% 100%;
+  background-position: 0 0, 4% bottom, 13% bottom, 21% bottom, 31% bottom, 39% bottom, 50% bottom, 57% bottom, 69% bottom, 77% bottom, 87% bottom, 94% bottom, 0 0;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
   animation: city-near 29s linear infinite;
 }
 /* The lanes have to converge inside 46px, so the vanishing point sits higher up

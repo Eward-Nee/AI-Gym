@@ -146,6 +146,42 @@
     return out;
   }
 
+  /**
+   * Group averages, for maps whose values are already on an absolute scale.
+   *
+   * Summing works for a COMPOSITION — an exercise's muscle split adds to 100,
+   * so "chest 46%" is a real share of that exercise. It is nonsense for
+   * training heat, where each muscle independently reports how much of its own
+   * weekly requirement it received: four chest regions at 80% each would sum to
+   * 320%, which reads as four times the requirement when in fact the chest got
+   * exactly 80% of it. The average is the number that keeps meaning the same
+   * thing as the per-muscle figure it is built from.
+   *
+   * Averaged over the group's FULL membership, not just the regions that were
+   * hit — a chest day that trains the upper pec and nothing else has genuinely
+   * not trained the chest, and hiding the untouched regions would say it had.
+   */
+  function groupAverages(map) {
+    const sum = Object.create(null);
+    const count = Object.create(null);
+    MUSCLES.forEach(function (m) {
+      if (m.hidden || m.parts) return;   /* composites would double-count */
+      count[m.group] = (count[m.group] || 0) + 1;
+      sum[m.group] = sum[m.group] || 0;
+    });
+    for (const id in map) {
+      const m = BY_ID[id];
+      if (!m || m.hidden || m.parts) continue;
+      sum[m.group] = (sum[m.group] || 0) + (Number(map[id]) || 0);
+    }
+    const out = Object.create(null);
+    for (const g in sum) {
+      if (!count[g]) continue;
+      out[g] = Math.round((sum[g] / count[g]) * 10) / 10;
+    }
+    return out;
+  }
+
   /** Human label for a muscle id, falling back to the raw id. */
   function label(id, longForm) {
     const m = BY_ID[id];
@@ -245,6 +281,7 @@
     DEFAULT_GROUP_ORDER: DEFAULT_ORDER,
     ids: MUSCLES.map(function (m) { return m.id; }),
     groupTotals: groupTotals,
+    groupAverages: groupAverages,
     expand: expand,
     label: label,
     normalise: normalise,

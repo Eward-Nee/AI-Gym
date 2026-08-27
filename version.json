@@ -1,5 +1,5 @@
 {
-  "version": "0.6.0",
+  "version": "0.6.1",
   "name": "AI-Gym",
-  "notes": "Growth forecasting that knows strength has a ceiling, drag to reorder that works on a phone, and a sci-fi/cyberpunk background set."
+  "notes": "Heat figures now score against what a muscle needs, not against the hardest-worked one. Sessions stop rewriting plans. The city backgrounds have actual buildings."
 }
