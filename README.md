@@ -1,6 +1,6 @@
 # AI-Gym
 
-**Version 0.6.1**
+**Version 0.6.2**
 
 A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No build step, no framework, no npm install, no CDN — open it and it works.
 
@@ -147,9 +147,18 @@ two figures were ever on the same scale.
 
 The unit is the **hard set**, which is how training volume is actually
 prescribed. Ten to twenty hard sets per muscle per week is the productive range;
-twelve is the figure the app measures against. A window shorter than a week is
-still judged against a week's requirement — you do not need less training because
-you looked at a smaller slice of the calendar.
+twelve is the figure the app measures against.
+
+**The answer is a weekly rate.** Divide the work by the length of the selected
+range and a fortnight of hard training viewed over 90 days is divided by
+thirteen weeks — so a genuinely hard chest week reports 3% and the figure looks
+like nothing happened. The range is a filter on what to look at, not a claim
+about how long you were training, so the divisor is the span the sessions
+actually cover, rounded up to whole weeks. Four weekly sessions sit three weeks
+apart end to end but represent four weeks of training, which is why it rounds up
+rather than dividing by the bare span. The reading then means "in a week you
+train, this muscle gets X% of what it needs", and it stays put whether you are
+looking at a month or a year.
 
 Three things decide what a set is worth:
 
@@ -174,10 +183,12 @@ a hard set to anything, and no amount of realistic training would reach the
 requirement.
 
 Two consequences worth knowing. Muscle-group figures are **averaged**, not
-summed — four chest regions at 80% each is a chest trained to 80%, not to 320%.
-And an exercise's own figure in the library still scales to itself, because there
-the numbers are a *composition* (a muscle split adding to 100) rather than a
-dose, and the largest share genuinely is the reference.
+summed — four chest regions at 80% each is a chest trained to 80%, not to 320% —
+and that average is weighted by the values themselves, so a minor accessory like
+the serratus cannot drag a well-pressed chest down to a quarter of what its pecs
+are reporting. And an exercise's own figure in the library still scales to
+itself, because there the numbers are a *composition* (a muscle split adding to
+100) rather than a dose, and the largest share genuinely is the reference.
 
 ---
 
@@ -270,9 +281,11 @@ repeated at one height — so the city read as three ruled rows of identical
 blocks. Every tower is now its own background image with its own width, height,
 position and darkness, generated once from a fixed seed so the skyline is
 irregular but stable, and each tower is darker at street level than at the roof.
-Windows are a separate layer: a dot grid **masked by the same tower shapes**, so
-light can only appear on a building, and each window is a bright core with a
-short falloff so it lights the wall immediately around it. Positions are
+Windows are a separate layer **masked by the same tower shapes**, so light can
+only appear on a building. A window is a rectangle, not a dot: a `conic-gradient`
+fired from a point inside its tile covers everything up and to the right of that
+origin, and inside a rectangular tile that region *is* a rectangle. Under each
+pane sits a soft radial — the light it spills onto the wall around it. Positions are
 percentages, so the city redistributes across a phone and a desktop instead of
 running out of buildings on a wide screen. Orbs went the same way — thirty small
 bodies at varied sizes and brightnesses read as orbs; three large ones read as a

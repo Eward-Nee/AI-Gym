@@ -232,9 +232,8 @@
   /* Everything below the training-load chart, which always describes the WHOLE
      range: the filter narrows one question, not the page. */
   function drawDistribution(sessions) {
-    const days = C.rangeById(view.range).days;
-    const heat = App.Store.sessionsHeat(sessions, { days: days });
-    const priorHeat = App.Store.sessionsHeat(priorRangeSessions(), { days: days });
+    const heat = App.Store.sessionsHeat(sessions);
+    const priorHeat = App.Store.sessionsHeat(priorRangeSessions());
     const groups = App.Muscles.groupAverages(heat);
 
     root.appendChild(U.h('.grid.grid-main', [
@@ -242,9 +241,9 @@
         U.h('.card-head', [
           U.h('div', [
             U.h('h2', 'Where the work landed'),
-            U.h('.card-sub', '100% is the training a muscle needs to get stronger ' +
-              'at your bodyweight, not the hardest-worked muscle here. ' +
-              'Tap one for its share and how it has moved.')
+            U.h('.card-sub', '100% is a full week of the training a muscle needs at ' +
+              'your bodyweight — averaged over the weeks you actually trained, ' +
+              'not spread across the whole range. Tap one for its share.')
           ])
         ]),
         C.heatPanel(heat, { limit: 12, compare: priorHeat })
@@ -254,7 +253,7 @@
           U.h('.card-head', [
             U.h('div', [
               U.h('h2', 'By muscle group'),
-              U.h('.card-sub', 'Averaged across each group, against what it needs.')
+              U.h('.card-sub', 'Averaged across each group, against a week’s work.')
             ])
           ]),
           groupBars(groups)

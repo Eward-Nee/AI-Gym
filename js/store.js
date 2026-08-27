@@ -639,12 +639,19 @@
       });
     });
 
-    /* A window shorter than a week is still judged against a week's
-       requirement — you do not need less training because you looked at a
-       smaller slice of the calendar, and a single session read against a
-       single day's share would saturate every figure in the app. */
-    const days = Math.max(7, Number(opts && opts.days) || 7);
-    const target = HARD_SETS_PER_WEEK * days / 7;
+    /* THE REQUIREMENT IS WEEKLY, AND SO IS THE ANSWER.
+       Scaling the target by the length of the selected RANGE was wrong in the
+       way that matters: pick 90 days, train hard for a fortnight, and the work
+       is divided by thirteen weeks — so a genuinely hard chest week reports 3%
+       and the figure looks like you have done nothing. The range is a filter on
+       what to look at, not a claim about how long you were training.
+
+       Dividing by the weeks that actually CONTAIN training gives the rate
+       instead: "in a week you train, this muscle gets X% of what it needs".
+       That number stays put whether you are looking at a month or a year, which
+       is the whole point of an absolute scale. */
+    const weeks = Math.max(1, Number(opts && opts.weeks) || 1);
+    const target = HARD_SETS_PER_WEEK * weeks;
 
     const out = Object.create(null);
     for (const k in acc) {
@@ -664,18 +671,49 @@
         return { exerciseId: it.exerciseId, sets: it.sets };
       }),
       plan: null
-    }], { days: 7 });
+    }], { weeks: 1 });
   }
 
   /**
-   * Heat across logged sessions.
-   * @param {Array}  sessions
-   * @param {Object} opts  {days} — how long a window these sessions cover
+   * How many weeks of training these sessions represent.
+   *
+   * Measured from the SPAN between the first and last session, not from the
+   * length of the selected range: a three-month view of someone who started a
+   * fortnight ago should report their actual weekly rate, not average it across
+   * ten weeks they were not training in.
+   *
+   * Span rather than a count of distinct calendar weeks, because a fortnight of
+   * training that happens to straddle a Monday touches three calendar weeks and
+   * would be divided by three — understating the rate by a third for no reason
+   * but where the boundaries fell.
+   *
+   * Rounded UP to whole weeks, which is the fencepost: four weekly sessions sit
+   * three weeks apart end to end but represent four weeks of training, and
+   * dividing by the bare span would overstate the rate by a third. A session
+   * with no date, which is the live one in the runner, counts as the week in
+   * progress.
    */
-  function sessionsHeat(sessions, opts) {
+  function trainingWeeks(sessions) {
+    let lo = null, hi = null;
+    (sessions || []).forEach(function (s) {
+      if (!s || !s.date) return;
+      if (lo === null || s.date < lo) lo = s.date;
+      if (hi === null || s.date > hi) hi = s.date;
+    });
+    if (lo === null) return 1;
+    const days = Math.round(
+      (new Date(hi + 'T12:00:00') - new Date(lo + 'T12:00:00')) / 86400000) + 1;
+    return Math.max(1, Math.ceil(days / 7));
+  }
+
+  /**
+   * Heat across logged sessions, as a share of a week's requirement.
+   * @param {Array} sessions
+   */
+  function sessionsHeat(sessions) {
     return heatFrom((sessions || []).map(function (s) {
       return { entries: s.entries, plan: planFor(s) };
-    }), opts);
+    }), { weeks: trainingWeeks(sessions) });
   }
 
   /** Volume-weighted work for a single entry — still used for duration maths. */
@@ -907,6 +945,7 @@
     allFriends: allFriends, saveFriend: saveFriend, deleteFriend: deleteFriend,
 
     exerciseHeat: exerciseHeat, workoutHeat: workoutHeat, sessionsHeat: sessionsHeat,
+    trainingWeeks: trainingWeeks,
     HEAT_MAX: HEAT_MAX, HARD_SETS_PER_WEEK: HARD_SETS_PER_WEEK,
     workoutStats: workoutStats, chainSplit: chainSplit, suggestSplit: suggestSplit,
     exerciseHistory: exerciseHistory, personalRecords: personalRecords, rank: rank,

@@ -30,7 +30,7 @@
 
     const sessions = App.Store.allSessions();
     const last30 = App.Store.sessionsBetween(U.daysAgo(30), U.today());
-    const heat = App.Store.sessionsHeat(last30, { days: 30 });
+    const heat = App.Store.sessionsHeat(last30);
     const rank = App.Store.rank();
     const settings = App.Store.getSettings();
 
@@ -77,7 +77,7 @@
           U.h('div', [
             U.h('h2', 'Last 30 days'),
             U.h('.card-sub', last30.length
-              ? 'How much of what each muscle needs it actually got, across ' +
+              ? 'What each muscle gets in a week you train, averaged over ' +
                 last30.length + ' sessions.'
               : 'Log a session and this figure fills in.')
           ]),
@@ -148,7 +148,7 @@
   /** Suggests the group that has had the least attention lately. */
   function nextUpCard() {
     const last14 = App.Store.sessionsBetween(U.daysAgo(14), U.today());
-    const heat = App.Store.sessionsHeat(last14, { days: 14 });
+    const heat = App.Store.sessionsHeat(last14);
     const groups = App.Muscles.groupAverages(heat);
     const all = Object.keys(App.Muscles.GROUPS).filter(function (g) { return g !== 'neck'; });
     const ranked = all.map(function (g) { return { g: g, v: groups[g] || 0 }; })
@@ -170,7 +170,7 @@
       U.h('.card-head', [
         U.h('div', [
           U.h('h2', 'Least trained · 14d'),
-          U.h('.card-sub', 'Share of the training each group needs.')
+          U.h('.card-sub', 'Share of a week’s training, per group.')
         ])
       ]),
       /* Bars run against the requirement, not against each other. Scaling to

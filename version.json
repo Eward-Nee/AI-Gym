@@ -1,5 +1,5 @@
 {
-  "version": "0.6.1",
+  "version": "0.6.2",
   "name": "AI-Gym",
-  "notes": "Heat figures now score against what a muscle needs, not against the hardest-worked one. Sessions stop rewriting plans. The city backgrounds have actual buildings."
+  "notes": "Heat is a weekly rate, so a hard week no longer reports 3%. Windows are rectangles. Hologrid is tuned for both a phone and a desktop."
 }

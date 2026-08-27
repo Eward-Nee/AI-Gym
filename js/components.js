@@ -244,7 +244,7 @@
       fig,
       opts.list === false ? null : U.h('.heat-panel-list', [
         U.h('.label', { text: opts.listLabel ||
-          (opts.absolute === false ? 'Muscle load' : 'Share of what it needs') }),
+          (opts.absolute === false ? 'Muscle load' : 'Share of a week’s work') }),
         muscleList(heat, opts.limit || 9, { absolute: opts.absolute !== false })
       ])
     ]);

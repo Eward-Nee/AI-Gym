@@ -438,7 +438,7 @@
       '<span class="anat-legend-label">' + (absolute ? 'none' : '0%') + '</span>' +
       '<i class="anat-legend-ramp"></i>' +
       '<span class="anat-legend-label">' +
-        (absolute ? 'trained' : (max ? Math.round(max) + '%' : 'max')) +
+        (absolute ? 'a full week' : (max ? Math.round(max) + '%' : 'max')) +
       '</span>' +
     '</div>';
   }
@@ -617,7 +617,7 @@
          NEEDS, so saying "of this workload" would describe the old meaning. */
       let out = App.Muscles.label(id, true) + '  ·  ' + (v > 0
         ? (cfg.absolute
-            ? pct + '% of what it needs' + (v >= 100 ? ' — trained' : '')
+            ? pct + '% of a week’s work' + (v >= 100 ? ' — fully trained' : '')
             : pct + '% of this workload')
         : 'not worked');
       if (cfg.compare) {

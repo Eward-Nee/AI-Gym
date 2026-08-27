@@ -612,7 +612,7 @@
       sessions28: last28.length,
       volume28: Math.round(r.recentVolume),
       totalVolume: Math.round(sessions.reduce(function (a, s) { return a + sessionVolume(s); }, 0)),
-      heat: App.Store.sessionsHeat(last28, { days: 28 }),
+      heat: App.Store.sessionsHeat(last28),
       groups: r.groupVolume,
       top: r.scored.slice(0, 8).map(function (s) {
         return { name: s.name, e1rm: Math.round(s.e1rm), score: Math.round(s.score) };

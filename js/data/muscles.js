@@ -157,27 +157,31 @@
    * exactly 80% of it. The average is the number that keeps meaning the same
    * thing as the per-muscle figure it is built from.
    *
-   * Averaged over the group's FULL membership, not just the regions that were
-   * hit — a chest day that trains the upper pec and nothing else has genuinely
-   * not trained the chest, and hiding the untouched regions would say it had.
+   * WEIGHTED BY THE VALUES THEMSELVES, so the regions a group's movements
+   * actually target dominate the answer. A flat average over the full
+   * membership drags every group down by its accessories: press the chest hard
+   * and the pecs sit near 100 while the serratus sits near zero, and a plain
+   * mean reports a well-trained chest as a quarter trained. Weighting each
+   * region by its own value keeps the group close to what its main regions are
+   * doing, while a genuinely untouched group still reads zero and a group with
+   * one hot region among several cold ones still reads below that region.
    */
   function groupAverages(map) {
-    const sum = Object.create(null);
-    const count = Object.create(null);
-    MUSCLES.forEach(function (m) {
-      if (m.hidden || m.parts) return;   /* composites would double-count */
-      count[m.group] = (count[m.group] || 0) + 1;
-      sum[m.group] = sum[m.group] || 0;
-    });
+    const sum = Object.create(null);      /* sum of v^2 */
+    const weight = Object.create(null);   /* sum of v   */
     for (const id in map) {
       const m = BY_ID[id];
-      if (!m || m.hidden || m.parts) continue;
-      sum[m.group] = (sum[m.group] || 0) + (Number(map[id]) || 0);
+      if (!m || m.hidden || m.parts) continue;   /* composites would double-count */
+      const v = Number(map[id]) || 0;
+      if (v <= 0) continue;
+      sum[m.group] = (sum[m.group] || 0) + v * v;
+      weight[m.group] = (weight[m.group] || 0) + v;
     }
     const out = Object.create(null);
-    for (const g in sum) {
-      if (!count[g]) continue;
-      out[g] = Math.round((sum[g] / count[g]) * 10) / 10;
+    Object.keys(GROUPS).forEach(function (g) { out[g] = 0; });
+    for (const g in weight) {
+      if (!weight[g]) continue;
+      out[g] = Math.round((sum[g] / weight[g]) * 10) / 10;
     }
     return out;
   }
