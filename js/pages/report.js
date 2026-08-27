@@ -8,12 +8,13 @@
 
   let root = null;
   let tab = 'overview';
-  const view = { range: '90', metric: 'volume' };
+  const view = { range: '90', metric: 'volume', load: 'all', forecastEx: null, horizon: 365 };
   let friendCache = null;
 
   const TABS = [
     { id: 'overview', label: 'Overview' },
     { id: 'records', label: 'Records' },
+    { id: 'forecast', label: 'Forecast' },
     { id: 'ranks', label: 'Ranks' },
     { id: 'vs', label: 'Compare' }
   ];
@@ -58,8 +59,43 @@
 
     if (tab === 'overview') drawOverview();
     else if (tab === 'records') drawRecords();
+    else if (tab === 'forecast') drawForecast();
     else if (tab === 'ranks') drawRanks();
     else drawVS();
+  }
+
+  /* ---------------------------------------------------------------------------
+     WHAT KIND OF SESSION WAS THAT
+
+     A session carries the id of the plan it was run from, when it was run from
+     one, but plenty are logged freehand — and two different plans can be the
+     same kind of day. So sessions are labelled BOTH ways: by the plan they came
+     from, and by the split the work itself describes. The second is derived from
+     the sets that were actually logged, which means it is right even for a
+     session that was improvised or that drifted away from its plan halfway
+     through.
+     ------------------------------------------------------------------------ */
+
+  function sessionType(s) {
+    const split = App.Store.suggestSplit({ items: s.entries || [] });
+    return (split && split.label) || 'Unclassified';
+  }
+
+  /** Does this session pass the current training-load filter? */
+  function passesLoadFilter(s) {
+    const f = view.load;
+    if (!f || f === 'all') return true;
+    if (f.indexOf('plan:') === 0) return s.workoutId === f.slice(5);
+    if (f.indexOf('type:') === 0) return sessionType(s) === f.slice(5);
+    return true;
+  }
+
+  function loadFilterLabel() {
+    const f = view.load;
+    if (!f || f === 'all') return 'every session';
+    if (f.indexOf('type:') === 0) return f.slice(5).toLowerCase() + ' sessions';
+    const w = App.Store.getWorkout(f.slice(5));
+    return w ? '"' + w.name + '" sessions' : 'those sessions';
   }
 
   function rangeSessions() {
@@ -116,17 +152,26 @@
       C.statTile('Time under the bar', U.dur(time), '')
     ]));
 
-    /* --- volume over time --- */
+    /* --- volume over time ---
+       Filtered by kind of session, because one line through everything answers
+       a question nobody asked. Push volume and leg volume move for different
+       reasons and on different weeks, and averaged together they hide each
+       other: a leg day cut short reads as a flat month rather than as the thing
+       that actually happened. */
+    normaliseLoadFilter(sessions);
+    const loadSessions = sessions.filter(passesLoadFilter);
     const volEl = U.h('div');
     root.appendChild(U.h('.card', [
       U.h('.card-head', [
-        U.h('div', [
+        U.h('div', { style: { minWidth: 0 } }, [
           U.h('h2', 'Training load'),
-          U.h('.card-sub', 'Volume per session, with the trend line through it.')
+          U.h('.card-sub', { text: 'Per session across ' + loadFilterLabel() +
+            ', with the trend line through it.' })
         ]),
         U.h('.spacer'),
+        loadFilterSelect(sessions),
         U.h('select.select.input-sm', {
-          style: { width: 'auto' },
+          style: { width: 'auto' }, 'aria-label': 'Metric',
           onchange: function () { view.metric = this.value; draw(); }
         }, [
           U.h('option', { value: 'volume', selected: view.metric === 'volume' }, 'Volume'),
@@ -135,10 +180,19 @@
           U.h('option', { value: 'duration', selected: view.metric === 'duration' }, 'Duration')
         ])
       ]),
-      volEl
+      loadSessions.length
+        ? volEl
+        : U.h('.empty', [
+            U.h('.empty-title', 'No sessions of that kind in this period'),
+            U.h('p', 'Widen the range, or set the filter back to every session.'),
+            U.h('button.btn.btn-sm', { type: 'button', text: 'Show every session',
+              onclick: function () { view.load = 'all'; draw(); } })
+          ])
     ]));
 
-    const points = sessions.map(function (s) {
+    if (!loadSessions.length) { drawDistribution(sessions); return; }
+
+    const points = loadSessions.map(function (s) {
       let v = 0;
       if (view.metric === 'duration') v = (s.durationSec || 0) / 60;
       else {
@@ -172,7 +226,12 @@
       });
     }, 0);
 
-    /* --- muscle distribution --- */
+    drawDistribution(sessions);
+  }
+
+  /* Everything below the training-load chart, which always describes the WHOLE
+     range: the filter narrows one question, not the page. */
+  function drawDistribution(sessions) {
     const heat = App.Store.sessionsHeat(sessions);
     const priorHeat = App.Store.sessionsHeat(priorRangeSessions());
     const groups = App.Muscles.groupTotals(heat);
@@ -205,6 +264,70 @@
       U.h('.card-head', [U.h('h2', 'Every session in range')]),
       sessionTable(sessions.slice().reverse())
     ]));
+  }
+
+  /**
+   * The training-load filter.
+   *
+   * Both lists are built from the sessions actually in range rather than from
+   * everything that exists, so the menu can only ever offer a choice that has
+   * something behind it — picking one and landing on an empty chart is the
+   * failure this is meant to avoid. Each option carries its own count for the
+   * same reason.
+   */
+  function loadFilterSelect(sessions) {
+    const plans = Object.create(null);
+    const types = Object.create(null);
+    sessions.forEach(function (s) {
+      if (s.workoutId) plans[s.workoutId] = (plans[s.workoutId] || 0) + 1;
+      const t = sessionType(s);
+      types[t] = (types[t] || 0) + 1;
+    });
+
+    const sel = U.h('select.select.input-sm', {
+      style: { width: 'auto' }, 'aria-label': 'Filter training load by session type',
+      onchange: function () { view.load = this.value; draw(); }
+    }, [U.h('option', { value: 'all', selected: view.load === 'all' },
+      'All sessions (' + sessions.length + ')')]);
+
+    const typeKeys = Object.keys(types).sort();
+    if (typeKeys.length > 1) {
+      const g = U.h('optgroup', { label: 'By session type' });
+      typeKeys.forEach(function (t) {
+        g.appendChild(U.h('option', { value: 'type:' + t,
+          selected: view.load === 'type:' + t }, t + ' (' + types[t] + ')'));
+      });
+      sel.appendChild(g);
+    }
+
+    const planKeys = Object.keys(plans);
+    if (planKeys.length) {
+      const g = U.h('optgroup', { label: 'By workout plan' });
+      planKeys.map(function (id) {
+        const w = App.Store.getWorkout(id);
+        return { id: id, name: w ? w.name : 'Deleted workout', n: plans[id] };
+      }).sort(function (a, b) { return a.name.localeCompare(b.name); })
+        .forEach(function (p) {
+          g.appendChild(U.h('option', { value: 'plan:' + p.id,
+            selected: view.load === 'plan:' + p.id }, p.name + ' (' + p.n + ')'));
+        });
+      sel.appendChild(g);
+    }
+
+    return sel;
+  }
+
+  /**
+   * A filter chosen over a wide range can have nothing behind it in a narrow
+   * one — pick "Leg day", shorten the range to 7 days, and the selection now
+   * names a set that is empty. Reset it to everything BEFORE the chart is
+   * built, not while the menu is being drawn: by then the chart has already
+   * been computed against the filter that is about to be discarded.
+   */
+  function normaliseLoadFilter(sessions) {
+    if (!view.load || view.load === 'all') return;
+    const ok = sessions.some(passesLoadFilter);
+    if (!ok) view.load = 'all';
   }
 
   function groupBars(groups) {
@@ -332,6 +455,258 @@
           ]);
         }))
       ])])
+    ]));
+  }
+
+  /* ===========================================================================
+     FORECAST
+
+     What this answers is "where will this lift be in a year", and the honest
+     answer bends. The straight-line projection already in the app is fine over
+     sixty days and dishonest over three hundred and sixty-five, because it
+     assumes the last three months repeat forever. Strength does not work that
+     way: the closer a lift gets to what a body of that size can do, the less
+     each month adds, and the curve flattens.
+
+     The ceiling used is the exercise's own world record, scaled allometrically
+     to the lifter's bodyweight — the same number the ranks are already measured
+     against, so the forecast and the rank cannot tell different stories. Both
+     curves are drawn together on purpose: the gap between them at twelve months
+     IS the diminishing return, and showing it is more useful than quietly
+     replacing one number with a smaller one.
+     ======================================================================== */
+
+  const HORIZONS = [
+    { days: 90, label: '3 months' },
+    { days: 180, label: '6 months' },
+    { days: 365, label: '12 months' }
+  ];
+
+  /** Every movement with enough logged history to fit a curve to. */
+  function forecastable() {
+    const out = [];
+    App.Store.allExercises().forEach(function (ex) {
+      const hist = App.Store.exerciseHistory(ex.id).filter(function (h) { return h.e1rm > 0; });
+      if (hist.length >= 3) out.push({ ex: ex, hist: hist });
+    });
+    out.sort(function (a, b) { return b.hist.length - a.hist.length; });
+    return out;
+  }
+
+  /**
+   * The ceiling for a movement, in the units its sets are LOGGED in.
+   *
+   * `displayRecord` already halves a two-dumbbell record for someone who logs
+   * one dumbbell, which is what makes it comparable with the history. The
+   * bodyweight case needs one more step: the record for a pull-up is the
+   * athlete plus whatever they hung off themselves, while the log only holds
+   * the added weight, so the athlete has to come back off again.
+   */
+  function ceilingFor(ex, settings) {
+    let c = App.Ranks.displayRecord(ex, settings.bodyweight, settings);
+    if (ex.equipment === 'bodyweight') c -= settings.bodyweight;
+    return c;
+  }
+
+  function drawForecast() {
+    const settings = App.Store.getSettings();
+    const units = settings.units;
+    const candidates = forecastable();
+
+    if (!candidates.length) {
+      root.appendChild(U.h('.card', [
+        U.h('.empty', [
+          U.h('div', { html: U.icon('chart') }),
+          U.h('.empty-title', 'Not enough history to project from'),
+          U.h('p', 'A movement needs at least three logged sessions before a growth ' +
+            'curve means anything. Keep logging and this fills in on its own.')
+        ])
+      ]));
+      return;
+    }
+
+    if (!view.forecastEx || !candidates.some(function (c) { return c.ex.id === view.forecastEx; })) {
+      view.forecastEx = candidates[0].ex.id;
+    }
+    const pick = candidates.find(function (c) { return c.ex.id === view.forecastEx; });
+    const ex = pick.ex;
+    const hist = pick.hist;
+
+    /* --- controls --- */
+    root.appendChild(U.h('.card', [
+      U.h('.card-head', [
+        U.h('div', { style: { minWidth: 0 } }, [
+          U.h('h2', 'Growth forecast'),
+          U.h('.card-sub', 'Projected against the ceiling for your bodyweight, so it ' +
+            'slows down the way real progress does.')
+        ])
+      ]),
+      U.h('.row.row-wrap', [
+        U.h('select.select.input-sm', {
+          style: { width: 'auto', maxWidth: '100%' }, 'aria-label': 'Movement',
+          onchange: function () { view.forecastEx = this.value; draw(); }
+        }, candidates.map(function (c) {
+          return U.h('option', { value: c.ex.id, selected: c.ex.id === view.forecastEx },
+            c.ex.name + ' (' + c.hist.length + ' sessions)');
+        })),
+        U.h('.spacer'),
+        U.h('.btn-group', { role: 'group', 'aria-label': 'Horizon' },
+          HORIZONS.map(function (hz) {
+            return U.h('button.btn.btn-sm' + (view.horizon === hz.days ? '.is-active' : ''), {
+              type: 'button', text: hz.label,
+              onclick: function () { view.horizon = hz.days; draw(); }
+            });
+          }))
+      ])
+    ]));
+
+    const points = hist.map(function (h) {
+      return { x: new Date(h.date + 'T12:00:00').getTime(), y: h.e1rm };
+    });
+    const ceiling = ceilingFor(ex, settings);
+    const fit = App.Charts.saturating(points, ceiling);
+    const linear = App.Charts.regress(points);
+
+    const lastX = points[points.length - 1].x;
+    const lastY = points[points.length - 1].y;
+    const endX = lastX + view.horizon * 86400000;
+    const horizonLabel = (HORIZONS.find(function (h) { return h.days === view.horizon; })
+      || HORIZONS[2]).label;
+
+    if (!fit || !fit.growing) {
+      root.appendChild(U.h('.card', [
+        U.h('.card-head', [U.h('h2', { text: ex.name })]),
+        U.h('.callout.is-warn', [
+          U.h('.callout-bar'),
+          U.h('div', [
+            U.h('div', [U.h('strong', 'No growth to project here yet.')]),
+            U.h('.u-xs.u-muted', { style: { marginTop: '4px' },
+              text: fit
+                ? 'Across the sessions logged, this movement is flat or going ' +
+                  'backwards. A curve fitted to that would only project the decline ' +
+                  'forwards, which is a worse guess than no guess.'
+                : 'Three sessions with a recorded load are needed before a curve can ' +
+                  'be fitted.' })
+          ])
+        ])
+      ]));
+      return;
+    }
+
+    /* --- the two projections --- */
+    const curve = [];
+    const naive = [];
+    const band = [];
+    for (let i = 0; i <= 12; i++) {
+      const x = lastX + ((endX - lastX) * i) / 12;
+      const y = fit.at(x);
+      curve.push({ x: x, y: y });
+      if (linear) naive.push({ x: x, y: Math.max(0, linear.at(x)) });
+      /* A projection widens with distance. The spread is a share of the gap
+         still to be closed, so it narrows as the curve flattens — which is the
+         same thing the curve itself is saying. */
+      const gap = fit.ceiling - y;
+      const spread = Math.max(gap * 0.14, y * 0.02) * (0.4 + i / 12);
+      band.push({ x: x, lo: Math.max(0, y - spread), hi: Math.min(fit.ceiling, y + spread) });
+    }
+
+    const projected = fit.at(endX);
+    const naiveEnd = linear ? Math.max(0, linear.at(endX)) : null;
+    const gainPct = lastY ? ((projected - lastY) / lastY) * 100 : 0;
+
+    root.appendChild(U.h('.grid.grid-4', [
+      C.statTile('Now', U.num(lastY, 0), units),
+      C.statTile('In ' + horizonLabel, U.num(projected, 0), units,
+        { dir: projected > lastY ? 'up' : 'flat',
+          text: (projected >= lastY ? '+' : '') + U.num(projected - lastY, 0) + ' ' + units }),
+      C.statTile('Of the ceiling', U.num((projected / fit.ceiling) * 100, 0), '%',
+        { dir: 'flat', text: 'now ' + U.num((lastY / fit.ceiling) * 100, 0) + '%' }),
+      C.statTile('Half the gap in', fit.halfLifeDays < 3650
+        ? U.num(fit.halfLifeDays / 30.4, 1) : '—', 'months')
+    ]));
+
+    const chartEl = U.h('div');
+    root.appendChild(U.h('.card', [
+      U.h('.card-head', [
+        U.h('div', { style: { minWidth: 0 } }, [
+          U.h('h2', { class: 'u-truncate', text: ex.name }),
+          U.h('.card-sub', { text: hist.length + ' logged sessions · ceiling ' +
+            U.num(fit.ceiling, 0) + ' ' + units +
+            App.Ranks.loadSuffix(ex, settings) })
+        ])
+      ]),
+      chartEl
+    ]));
+
+    setTimeout(function () {
+      const series = [
+        { name: 'Logged', accent: true, points: points },
+        { name: 'Forecast', dash: true, dots: false, points: curve }
+      ];
+      if (naive.length && naiveEnd !== null) {
+        series.push({ name: 'If it stayed linear', dash: true, dots: false, points: naive });
+      }
+      App.Charts.line(chartEl, {
+        xType: 'date', height: 280, series: series, bands: [{ points: band }],
+        /* The ceiling is the thing the whole curve is bending towards, so the
+           scale has to reach it — otherwise the one line that explains the
+           shape is the one line dropped for being off the top. */
+        yMin: 0, yMax: fit.ceiling,
+        rules: [{ y: fit.ceiling, label: 'World-record ceiling for ' +
+          settings.bodyweight + ' ' + units }],
+        yFormat: function (v) { return U.compact(v) + units; }
+      });
+    }, 0);
+
+    /* --- what the numbers mean --- */
+    const overshoot = naiveEnd !== null ? naiveEnd - projected : 0;
+    root.appendChild(U.h('.card', [
+      U.h('.card-head', [U.h('h2', 'How this is worked out')]),
+      U.h('.stack-sm', [
+        U.h('.callout', [
+          U.h('.callout-bar'),
+          U.h('div', [
+            U.h('div', [
+              U.h('strong', 'Gains are modelled as a share of what is left, not a ' +
+                'fixed amount per month. '),
+              'On this fit you close half the remaining gap to the ceiling every ' +
+              U.num(fit.halfLifeDays / 30.4, 1) + ' months, so each month adds less ' +
+              'than the one before it.'
+            ])
+          ])
+        ]),
+        overshoot > 0.5 ? U.h('.callout.is-warn', [
+          U.h('.callout-bar'),
+          U.h('div', [
+            U.h('div', [
+              U.h('strong', 'A straight line would say ' + U.num(naiveEnd, 0) + ' ' +
+                units + '. '),
+              'That is ' + U.num(overshoot, 0) + ' ' + units + ' more than this ' +
+              'forecast, and it is the whole reason for the curve: extrapolating ' +
+              'recent progress in a straight line quietly assumes it never slows.'
+            ])
+          ])
+        ]) : null,
+        U.h('.callout' + (fit.r2 < 0.3 ? '.is-warn' : ''), [
+          U.h('.callout-bar'),
+          U.h('div', [
+            U.h('div', [
+              U.h('strong', 'Fitted over ' + fit.n + ' sessions · r² = ' +
+                U.num(fit.r2, 2) + '. '),
+              fit.r2 < 0.3
+                ? 'That is a weak fit — the sessions are scattered enough that this ' +
+                  'is a direction rather than a number. More history tightens it.'
+                : 'The shaded band is the uncertainty, and it narrows as the curve ' +
+                  'flattens because there is less room left to be wrong in.'
+            ]),
+            U.h('.u-xs.u-muted', { style: { marginTop: '6px' },
+              text: 'The ceiling is this movement’s world record re-scaled to ' +
+                settings.bodyweight + ' ' + units + ' — the same standard your rank ' +
+                'is measured against. Set a truer record on the exercise itself and ' +
+                'this curve follows it.' })
+          ])
+        ])
+      ])
     ]));
   }
 
@@ -575,7 +950,7 @@
             U.h('td.num.u-muted', [
               U.h('span', { text: U.num(s.displayRecord || s.record, 0) + ' ' + units }),
               s.loadMode === 'per-hand'
-                ? U.h('.u-xs.u-muted', 'per hand') : null
+                ? U.h('.u-xs.u-muted', 'per side') : null
             ]),
             U.h('td.num', { text: U.num(s.score, 1) + '%' }),
             U.h('td.bar-cell', [
@@ -639,7 +1014,7 @@
               U.h('div', [
                 U.h('div', { style: { fontWeight: row.is_self ? '680' : '540' },
                   text: (row.display_name || row.handle) + (row.is_self ? ' (you)' : '') }),
-                U.h('.u-xs.u-muted', { text: '@' + row.handle })
+                U.h('.u-xs.u-muted', { text: U.handle(row.handle) })
               ])
             ])]),
             U.h('td', [U.h('span.chip', { style: { color: rk.color,

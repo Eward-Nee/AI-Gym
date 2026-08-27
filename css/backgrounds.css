@@ -99,7 +99,13 @@
 [data-bg='aurora'] .bg-l4, [data-bg='aurora'] .bg-l5, [data-bg='aurora'] .bg-l6,
 [data-bg='orbs']   .bg-l1, [data-bg='orbs']   .bg-l2, [data-bg='orbs']   .bg-l3,
 [data-bg='pulse']  .bg-l1, [data-bg='pulse']  .bg-l2, [data-bg='pulse']  .bg-l3,
-[data-bg='tide']   .bg-l1, [data-bg='tide']   .bg-l2 {
+[data-bg='tide']   .bg-l1, [data-bg='tide']   .bg-l2,
+[data-bg='skyline'] .bg-l1, [data-bg='skyline'] .bg-l2, [data-bg='skyline'] .bg-l3,
+[data-bg='skyline'] .bg-l4, [data-bg='skyline'] .bg-l5,
+[data-bg='circuit'] .bg-l1, [data-bg='circuit'] .bg-l2, [data-bg='circuit'] .bg-l3,
+[data-bg='neon']    .bg-l1, [data-bg='neon']    .bg-l2, [data-bg='neon']    .bg-l3,
+[data-bg='neon']    .bg-l4, [data-bg='neon']    .bg-l5, [data-bg='neon']    .bg-l6,
+[data-bg='hologrid'] .bg-l1, [data-bg='hologrid'] .bg-l2, [data-bg='hologrid'] .bg-l3 {
   opacity: var(--bg-alpha);
 }
 
@@ -107,7 +113,10 @@
 [data-bg='aurora'] .bg-fx > i,
 [data-bg='orbs']   .bg-fx > i,
 [data-bg='pulse']  .bg-fx > i,
-[data-bg='tide']   .bg-l1, [data-bg='tide'] .bg-l2 {
+[data-bg='tide']   .bg-l1, [data-bg='tide'] .bg-l2,
+[data-bg='neon']   .bg-l1, [data-bg='neon'] .bg-l2, [data-bg='neon'] .bg-l3,
+[data-bg='neon']   .bg-l5,
+[data-bg='hologrid'] .bg-l1, [data-bg='hologrid'] .bg-l3 {
   will-change: transform;
 }
 
@@ -373,6 +382,271 @@
 }
 
 /* =============================================================================
+   SCI-FI / CYBERPUNK
+   Two static, two animated, and built the same way everything above is: hard
+   gradient stops off --c1..--c5, no filters, no images.
+
+   A city out of CSS gradients is three interleaved sets of columns rather than
+   individually placed buildings. Each set is one `repeating-linear-gradient`
+   anchored to the BOTTOM with its own column width, spacing, horizontal offset
+   and height, so the three read together as a skyline of varied buildings and
+   cost one paint between them. Hand-placing forty buildings would look no
+   better and would be forty gradient stops to re-rasterise.
+   ============================================================================= */
+
+/* --- 9. Skyline: a sci-fi city under a horizon glow (static) -----------------
+
+   SIX tower heights, not three. Each layer carries two column sets rather than
+   one, at different widths, spacings, offsets and heights. With one set per
+   layer every tower in a band topped out at exactly the same y, and the result
+   read as three ruled lines rather than as a skyline.
+
+   `inset: 0` on these, unlike the drifting layers elsewhere in this file: they
+   never move, so the 30% overhang would only push the bottom of the city below
+   the fold and make every height mean something other than what it says. */
+[data-bg='skyline'] .bg-l1 {          /* far towers — tall, thin, faint */
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, var(--c3) 0 9px, transparent 9px 38px)
+      left bottom / 100% 62% repeat-x,
+    repeating-linear-gradient(90deg, var(--c3) 0 7px, transparent 7px 44px)
+      left 19px bottom / 100% 51% repeat-x;
+  opacity: calc(var(--bg-alpha) * 0.5);
+}
+[data-bg='skyline'] .bg-l2 {          /* mid block */
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, var(--c4) 0 17px, transparent 17px 59px)
+      left 23px bottom / 100% 44% repeat-x,
+    repeating-linear-gradient(90deg, var(--c4) 0 13px, transparent 13px 67px)
+      left 47px bottom / 100% 36% repeat-x;
+}
+[data-bg='skyline'] .bg-l3 {          /* near block — wide and short */
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, var(--c4) 0 27px, transparent 27px 91px)
+      left 11px bottom / 100% 28% repeat-x,
+    repeating-linear-gradient(90deg, var(--c4) 0 21px, transparent 21px 103px)
+      left 63px bottom / 100% 21% repeat-x;
+}
+[data-bg='skyline'] .bg-l4 {          /* lit windows, confined to the towers */
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, var(--c5) 0 1.1px, transparent 1.6px)
+    0 0 / 13px 19px;
+  -webkit-mask-image: linear-gradient(to top, #000 4%, #000 30%, transparent 58%);
+          mask-image: linear-gradient(to top, #000 4%, #000 30%, transparent 58%);
+  opacity: calc(var(--bg-alpha) * 0.62);
+}
+[data-bg='skyline'] .bg-l5 {          /* the light the city sits under */
+  background: radial-gradient(90% 46% at 50% 78%, var(--c4), transparent 100%);
+}
+
+/* --- 10. Circuit: a cyberpunk board (static) ---------------------------------
+   Deliberately the Grid background's relative — same 48px engineering ruling,
+   with traces and vias laid over it, so choosing it is a change of subject
+   rather than a change of style. */
+[data-bg='circuit'] .bg-l1 {
+  background:
+    linear-gradient(to right, var(--c4) 1px, transparent 1px) 0 0 / 48px 48px,
+    linear-gradient(to bottom, var(--c4) 1px, transparent 1px) 0 0 / 48px 48px;
+  opacity: calc(var(--bg-alpha) * 0.6);
+}
+[data-bg='circuit'] .bg-l2 {
+  /* Traces: thicker runs on a coarser pitch, plus a 45° diagonal, which is what
+     stops it reading as graph paper. */
+  background:
+    repeating-linear-gradient(90deg,
+      var(--c5) 0 3px, transparent 3px 192px) 0 0 / 100% 100%,
+    repeating-linear-gradient(0deg,
+      var(--c5) 0 3px, transparent 3px 240px) 0 0 / 100% 100%,
+    repeating-linear-gradient(45deg,
+      var(--c3) 0 2px, transparent 2px 168px) 0 0 / 100% 100%;
+  -webkit-mask-image: radial-gradient(115% 95% at 50% 26%, #000 18%, transparent 82%);
+          mask-image: radial-gradient(115% 95% at 50% 26%, #000 18%, transparent 82%);
+}
+[data-bg='circuit'] .bg-l3 {
+  /* Vias, on the trace pitch so they land where runs cross. */
+  background:
+    radial-gradient(circle at 50% 50%, var(--c5) 0 2.4px, transparent 3.4px)
+      0 0 / 96px 120px,
+    radial-gradient(64% 44% at 50% 10%, var(--c4), transparent 100%);
+}
+
+/* --- 11. Neon: the same city, alive (animated) -------------------------------
+   Three tower layers on a PARALLAX: the near block travels furthest per second
+   and the far block barely moves, which is what makes a flat drift read as
+   depth. Only `transform` is animated, and each band travels less than its own
+   column period so the loop never announces itself. */
+/* The overhang is horizontal only. These bands are anchored to the bottom of
+   their own box, so a vertical overhang would push the city off the fold; the
+   sideways room is what lets them travel a full column period without ever
+   showing an edge. */
+[data-bg='neon'] .bg-l1 {
+  inset: 0 -20%;
+  background:
+    repeating-linear-gradient(90deg, var(--c3) 0 9px, transparent 9px 38px)
+      left bottom / 100% 64% repeat-x,
+    repeating-linear-gradient(90deg, var(--c3) 0 7px, transparent 7px 44px)
+      left 19px bottom / 100% 53% repeat-x;
+  opacity: calc(var(--bg-alpha) * 0.46);
+  animation: city-far 74s linear infinite;
+}
+[data-bg='neon'] .bg-l2 {
+  inset: 0 -20%;
+  background:
+    repeating-linear-gradient(90deg, var(--c4) 0 17px, transparent 17px 59px)
+      left 23px bottom / 100% 46% repeat-x,
+    repeating-linear-gradient(90deg, var(--c4) 0 13px, transparent 13px 67px)
+      left 47px bottom / 100% 37% repeat-x;
+  animation: city-mid 47s linear infinite;
+}
+[data-bg='neon'] .bg-l3 {
+  inset: 0 -20%;
+  background:
+    repeating-linear-gradient(90deg, var(--c4) 0 27px, transparent 27px 91px)
+      left 11px bottom / 100% 29% repeat-x,
+    repeating-linear-gradient(90deg, var(--c4) 0 21px, transparent 21px 103px)
+      left 63px bottom / 100% 22% repeat-x;
+  animation: city-near 29s linear infinite;
+}
+[data-bg='neon'] .bg-l4 {             /* windows: static, so they belong to the mid block */
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, var(--c5) 0 1.1px, transparent 1.6px)
+    0 0 / 13px 19px;
+  -webkit-mask-image: linear-gradient(to top, #000 4%, #000 30%, transparent 58%);
+          mask-image: linear-gradient(to top, #000 4%, #000 30%, transparent 58%);
+  opacity: calc(var(--bg-alpha) * 0.56);
+}
+[data-bg='neon'] .bg-l5 {             /* a sign sweep crossing the skyline */
+  inset: -30% -80%;
+  background: linear-gradient(96deg,
+    transparent 0%, var(--c5) 44%, var(--c4) 52%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 72%);
+          mask-image: linear-gradient(to top, #000 0%, transparent 72%);
+  opacity: calc(var(--bg-alpha) * 0.55);
+  animation: neon-sweep 23s ease-in-out infinite alternate;
+}
+[data-bg='neon'] .bg-l6 {             /* the glow the city throws up */
+  background: radial-gradient(92% 48% at 50% 80%, var(--c4), transparent 100%);
+}
+@keyframes city-far  { from { transform: translate3d(0, 0, 0); }
+                       to   { transform: translate3d(38px, 0, 0); } }
+@keyframes city-mid  { from { transform: translate3d(0, 0, 0); }
+                       to   { transform: translate3d(-59px, 0, 0); } }
+@keyframes city-near { from { transform: translate3d(0, 0, 0); }
+                       to   { transform: translate3d(-91px, 0, 0); } }
+@keyframes neon-sweep {
+  from { transform: translate3d(-26%, 0, 0); }
+  to   { transform: translate3d(26%, 0, 0); }
+}
+
+/* --- 12. Hologrid: a grid running to the horizon (animated) ------------------
+
+   NO 3D TRANSFORM HERE, and that is the whole design note.
+
+   The obvious way to build a receding grid is `perspective()` + `rotateX()` on
+   a wide layer. It was tried, and it froze the renderer outright on a desktop
+   — a 64° tilt against a 300px perspective throws the near edge of a
+   viewport-and-a-half-wide layer enormously far towards the camera, and the
+   raster area needed to cover it is not something a phone was ever going to
+   survive. A background is decoration; it does not get to do that.
+
+   So the perspective is DRAWN rather than transformed. The lanes are a
+   repeating conic gradient fired from the vanishing point, which converges
+   exactly the way real lanes do and costs one static paint. The rungs are a
+   plain uniform grid translating down by exactly one period — a seamless loop
+   and a pure compositor transform — and the mask fading them into the horizon
+   is what sells them as receding. Between the two, the eye reads perspective
+   and the compositor reads two flat layers.
+   -------------------------------------------------------------------------- */
+[data-bg='hologrid'] .bg-l1 {         /* converging lanes */
+  inset: 0;
+  /* Fallback first: a browser without conic gradients drops the whole
+     declaration below and keeps this, so it degrades to plain lanes rather
+     than to nothing at all. */
+  background: repeating-linear-gradient(90deg,
+    var(--c4) 0 2px, transparent 2px 64px);
+  background: repeating-conic-gradient(from 202deg at 50% 34%,
+    var(--c4) 0 0.32deg, transparent 0.32deg 4.6deg);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 30%, #000 46%, #000 100%);
+          mask-image: linear-gradient(to bottom, transparent 30%, #000 46%, #000 100%);
+}
+[data-bg='hologrid'] .bg-l3 {         /* rungs, running towards the viewer */
+  inset: 0 0 -60px 0;
+  background: repeating-linear-gradient(to bottom,
+    var(--c4) 0 2px, transparent 2px 60px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 34%, #000 62%, #000 100%);
+          mask-image: linear-gradient(to bottom, transparent 34%, #000 62%, #000 100%);
+  animation: holo-run 5.5s linear infinite;
+}
+[data-bg='hologrid'] .bg-l2 {         /* the horizon they run to */
+  background: radial-gradient(74% 24% at 50% 34%, var(--c5), transparent 100%);
+}
+/* Exactly one grid period, so the loop has no seam. */
+@keyframes holo-run {
+  from { transform: translate3d(0, -60px, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+
+/* =============================================================================
+   MOTION BUDGET
+
+   A five-year-old phone has a fraction of the fill rate of a current one, and
+   the animated backgrounds are pure fill: every frame repaints a viewport-sized
+   layer per moving element. Nothing here is doing anything wrong — there is
+   simply a device on which six of them at once is too many.
+
+   So the number of MOVING layers is a budget, set by `data-bgmotion` on <html>
+   (see App.Shell.applyTheme). `full` is everything. `low` keeps the background
+   exactly as it looks and stills all but the one or two layers that carry the
+   idea — the parallax, the sweep — and slows those down, which cuts the paint
+   cost several-fold while still reading as alive. `off` freezes it completely
+   and is what a device asking for reduced motion gets.
+
+   The layers are STILLED, never hidden: dropping them would change the picture,
+   and a background that looks different on an old phone is a worse outcome than
+   one that moves less.
+   ============================================================================= */
+
+[data-bgmotion='low'] .bg-fx > i { animation-duration: 60s !important; }
+
+/* Keep one storyteller per background; still the rest.
+   `data-bgmotion` and `data-bg` both sit on <html>, so these have to be
+   COMPOUND selectors — written as a descendant pair they would be looking for
+   a `data-bg` element inside the root element and match nothing at all. */
+[data-bgmotion='low'][data-bg='aurora'] .bg-l1,
+[data-bgmotion='low'][data-bg='aurora'] .bg-l2,
+[data-bgmotion='low'][data-bg='aurora'] .bg-l3,
+[data-bgmotion='low'][data-bg='aurora'] .bg-l5,
+[data-bgmotion='low'][data-bg='aurora'] .bg-l6,
+[data-bgmotion='low'][data-bg='orbs']   .bg-l2,
+[data-bgmotion='low'][data-bg='orbs']   .bg-l3,
+[data-bgmotion='low'][data-bg='pulse']  .bg-l2,
+[data-bgmotion='low'][data-bg='pulse']  .bg-l3,
+[data-bgmotion='low'][data-bg='tide']   .bg-l2,
+[data-bgmotion='low'][data-bg='neon']   .bg-l1,
+[data-bgmotion='low'][data-bg='neon']   .bg-l2,
+[data-bgmotion='low'][data-bg='neon']   .bg-l5,
+[data-bgmotion='low'][data-bg='hologrid'] .bg-l3 {
+  animation: none;
+}
+/* Nothing that has stopped moving should still be holding a compositor layer. */
+[data-bgmotion='low'] .bg-fx > i { will-change: auto; }
+[data-bgmotion='low'][data-bg='neon'] .bg-l3,
+[data-bgmotion='low'][data-bg='hologrid'] .bg-l1,
+[data-bgmotion='low'][data-bg='aurora'] .bg-l4,
+[data-bgmotion='low'][data-bg='orbs'] .bg-l1,
+[data-bgmotion='low'][data-bg='pulse'] .bg-l1,
+[data-bgmotion='low'][data-bg='tide'] .bg-l1 { will-change: transform; }
+
+[data-bgmotion='off'] .bg-fx > i { animation: none !important; will-change: auto; }
+
+/* A background nobody is looking at should not be costing frames. Browsers
+   usually throttle a hidden tab on their own, but a web-to-app shell is not a
+   tab and does not reliably get that treatment. */
+[data-bgpaused] .bg-fx > i { animation-play-state: paused !important; }
+
+/* =============================================================================
    REDUCED MOTION — keep the look, drop the movement
    ============================================================================= */
 @media (prefers-reduced-motion: reduce) {
@@ -435,6 +709,58 @@
   inset: -20% -60%;
   animation: tide-sweep 17s linear infinite;
 }
+/* The four sci-fi / cyberpunk previews. A 46px-tall swatch cannot carry the
+   full column pitch, so every period here is scaled down rather than reused —
+   at full size the city would show one and a half buildings. */
+.bg-swatch[data-preview='skyline']::after {
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, var(--c3) 0 3px, transparent 3px 11px)
+      left bottom / 100% 62% repeat-x,
+    repeating-linear-gradient(90deg, var(--c4) 0 5px, transparent 5px 17px)
+      left 7px bottom / 100% 42% repeat-x,
+    radial-gradient(90% 46% at 50% 82%, var(--c4), transparent 100%);
+}
+.bg-swatch[data-preview='circuit']::after {
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, var(--c5) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(45deg, var(--c3) 0 1px, transparent 1px 19px),
+    linear-gradient(to right, var(--c4) 1px, transparent 1px) 0 0 / 11px 11px,
+    linear-gradient(to bottom, var(--c4) 1px, transparent 1px) 0 0 / 11px 11px;
+}
+/* Horizontal overhang, or the drift walks the city straight out of a 92px-wide
+   swatch: `city-near` travels 91px, which is the whole thumbnail. */
+.bg-swatch[data-preview='neon']::after {
+  inset: 0 -110%;
+  background:
+    repeating-linear-gradient(90deg, var(--c3) 0 3px, transparent 3px 11px)
+      left bottom / 100% 62% repeat-x,
+    repeating-linear-gradient(90deg, var(--c4) 0 5px, transparent 5px 17px)
+      left 7px bottom / 100% 42% repeat-x,
+    radial-gradient(40% 46% at 50% 82%, var(--c5), transparent 100%);
+  animation: city-near 29s linear infinite;
+}
+/* The lanes have to converge inside 46px, so the vanishing point sits higher up
+   and the fan is wider than the full-size one — the same construction, scaled
+   to a thumbnail rather than the same numbers shrunk. */
+.bg-swatch[data-preview='hologrid']::after {
+  inset: 0;
+  background:
+    repeating-linear-gradient(to bottom, var(--c4) 0 1px, transparent 1px 8px),
+    repeating-conic-gradient(from 200deg at 50% 22%,
+      var(--c4) 0 0.9deg, transparent 0.9deg 9deg),
+    radial-gradient(70% 30% at 50% 22%, var(--c5), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 12%, #000 40%);
+          mask-image: linear-gradient(to bottom, transparent 12%, #000 40%);
+  animation: holo-swatch 5.5s linear infinite;
+}
+/* One rung period, so the miniature loops as seamlessly as the real one. */
+@keyframes holo-swatch {
+  from { transform: translate3d(0, -8px, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+
 .bg-swatch .bg-live {
   position: absolute; right: 5px; top: 5px; z-index: 1;
   font-size: 9px; font-weight: 700; letter-spacing: 0.06em;

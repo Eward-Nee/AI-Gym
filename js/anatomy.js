@@ -437,10 +437,82 @@
   }
 
   /**
+   * Re-colour a figure that is already in the DOM.
+   *
+   * Rebuilding cost real time in the one place it is paid most often: the
+   * exercise editor re-rendered BOTH figures from scratch on every keystroke in
+   * a muscle-percentage field, which meant parsing about forty kilobytes of
+   * fresh SVG markup per character typed. Nothing about the geometry changes
+   * between those renders — only the fills do — so the figure is now built once
+   * and repainted in place, which is a couple of attribute writes per region.
+   */
+  function repaint(root, heat, max) {
+    heat = App.Muscles.expand(heat || {});
+    if (!max) max = 1;
+
+    const nodes = root.querySelectorAll('.anat-m');
+    const active = [];
+    let key = '';
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      const id = n.getAttribute('data-muscle');
+      const v = Number(heat[id]) || 0;
+      n.setAttribute('data-value', v);
+      n.setAttribute('fill', heatColor(v / max));
+      n.classList.toggle('is-active', v > 0);
+      const t = n.querySelector('title');
+      if (t) {
+        t.textContent = App.Muscles.label(id, true) +
+          (v > 0 ? ' — ' + (Math.round(v * 10) / 10) + '%' : '');
+      }
+      if (v > 0) { active.push(n); key += id + ','; }
+    }
+
+    /* Loaded muscles are drawn last, for the same reason figureSVG() sorts them
+       that way. Moving nodes is the expensive half of this, so it only happens
+       when the set of loaded muscles has actually changed — not on every edit
+       to a percentage that was already non-zero. */
+    if (root.__anatKey !== key) {
+      root.__anatKey = key;
+      active.forEach(function (n) { n.parentNode.appendChild(n); });
+    }
+
+    const labels = root.querySelectorAll('.anat-legend-label');
+    if (labels.length > 1) labels[1].textContent = max > 1 ? Math.round(max) + '%' : 'max';
+  }
+
+  /**
+   * Hold the space a figure is about to occupy.
+   *
+   * Deferring the build to a later frame is what lets a dialog paint
+   * immediately, but an empty box that then grows by three hundred pixels
+   * moves every control below it — under a thumb that is already on its way to
+   * one. A fixed placeholder height cannot fix that, because the figure sizes
+   * itself from the container width and the caps differ by breakpoint. So the
+   * placeholder is the same two boxes carrying the same `.anat-svg` class, and
+   * therefore the same max-width and aspect ratio, as the SVGs replacing them.
+   */
+  function reserve(el, opts) {
+    if (!el) return;
+    opts = opts || {};
+    el.innerHTML =
+      '<div class="anat-pair' + (opts.compact ? ' is-compact' : '') + '">' +
+        '<figure class="anat-fig"><i class="anat-svg anat-skel"></i>' +
+          '<figcaption>Front</figcaption></figure>' +
+        '<figure class="anat-fig"><i class="anat-svg anat-skel"></i>' +
+          '<figcaption>Back</figcaption></figure>' +
+      '</div>';
+    /* Deliberately NOT setting __anatShape: the next render() must rebuild
+       over this rather than mistake it for a figure it can repaint. */
+    el.__anatShape = null;
+  }
+
+  /**
    * @param {Element} el
    * @param {Object} heat  {muscleId: 0..100}
    * @param {Object} opts  {legend:false, compact:true, interactive:false,
-   *                        compare:<heat map to show a delta against>}
+   *                        compare:<heat map to show a delta against>,
+   *                        onLongPress:fn(muscleId), onSelect:fn(muscleId|null)}
    */
   function render(el, heat, opts) {
     if (!el) return;
@@ -450,17 +522,28 @@
     let max = 0;
     for (const k in shown) max = Math.max(max, shown[k] || 0);
 
-    el.innerHTML =
-      '<div class="anat-pair' + (opts.compact ? ' is-compact' : '') + '">' +
-        '<figure class="anat-fig">' + figureSVG('front', heat, { max: max }) +
-          '<figcaption>Front</figcaption></figure>' +
-        '<figure class="anat-fig">' + figureSVG('back', heat, { max: max }) +
-          '<figcaption>Back</figcaption></figure>' +
-      '</div>' +
-      (opts.legend === false ? '' : legendHTML(max));
+    const compact = !!opts.compact;
+    const legend = opts.legend !== false;
+
+    /* Same container, same shape of figure — repaint rather than rebuild. */
+    if (el.__anatShape === compact + '/' + legend && el.querySelector('.anat-pair')) {
+      repaint(el, heat, max);
+    } else {
+      el.innerHTML =
+        '<div class="anat-pair' + (compact ? ' is-compact' : '') + '">' +
+          '<figure class="anat-fig">' + figureSVG('front', heat, { max: max }) +
+            '<figcaption>Front</figcaption></figure>' +
+          '<figure class="anat-fig">' + figureSVG('back', heat, { max: max }) +
+            '<figcaption>Back</figcaption></figure>' +
+        '</div>' +
+        (legend ? legendHTML(max) : '');
+      el.__anatShape = compact + '/' + legend;
+      el.__anatKey = null;
+      el.__anatBound = false;
+    }
 
     if (opts.interactive !== false) {
-      bindTooltip(el, opts.compare ? App.Muscles.expand(opts.compare) : null);
+      bindTooltip(el, opts.compare ? App.Muscles.expand(opts.compare) : null, opts);
     }
   }
 
@@ -473,7 +556,16 @@
    * all. Touch therefore gets its own model: tap a muscle to PIN the readout,
    * tap it again or anywhere else to dismiss. Mouse keeps hover.
    */
-  function bindTooltip(root, compare) {
+  function bindTooltip(root, compare, opts) {
+    /* Config is re-read on every render; the listeners are attached once. A
+       repaint must not stack another set of handlers on the same figure. */
+    const cfg = root.__anatCfg || (root.__anatCfg = {});
+    cfg.compare = compare;
+    cfg.onLongPress = opts && opts.onLongPress;
+    cfg.onSelect = opts && opts.onSelect;
+    if (root.__anatBound) return;
+    root.__anatBound = true;
+
     let tip = root.querySelector('.anat-tip');
     if (!tip) {
       tip = document.createElement('div');
@@ -484,20 +576,24 @@
     let pinned = null;
 
     function clearHot() {
-      root.querySelectorAll('.anat-m.is-hot').forEach(function (n) { n.classList.remove('is-hot'); });
+      root.querySelectorAll('.anat-m.is-hot, .anat-m.is-sel').forEach(function (n) {
+        n.classList.remove('is-hot', 'is-sel');
+      });
     }
 
     function hide() {
+      const had = pinned;
       pinned = null;
       tip.classList.remove('is-on', 'is-pinned');
       clearHot();
+      if (had && cfg.onSelect) cfg.onSelect(null);
     }
 
     function text(id, v) {
       let out = App.Muscles.label(id, true) + '  ·  ' +
         (v > 0 ? (Math.round(v * 10) / 10) + '% of this workload' : 'not worked');
-      if (compare) {
-        const was = Number(compare[id]) || 0;
+      if (cfg.compare) {
+        const was = Number(cfg.compare[id]) || 0;
         const d = v - was;
         /* Both numbers are shares of a total, so the difference is in
            percentage POINTS — calling it a percent change would be wrong. */
@@ -510,12 +606,16 @@
       return out;
     }
 
-    function show(path, clientX, clientY) {
+    function show(path, clientX, clientY, solid) {
       const id = path.getAttribute('data-muscle');
       const v = Number(path.getAttribute('data-value')) || 0;
       clearHot();
+      /* Both the region and its mirrored twin light up: they are one muscle,
+         and lighting only the half that was touched reads as a rendering bug.
+         A deliberate tap gets `is-sel`, which is a solid high-contrast block
+         rather than the lighter outline a mouse sweep leaves behind. */
       root.querySelectorAll('.anat-m[data-muscle="' + id + '"]')
-          .forEach(function (n) { n.classList.add('is-hot'); });
+          .forEach(function (n) { n.classList.add(solid ? 'is-sel' : 'is-hot'); });
       tip.textContent = text(id, v);
       tip.classList.add('is-on');
 
@@ -547,25 +647,81 @@
     });
 
     root.addEventListener('click', function (e) {
+      if (suppressClick) { suppressClick = false; return; }
       const path = hit(e);
       if (!path) { hide(); return; }
       const id = path.getAttribute('data-muscle');
       if (pinned === id) { hide(); return; }   /* second tap closes it */
-      pinned = show(path, e.clientX, e.clientY);
+      pinned = show(path, e.clientX, e.clientY, true);
       tip.classList.add('is-pinned');
+      if (cfg.onSelect) cfg.onSelect(id);
     });
 
-    if (!root.__anatDismiss) {
-      root.__anatDismiss = function (e) {
-        if (!pinned) return;
-        if (!root.contains(e.target)) hide();
-      };
-      document.addEventListener('click', root.__anatDismiss, true);
+    /* --- TAP AND HOLD -------------------------------------------------------
+       Holding a region assigns it to whatever is being edited, so building a
+       muscle split can be done on the figure itself instead of through the
+       dropdown underneath it. It is deliberately a hold rather than a second
+       tap: a plain tap already means "tell me about this one", and a gesture
+       that both reads and writes depending on how fast you were is a trap.
+
+       The hold is cancelled by movement, because a finger that has started to
+       scroll is not making a selection. */
+    let holdTimer = 0, holdFrom = null, suppressClick = false;
+
+    function cancelHold() {
+      if (holdTimer) clearTimeout(holdTimer);
+      holdTimer = 0; holdFrom = null;
     }
+
+    root.addEventListener('pointerdown', function (e) {
+      if (!cfg.onLongPress) return;
+      const path = hit(e);
+      if (!path) return;
+      holdFrom = { x: e.clientX, y: e.clientY };
+      holdTimer = setTimeout(function () {
+        holdTimer = 0;
+        const id = path.getAttribute('data-muscle');
+        suppressClick = true;
+        /* Show it as selected too, so the hold has a visible result even before
+           whatever the callback does lands on screen. */
+        pinned = show(path, e.clientX, e.clientY, true);
+        tip.classList.add('is-pinned');
+        if (navigator.vibrate) { try { navigator.vibrate(18); } catch (err) { /* ignore */ } }
+        cfg.onLongPress(id);
+      }, 480);
+    });
+
+    root.addEventListener('pointermove', function (e) {
+      if (!holdTimer || !holdFrom) return;
+      if (Math.abs(e.clientX - holdFrom.x) > 10 || Math.abs(e.clientY - holdFrom.y) > 10) {
+        cancelHold();
+      }
+    });
+    root.addEventListener('pointerup', cancelHold);
+    root.addEventListener('pointercancel', cancelHold);
+    root.addEventListener('contextmenu', function (e) {
+      /* A long press on an SVG path otherwise raises the platform callout,
+         which lands on top of the gesture it is meant to be. */
+      if (cfg.onLongPress && hit(e)) e.preventDefault();
+    });
+
+    /* Replaced, not merely skipped when present. A rebuilt figure gets a new
+       tooltip element and a new set of closures; leaving the old listener
+       attached would have "tap elsewhere to dismiss" operating on a tip that is
+       no longer in the document, so nothing would close. */
+    if (root.__anatDismiss) {
+      document.removeEventListener('click', root.__anatDismiss, true);
+    }
+    root.__anatDismiss = function (e) {
+      if (!pinned) return;
+      if (!root.contains(e.target)) hide();
+    };
+    document.addEventListener('click', root.__anatDismiss, true);
   }
 
   App.Anatomy = {
     render: render,
+    reserve: reserve,
     figureSVG: figureSVG,
     heatColor: heatColor,
     band: band,

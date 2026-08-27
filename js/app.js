@@ -14,20 +14,24 @@
     { id: 'settings',  title: 'Control Panel', sub: 'Account, sync, theme',   icon: 'settings' }
   ];
 
-  const VERSION = '0.5.3';
+  const VERSION = '0.6.0';
 
-  /* Four static, four animated. All derive their colour from the active scheme
+  /* Six static, six animated. All derive their colour from the active scheme
      and mode, so they never fight the theme. */
   const BACKGROUNDS = [
-    { id: 'plain',  name: 'None',    live: false },
-    { id: 'mesh',   name: 'Mesh',    live: false },
-    { id: 'grid',   name: 'Grid',    live: false },
-    { id: 'glow',   name: 'Glow',    live: false },
-    { id: 'strata', name: 'Strata',  live: false },
-    { id: 'aurora', name: 'Aurora',  live: true },
-    { id: 'orbs',   name: 'Orbs',    live: true },
-    { id: 'pulse',  name: 'Pulse',   live: true },
-    { id: 'tide',   name: 'Tide',    live: true }
+    { id: 'plain',    name: 'None',     live: false },
+    { id: 'mesh',     name: 'Mesh',     live: false },
+    { id: 'grid',     name: 'Grid',     live: false },
+    { id: 'glow',     name: 'Glow',     live: false },
+    { id: 'strata',   name: 'Strata',   live: false },
+    { id: 'skyline',  name: 'Skyline',  live: false },
+    { id: 'circuit',  name: 'Circuit',  live: false },
+    { id: 'aurora',   name: 'Aurora',   live: true },
+    { id: 'orbs',     name: 'Orbs',     live: true },
+    { id: 'pulse',    name: 'Pulse',    live: true },
+    { id: 'tide',     name: 'Tide',     live: true },
+    { id: 'neon',     name: 'Neon City', live: true },
+    { id: 'hologrid', name: 'Hologrid', live: true }
   ];
 
   const SCHEMES = [
@@ -48,17 +52,59 @@
      THEME
      ------------------------------------------------------------------------ */
 
+  /* ---------------------------------------------------------------------------
+     MOTION BUDGET
+
+     An animated background is pure fill rate: every frame repaints a
+     viewport-sized layer for each element that moves. A phone from five years
+     ago has a fraction of the fill rate of a current one, so six moving layers
+     that are free on a desk are not free on a Galaxy J1.
+
+     `auto` therefore asks the device what it is. `deviceMemory` and
+     `hardwareConcurrency` are crude, but they are the only budget signals a
+     browser actually offers, and they are honest in the direction that matters:
+     a phone reporting 2GB or four cores is genuinely a phone that will struggle.
+     Anything that does not answer at all is old enough that the guess should be
+     the cautious one. The choice is overridable, because a guess about someone
+     else's hardware should never be the last word on it.
+     ------------------------------------------------------------------------ */
+  function resolveMotion(pref) {
+    if (pref === 'full' || pref === 'low' || pref === 'off') return pref;
+    try {
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return 'off';
+    } catch (e) { /* pre-matchMedia is itself a signal */ }
+    const mem = navigator.deviceMemory;
+    const cores = navigator.hardwareConcurrency;
+    if ((mem !== undefined && mem <= 2) || (cores !== undefined && cores <= 4)) return 'low';
+    if (mem === undefined && cores === undefined) return 'low';
+    return 'full';
+  }
+
   function applyTheme(settings) {
     const root = document.documentElement;
     root.setAttribute('data-mode', settings.mode || 'dark');
     root.setAttribute('data-scheme', settings.scheme || 'ember');
     root.setAttribute('data-bg', settings.background || 'plain');
+    root.setAttribute('data-bgmotion', resolveMotion(settings.bgMotion));
 
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
       meta.setAttribute('content',
         getComputedStyle(root).getPropertyValue('--bg').trim() || '#0f1216');
     }
+  }
+
+  /* Frames spent animating a background nobody can see are frames stolen from
+     whatever the device does next. Browsers throttle a hidden tab, but a
+     web-to-app shell is not a tab and does not reliably get that treatment. */
+  function watchVisibility() {
+    function sync() {
+      const root = document.documentElement;
+      if (document.visibilityState === 'hidden') root.setAttribute('data-bgpaused', '');
+      else root.removeAttribute('data-bgpaused');
+    }
+    document.addEventListener('visibilitychange', sync);
+    sync();
   }
 
   /* ---------------------------------------------------------------------------
@@ -116,9 +162,10 @@
      ------------------------------------------------------------------------ */
 
   /**
-   * Host for the decorative background. Three real elements rather than the two
+   * Host for the decorative background. Six real elements rather than the two
    * available pseudo-elements, so a background can move several layers
    * independently and each one can be promoted to its own compositor layer.
+   * Layers a background does not claim paint nothing and are never promoted.
    */
   function buildBackground() {
     const fx = U.h('.bg-fx', { 'aria-hidden': 'true' }, [
@@ -200,6 +247,7 @@
 
   function boot() {
     buildShell();
+    watchVisibility();
 
     App.Store.load()
       .then(function () {
@@ -266,6 +314,7 @@
     navigate: navigate,
     render: render,
     applyTheme: applyTheme,
+    resolveMotion: resolveMotion,
     updateSyncBadge: updateSyncBadge,
     topActions: function () { return U.$('#topActions'); },
     setTopActions: function (nodes) {

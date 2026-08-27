@@ -1,22 +1,23 @@
 # AI-Gym
 
-**Version 0.5.3**
+**Version 0.6.0**
 
 A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No build step, no framework, no npm install, no CDN — open it and it works.
 
 - **Built for the phone**: bottom tab bar, bottom-sheet dialogs, 40px+ touch targets, one column by default, and charts that measure their container instead of being scaled to fit
 - **468 built-in exercises**, each with a weighted muscle split, an equipment tag and its own world record — including wide/close grip variants across the bar movements
 - **Anatomical heat figures** (anterior + posterior) on every exercise, workout, session and report
-- **Workout builder** with sets, reps, load, per-set and per-exercise rest, drag reordering and smart push/pull/legs grouping, in a **muscle-group order you set** — with templates that apply to the exact splits you run
+- **Workout builder** with sets, reps, load, per-set and per-exercise rest (all in seconds, and it says so), **drag reordering that works with a thumb**, and smart push/pull/legs grouping, in a **muscle-group order you set** — with templates that apply to the exact splits you run
 - **Session runner** with a rest timer and live volume
-- **Progression reports** with least-squares trend lines and a 60-day forecast band, plus a **ranking chart** tracking your points and your friends' against the tier thresholds
+- **Progression reports** with least-squares trend lines and a 60-day forecast band, **training load filtered by the kind of session it was**, plus a **ranking chart** tracking your points and your friends' against the tier thresholds
+- **Growth forecasting that bends**, projecting each lift against the world-record ceiling for your bodyweight instead of extrapolating a straight line into a number nobody has lifted
 - **Eight ranks scored against world records** for your bodyweight — your rank is the average across everything you train, and Diamond is 99%
 - **In-app update check** against GitHub releases, with an update that never costs you work in progress
 - **End-to-end encryption** of everything written to the cloud — AES-GCM with a key that never leaves your devices in the clear
 - **Invite codes** for adding friends: generate, share, redeem — redeeming is the acceptance
 - **Friends and head-to-head comparison** through a shared hub
 - **Three storage tiers**: IndexedDB always, your own Supabase optionally, a shared hub only for friends
-- **Light / dark / AMOLED**, eight colour schemes that also drive the heat gradient, and eight page backgrounds (four static, four animated) built from that same palette — with every panel going translucent so the background reads through the whole page
+- **Light / dark / AMOLED**, eight colour schemes that also drive the heat gradient, and twelve page backgrounds (six static, six animated — including a sci-fi skyline, a cyberpunk board and a receding hologrid) built from that same palette — with every panel going translucent so the background reads through the whole page, and a **motion budget** that keeps them smooth on an old phone
 
 ---
 
@@ -132,6 +133,26 @@ Standards are held per movement *pattern*, not per exercise, so a lat pulldown i
 
 ---
 
+## Forecasting, and why the line bends
+
+The Report's **Forecast** tab answers "where will this lift be in a year". A least-squares line answers it by assuming the last three months repeat forever, which is fine over sixty days and dishonest over three hundred and sixty-five: progress against a ceiling slows as the gap to it closes, and the training that adds 10 kg to a 60 kg bench adds a fraction of that to a 160 kg one.
+
+So the projection is the standard bounded-growth curve
+
+```
+y(t) = C − (C − y₀)·e^(−k·t)
+```
+
+fitted by the same least-squares machinery, because taking logs of the **remaining gap** linearises it: `ln(C − y) = ln(C − y₀) − k·t`. One substitution and the decay rate falls out of the slope. `App.Charts.saturating()` in [js/charts.js](js/charts.js) is the whole of it, and it fits against time *since the first point* — epoch milliseconds put the sums of squares near the edge of what a double holds apart.
+
+**The ceiling C is the exercise's own world record**, re-scaled allometrically to your bodyweight — the same standard the ranks are measured against, so the forecast and the rank cannot tell different stories. Set a truer record on the exercise and the curve follows it. A ceiling at or below what has already been lifted leaves no gap to fit, so it is lifted clear of the best logged effort; someone who has beaten the estimate simply has a higher ceiling than the estimate knew.
+
+Two things are deliberately shown rather than smoothed away. The **straight-line projection is drawn alongside** the curve: the gap between them at twelve months *is* the diminishing return, and quietly replacing one number with a smaller one teaches nothing. And a lift that is flat or going backwards gets **no projection at all** — a curve fitted to a decline would only project the decline forwards, which is a worse guess than no guess.
+
+The decay rate is reported as a **half-life**: "half of the remaining gap every 11.8 months" is a statement about training. `k = 5.9e-9` is not.
+
+---
+
 ## Layout rules
 
 The app is designed for a phone first and widens from there. Three rules do most of the work:
@@ -142,15 +163,43 @@ The app is designed for a phone first and widens from there. Three rules do most
 
 Breakpoints: 1100px (sidebar layout loosens), 860px (sidebar becomes a bottom tab bar), 760px (figure panels stack), 560px (denser list rows), 344px (tiles go single column). A `(hover: none)` block makes row actions permanent and grows hit areas, since a phone never fires hover.
 
+### Dragging to reorder
+
+Both the workout list and the exercises inside a workout reorder by dragging. This used to be HTML5 drag-and-drop, which fires **nothing at all on a phone** — `dragstart` requires a mouse — so in a phone-first app the feature was invisible to almost everyone it was for, and the move-up / move-down buttons were the only route that actually worked.
+
+`U.dragList()` is pointer-driven instead, and the gesture starts from a **grip**, never from the item body. That is the point: a grip can declare `touch-action: none`, which is what lets the drag win against the page scroll, and an item that did the same could never be scrolled past. Positions are measured once at the start and every item that has to move is moved with a `transform`, so nothing is re-laid-out mid-gesture; the view creeps when the finger reaches an edge, and the measurements travel with it so the item stays under the finger.
+
+Order is resolved through the **ids in the DOM**, not through the two indices the drag reports. Under "group by muscle group" the blocks on screen are in a different order from the plan, so index 3 on screen is not item 3 in the workout; reading the ids back in their new order works either way. Workout order persists as an integer per workout, and the whole list is renumbered from zero on every change rather than only the rows that moved — a partial renumber leaves stale or absent numbers behind and the next reorder has to reason about two orderings at once.
+
+The up / down buttons stay. They are the keyboard and accessibility route to the same result, and they are what you want for a single nudge.
+
+### The muscle figures are an input, not just a picture
+
+Tapping a region names it and pins a readout. **Holding one assigns it** — in the exercise editor that adds the muscle to the split, so a movement can be built by pointing at the body instead of hunting for "Vastus lateralis" in a dropdown, which is also the only one of the two that works one-handed. It is a hold rather than a second tap because a plain tap already means "tell me about this one", and a gesture that reads or writes depending on how fast you were is a trap. Movement cancels it; a finger that has started to scroll is not making a selection.
+
+**Selection is deliberately outside the colour scheme.** Every other colour in the app derives from the scheme, which is exactly what a selection must not: against Ice or Flux an accent-coloured highlight lands a few points from the heat ramp it is drawn on top of, and the region you just tapped becomes the hardest one on the figure to find. A near-black block ringed in white — inverted for the dark modes — reads the same against every scheme and every heat colour there is. `paint-order: stroke` keeps the ring outside the shape so a small belly is not swallowed by its own outline.
+
+Figures are also **repainted rather than rebuilt**. The editor used to re-render both of them from scratch on every keystroke in a percentage field — about forty kilobytes of fresh SVG parsed per character typed — when nothing but the fills had changed. `App.Anatomy.render()` now recognises a figure it can update in place, which is a couple of attribute writes per region, and reorders nodes only when the *set* of loaded muscles actually changes.
+
+### Dialogs open on the first frame
+
+`U.modal()` takes an `onShown(body, close)` that runs after the browser has painted the open dialog. Everything a `body` builder does runs *before* the dialog is in the document, so on a phone the gap between tapping "New exercise" and seeing anything at all was the full cost of building the form — two anatomy figures included. The dialog arrived late and then animated, which reads as a stall rather than a transition.
+
+Now the cheap chrome goes up immediately and the expensive content fills in a frame later; the synchronous half of opening the exercise editor is about 2 ms. Two `requestAnimationFrame`s, not one — the first is the frame the dialog paints in, and doing heavy work there would stall the very first frame of the entry animation, which is the jank being avoided. Deferred figures leave a placeholder built from the same `.anat-svg` class, so it is exactly the size of what replaces it at every breakpoint and nothing below it moves on the swap.
+
+The scrim also lost its `backdrop-filter`. A viewport-wide blur was being asked for at the worst possible moment — while the dialog animated, over whatever the page underneath was still painting — and removing it is most of why the sheet now opens without a stall.
+
 ### Backgrounds and translucent surfaces
 
-Backgrounds are three absolutely-positioned layers in a fixed host, each built from the scheme palette. When one is selected, every container that would otherwise be an opaque slab — cards, modals, tiles, table headers, the topbar and nav — goes translucent so the background reads through the whole page. Selecting **None** restores fully opaque surfaces.
+Backgrounds are six absolutely-positioned layers in a fixed host, each built from the scheme palette. A background claims only the layers it needs; the rest paint nothing and are never promoted. When one is selected, every container that would otherwise be an opaque slab — cards, modals, tiles, table headers, the topbar and nav — goes translucent so the background reads through the whole page. Selecting **None** restores fully opaque surfaces.
 
 **Performance is the design constraint.** An earlier version ran two viewport-sized layers under `filter: blur(70px)` while animating them, and put `backdrop-filter` on every card. Those are two of the most expensive things a mobile browser can be asked to do — a large blur re-rasterises as the layer moves, and each backdrop-filter forces a compositing layer that re-reads what is behind it on every paint. The current version has **no `filter` or `backdrop-filter` in the running app at all**: softness comes from wide radial-gradient falloffs, which cost nothing, and only `transform`/`opacity` are animated so frames never leave the compositor. `will-change` and layer activation are both opt-in per background, so nothing is promoted that does not move.
 
 Two knobs in [css/backgrounds.css](css/backgrounds.css), both mode-aware: `--bg-alpha` (how strong the background reads) and `--surface-alpha` (how transparent panels are). Dark text on a washed-out light panel loses contrast much faster than light text on a dark one, so the values differ per mode, and dark modes also lift `--text-2`/`--text-3` a step while a background is active — a bold background washes a dark panel *lighter*, which eats light-on-dark contrast. Checked across all 144 mode × scheme × palette-stop combinations: worst-case body text 6.2:1, worst muted text 3.2:1, zero WCAG AA failures.
 
-One gotcha worth recording: `radial-gradient(closest-side …)` anchored at an edge (`at 50% 0%`) collapses to a zero radius and paints nothing. Every gradient here uses explicit size pairs instead.
+**The motion budget.** An animated background is pure fill rate — every frame repaints a viewport-sized layer per moving element — and six of them at once is fine on a desktop and is not fine on a five-year-old phone. So how many layers are *allowed to move* is a setting (`Background motion` in the Control Panel), resolved onto `data-bgmotion`. **Automatic** reads `deviceMemory` and `hardwareConcurrency`, which are crude but honest in the direction that matters, and treats a browser that answers neither as old enough to be careful with. **Light** keeps one or two layers moving per background and slows them; **Still** freezes them. Layers are stilled, never hidden — a background that looks *different* on an old phone would be a worse outcome than one that moves less. Animations also pause on `visibilitychange`, because a web-to-app shell is not a tab and does not reliably get the throttling a tab would.
+
+Two gotchas worth recording. `radial-gradient(closest-side …)` anchored at an edge (`at 50% 0%`) collapses to a zero radius and paints nothing, so every gradient here uses explicit size pairs. And **`perspective()` + `rotateX()` on a viewport-sized layer is not affordable**: the first Hologrid built its receding grid that way and froze the renderer outright on a desktop, because a 64° tilt throws the near edge of the layer far enough towards the camera that the raster area explodes. The perspective is now *drawn* — a `repeating-conic-gradient` fired from the vanishing point gives converging lanes for one static paint, and the rungs are a uniform grid translating by exactly one period under a fade-to-horizon mask. The eye reads perspective; the compositor reads two flat layers.
 
 ### Updating
 
@@ -183,6 +232,12 @@ Uploads do not fail in the meantime. If a column the build expects is missing, t
 ### Adding friends
 
 Two routes. **By handle** sends a request the other person approves. **By invite code** goes the other way: you generate a single-use code, hand it over through any channel you like, and redeeming it completes the link in one step — holding the code *is* the consent, so there is no second approval to chase. Codes expire after 14 days and can be revoked.
+
+**A handle is stored bare and shown with an @, always.** The hub's own format check is `^[a-z0-9_]{3,24}$`, so an `@` sent to it matches nobody and comes back as "no account with that handle". Half the app used to print `'@' + handle` and half printed the handle, and the search box accepted either — the same identifier in two spellings, neither of them authoritative. `U.handle()` decides what goes on screen and `U.bareHandle()` decides what goes to the hub, `App.Sync.requestFriend()` strips defensively so no future caller can reintroduce the dead end, and the search field draws the `@` as furniture beside the input so the value can never carry one.
+
+Finding someone is a **search**, not a spelling test: matches appear as you type, **five of them, alphabetically**. The hub sorts by rank points, which is the wrong order for picking a known name out of a list. Each result says what it already is — friend, request sent, they asked you — instead of letting you send a request that was never going to land.
+
+**Incoming requests get their own block at the top of the Friends card**, naming the sender with Accept in reach. They were previously a heading part-way down a list you had to already be scrolling, which is a poor place for the one thing on the page that is waiting on you.
 
 ### Running inside a web-to-app wrapper
 

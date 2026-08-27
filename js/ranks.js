@@ -315,9 +315,24 @@
     return exerciseRecord(exercise, bodyweight) / loadFactor(exercise, settings);
   }
 
-  /** 'per hand' / '' — the qualifier to print after a weight. */
+  /**
+   * The two load modes, in the words the app shows.
+   *
+   * "One implement, both sides working" and "the total load" both described the
+   * arrangement rather than the number being typed, and neither said which of
+   * two figures to write down. Naming them by the LIMBS the figure covers does:
+   * "single arm / leg" is one dumbbell's weight, "double arm / leg" is the pair
+   * added together. Held in one place so the Control Panel, the exercise editor
+   * and the session runner cannot drift apart again.
+   */
+  const LOAD_LABELS = {
+    'per-hand': 'Single arm / leg',
+    total: 'Double arm / leg'
+  };
+
+  /** 'per side' / '' — the qualifier to print after a weight. */
   function loadSuffix(exercise, settings) {
-    return loadMode(exercise, settings) === 'per-hand' ? ' per hand' : '';
+    return loadMode(exercise, settings) === 'per-hand' ? ' per side' : '';
   }
 
   /* ---------------------------------------------------------------------------
@@ -535,6 +550,7 @@
     loadFactor: loadFactor,
     displayRecord: displayRecord,
     loadSuffix: loadSuffix,
+    LOAD_LABELS: LOAD_LABELS,
     exerciseRecord: exerciseRecord,
     wrPercent: wrPercent,
     isRankBearing: isRankBearing,

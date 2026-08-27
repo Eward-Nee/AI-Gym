@@ -17,6 +17,32 @@
 
   function onDataChange() { if (root && root.isConnected) draw(); }
 
+  /* ---------------------------------------------------------------------------
+     REVEALING A MOVEMENT
+
+     Creating an exercise used to leave you wherever you were, with the new
+     movement somewhere in a list of nearly five hundred. This brings the
+     library up with the search already holding the exact name, which is both
+     the fastest way to see what was just made and the state you would have had
+     to type out by hand otherwise.
+
+     The group and equipment filters are cleared as well. Prefilling the search
+     but leaving a filter in place that excludes the very movement being
+     revealed would produce an empty list, which is the opposite of the point.
+     ------------------------------------------------------------------------ */
+  function reveal(ex) {
+    view.query = ex ? ex.name : '';
+    view.group = 'all';
+    view.equip = 'all';
+    view.selected = ex ? ex.id : null;
+
+    if (/^#\/exercises/.test(location.hash || '')) {
+      if (root && root.isConnected) draw();
+    } else {
+      App.Shell.navigate('exercises');
+    }
+  }
+
   function draw() {
     const el = root;
     U.clear(el);
@@ -28,7 +54,7 @@
       }),
       U.h('button.btn.btn-primary.btn-sm', {
         type: 'button', html: U.icon('plus') + '<span>New exercise</span>',
-        onclick: function () { C.editExercise(null, function (ex) { view.selected = ex.id; draw(); }); }
+        onclick: function () { C.editExercise(null); }
       })
     ]);
 
@@ -40,12 +66,15 @@
      FILTERS
      ------------------------------------------------------------------------ */
 
+  let searchEl = null;
+
   function filterBar() {
     const search = U.h('input.input', {
       type: 'search', placeholder: 'Search by name or equipment…',
       value: view.query, autocomplete: 'off',
       oninput: U.debounce(function () { view.query = this.value; redrawList(); }, 140)
     });
+    searchEl = search;
 
     const searchWrap = U.h('.search', {
       style: { flex: '1', minWidth: '220px' }, html: U.icon('search')
@@ -189,8 +218,7 @@
         U.h('.empty-title', 'Nothing matches'),
         U.h('p', 'Try clearing a filter, or create the movement yourself.'),
         U.h('button.btn.btn-sm', { type: 'button', text: 'Create it',
-          onclick: function () { C.editExercise({ name: view.query }, function (ex) {
-            view.selected = ex.id; draw(); }); } })
+          onclick: function () { C.editExercise({ name: view.query }); } })
       ]));
       return;
     }
@@ -221,6 +249,12 @@
         U.h('.ex-meta', [
           U.h('span', { text: App.Equipment[ex.equipment] || ex.equipment }),
           U.h('span', { text: C.topMuscleLabel(ex) }),
+          /* Whether a movement is one limb or two is the difference between two
+             different exercises with the same name, and it decides how the
+             weight is scored — so it belongs on the row, not only in the
+             detail panel two taps away. */
+          ex.unilateral ? U.h('span.badge', { text: 'unilateral',
+            title: 'One limb at a time' }) : null,
           u ? U.h('span', { text: u.sessions + '× · ' + U.relDate(u.last) }) : null,
           ex.builtin ? null : U.h('span.badge', 'custom')
         ])
@@ -297,6 +331,7 @@
     const units = App.Store.getSettings().units;
 
     const figWrap = U.h('.anat-wrap');
+    App.Anatomy.reserve(figWrap, { compact: false });
     setTimeout(function () { App.Anatomy.render(figWrap, heat, { compact: false }); }, 0);
 
     detailEl.appendChild(U.h('.card', [
@@ -305,7 +340,13 @@
         U.h('div', { style: { minWidth: 0 } }, [
           U.h('h2', { class: 'u-truncate', text: ex.name }),
           U.h('.card-sub', { text: (App.Equipment[ex.equipment] || ex.equipment) + ' · ' +
-            String(ex.pattern).replace(/-/g, ' ') + (ex.unilateral ? ' · unilateral' : '') })
+            String(ex.pattern).replace(/-/g, ' ') +
+            /* "unilateral" on its own is jargon to most people reading it, and
+               it is the one word here that changes how a logged weight is
+               scored — so it says what it means. */
+            (ex.unilateral
+              ? ' · unilateral (one limb at a time)'
+              : ' · bilateral (both limbs together)') })
         ]),
         U.h('.spacer'),
         U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
@@ -378,6 +419,12 @@
       if (!ok) return;
       App.Store.deleteExercise(ex.id).then(function () {
         if (view.selected === ex.id) view.selected = null;
+        /* The search is almost always still holding the name of the thing that
+           has just been deleted — most often because creating it put the name
+           there in the first place. Leaving it would answer the delete with an
+           empty list and a filter the user never typed, which reads as the
+           whole library having disappeared. */
+        clearSearch();
         U.toast('Deleted', ex.name);
         draw();
       });
@@ -394,6 +441,11 @@
     U.toast('Exported', (custom.length || App.Store.allExercises().length) + ' exercises');
   }
 
+  function clearSearch() {
+    view.query = '';
+    if (searchEl && searchEl.isConnected) searchEl.value = '';
+  }
+
   App.Pages = App.Pages || {};
-  App.Pages.exercises = { render: render, onDataChange: onDataChange };
+  App.Pages.exercises = { render: render, onDataChange: onDataChange, reveal: reveal };
 })(window.App = window.App || {});

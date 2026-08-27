@@ -874,7 +874,8 @@
 
   function searchProfiles(q) {
     if (!signedIn()) return Promise.reject(new Error('Sign in to search for friends.'));
-    return hub.withRetry(function () { return hub.rpc('search_profiles', { q: q }); });
+    const term = App.U.bareHandle(q) || String(q || '').trim();
+    return hub.withRetry(function () { return hub.rpc('search_profiles', { q: term }); });
   }
 
   function listFriends() {
@@ -882,9 +883,15 @@
     return hub.withRetry(function () { return hub.rpc('list_friends', {}); });
   }
 
+  /* Handles are shown with an @ everywhere in the app, and people paste what
+     they see. The hub stores them bare — its own format check is
+     `^[a-z0-9_]{3,24}$` — so an @ that reached it would simply match nobody and
+     come back as "no account with that handle". Strip it here rather than at
+     each call site, so no future caller can reintroduce the same dead end. */
   function requestFriend(handle) {
+    const target = App.U.bareHandle(handle);
     return hub.withRetry(function () {
-      return hub.rpc('request_friend', { target_handle: handle });
+      return hub.rpc('request_friend', { target_handle: target });
     });
   }
 

@@ -14,6 +14,9 @@
     mode: 'dark',              /* light | dark | amoled */
     scheme: 'ember',
     background: 'plain',       /* see App.Shell.BACKGROUNDS */
+    /* How much of an animated background actually moves. 'auto' asks the
+       device; see App.Shell.resolveMotion(). */
+    bgMotion: 'auto',          /* auto | full | low | off */
     units: 'kg',               /* kg | lb */
     bodyweight: 80,
     name: '',
@@ -95,6 +98,7 @@
       return topUpSeedExercises();
     }).then(function () {
       state.sessions.sort(function (a, b) { return (a.date < b.date) ? 1 : -1; });
+      sortWorkouts();
       reindex();
       state.ready = true;
       emit('ready');
@@ -314,12 +318,74 @@
 
     const i = state.workouts.findIndex(function (x) { return x.id === rec.id; });
     if (i >= 0) state.workouts[i] = rec; else state.workouts.push(rec);
+    sortWorkouts();
 
     return App.DB.put('workouts', rec).then(function () {
       queueSync('workouts', rec);
       emit('workouts');
       emit('change');
       return rec;
+    });
+  }
+
+  /* ---------------------------------------------------------------------------
+     WORKOUT ORDER
+
+     The list used to come out in whatever order IndexedDB handed the records
+     back, which is insertion order and so effectively "oldest first" forever.
+     The workout you actually run on a Monday should be the one you can reach
+     first, and that is a decision only the person training can make.
+
+     `order` is a plain integer per workout. Records written before this exist
+     without one, so they are sorted by creation date and fall in behind
+     anything explicitly placed, rather than jumping to the front on a nullish
+     comparison.
+     ------------------------------------------------------------------------ */
+
+  function sortWorkouts() {
+    state.workouts.sort(function (a, b) {
+      const ao = typeof a.order === 'number' ? a.order : Infinity;
+      const bo = typeof b.order === 'number' ? b.order : Infinity;
+      if (ao !== bo) return ao - bo;
+      return String(a.createdAt || '').localeCompare(String(b.createdAt || ''));
+    });
+    return state.workouts;
+  }
+
+  /**
+   * Persist a new order for the whole list, given the ids in their new order.
+   *
+   * Every workout is renumbered from zero rather than only the ones that moved.
+   * A partial renumber leaves the untouched records carrying stale — or absent —
+   * numbers, and the next reorder then has to reason about two orderings at
+   * once. Rewriting all of them is a handful of small records and makes the
+   * stored order match what is on screen exactly.
+   */
+  function reorderWorkouts(ids) {
+    const byId = Object.create(null);
+    state.workouts.forEach(function (w) { byId[w.id] = w; });
+
+    const ordered = ids.map(function (id) { return byId[id]; }).filter(Boolean);
+    state.workouts.forEach(function (w) { if (ordered.indexOf(w) < 0) ordered.push(w); });
+
+    const now = new Date().toISOString();
+    const changed = [];
+    ordered.forEach(function (w, i) {
+      if (w.order === i) return;
+      w.order = i;
+      w.updatedAt = now;
+      changed.push(w);
+    });
+
+    state.workouts = ordered;
+    if (!changed.length) return Promise.resolve(state.workouts);
+
+    return Promise.all(changed.map(function (w) {
+      return App.DB.put('workouts', w).then(function () { queueSync('workouts', w); });
+    })).then(function () {
+      emit('workouts');
+      emit('change');
+      return state.workouts;
     });
   }
 
@@ -703,6 +769,7 @@
 
     allWorkouts: allWorkouts, getWorkout: getWorkout,
     saveWorkout: saveWorkout, deleteWorkout: deleteWorkout,
+    reorderWorkouts: reorderWorkouts,
 
     allSessions: allSessions, sessionsBetween: sessionsBetween,
     saveSession: saveSession, deleteSession: deleteSession,

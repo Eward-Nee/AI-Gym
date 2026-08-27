@@ -63,7 +63,24 @@
         ])
       ]));
     } else {
-      root.appendChild(U.h('.grid.grid-auto', workouts.map(workoutCard)));
+      /* One column, not the auto grid it used to be. Reordering by dragging
+         only means anything if the list has a single axis to reorder along;
+         in a wrapping two-column grid "above" and "before" stop being the same
+         thing and the gesture has no honest answer. Phone-first, this was
+         already one column at every width that matters. */
+      const grid = U.h('.wo-list');
+      workouts.forEach(function (w) { grid.appendChild(workoutCard(w)); });
+      root.appendChild(grid);
+
+      U.dragList(grid, {
+        onReorder: function (from, to) {
+          const ids = U.$$('[data-drag-item]', grid).map(function (n) { return n.dataset.id; });
+          U.moveIn(ids, from, to);
+          App.Store.reorderWorkouts(ids).then(function () {
+            U.toast('Reordered', 'Your workout order is saved.');
+          });
+        }
+      });
     }
 
     root.appendChild(progressReport());
@@ -74,12 +91,15 @@
     const split = App.Store.suggestSplit(w);
     const units = App.Store.getSettings().units;
     const figWrap = U.h('.anat-wrap');
+    App.Anatomy.reserve(figWrap, { compact: true });
     setTimeout(function () {
       App.Anatomy.render(figWrap, st.heat, { compact: true, legend: false });
     }, 0);
 
-    return U.h('.card', [
+    return U.h('.card', { 'data-drag-item': '', dataset: { id: w.id } }, [
       U.h('.card-head', [
+        U.h('span.wo-grip', { html: U.icon('grip'), 'data-grip': '', role: 'button',
+          title: 'Drag to reorder', 'aria-label': 'Drag to reorder ' + w.name }),
         U.h('div', { style: { minWidth: 0 } }, [
           U.h('h2', { class: 'u-truncate', text: w.name }),
           U.h('.card-sub', { text: (w.items || []).length + ' exercises · ' + st.sets +
@@ -233,6 +253,42 @@
         if (g.label) itemsWrap.appendChild(U.h('.group-head', [U.h('span', { text: g.label })]));
         g.items.forEach(function (it) { itemsWrap.appendChild(itemBlock(it)); });
       });
+
+      U.dragList(itemsWrap, { onReorder: reorderItems });
+    }
+
+    /**
+     * Reordering is resolved through the ids in the DOM, not through the two
+     * indices the drag reports.
+     *
+     * Under "group by muscle group" the blocks on screen are in a different
+     * order from `draft.items`, so index 3 on screen is not item 3 in the plan.
+     * Reading the ids back in the order they now appear sidesteps that
+     * entirely, and works the same whether grouping is on or off.
+     *
+     * The grouping is then switched off, because a plan that has been ordered
+     * by hand and then re-sorted by a rule is not the plan that was just built.
+     */
+    function reorderItems(from, to) {
+      const ids = U.$$('[data-drag-item]', itemsWrap).map(function (n) { return n.dataset.id; });
+      U.moveIn(ids, from, to);
+
+      const byId = Object.create(null);
+      draft.items.forEach(function (it) { byId[it.id] = it; });
+      const next = ids.map(function (id) { return byId[id]; }).filter(Boolean);
+      /* Never lose an item to a stale id: keep anything the DOM did not name. */
+      draft.items.forEach(function (it) { if (next.indexOf(it) < 0) next.push(it); });
+      draft.items = next;
+
+      setGrouping('none');
+      refreshItems();
+      scheduleRefresh();
+    }
+
+    function setGrouping(v) {
+      grouping = v;
+      const sel = U.$('#woGrouping');
+      if (sel) sel.value = v;
     }
 
     function itemBlock(it) {
@@ -265,8 +321,9 @@
               oninput: function () { s.reps = Number(this.value) || 0; scheduleRefresh(); }
             }),
             i === 0 ? U.h('input.input.input-sm.input-num', {
-              type: 'number', min: '0', step: '5', value: it.restSets,
-              'aria-label': 'Rest between sets',
+              type: 'number', min: '0', step: '5', value: it.restSets, inputmode: 'numeric',
+              'aria-label': 'Rest between sets, in seconds',
+              title: 'Seconds of rest between sets',
               oninput: function () { it.restSets = Number(this.value) || 0; scheduleRefresh(); }
             }) : U.h('span.u-xs.u-muted.u-center', { text: '↑' }),
             U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
@@ -289,16 +346,18 @@
             }
           }),
           U.h('.spacer'),
-          U.h('span.u-xs.u-muted', 'Rest after exercise'),
+          U.h('span.u-xs.u-muted', 'Rest after exercise (s)'),
           U.h('input.input.input-sm.input-num', {
-            type: 'number', min: '0', step: '15', value: it.restAfter,
-            style: { width: '80px' }, 'aria-label': 'Rest after this exercise',
+            type: 'number', min: '0', step: '15', value: it.restAfter, inputmode: 'numeric',
+            style: { width: '80px' },
+            'aria-label': 'Rest after this exercise, in seconds',
+            title: 'Seconds of rest before the next exercise',
             oninput: function () { it.restAfter = Number(this.value) || 0; scheduleRefresh(); }
           })
         ]));
       }
 
-      const block = U.h('.wo-block', { draggable: 'true', dataset: { id: it.id } }, [
+      const block = U.h('.wo-block', { 'data-drag-item': '', dataset: { id: it.id } }, [
         /* Floats, not flex: the controls sit in the top-right corner and the
            name flows beside the thumbnail and then WRAPS UNDER them, so a long
            exercise name uses the full width of the block instead of being
@@ -324,7 +383,8 @@
               }
             })
           ]),
-          U.h('span.wo-grip', { html: U.icon('grip'), title: 'Drag to reorder' }),
+          U.h('span.wo-grip', { html: U.icon('grip'), 'data-grip': '',
+            title: 'Drag to reorder', 'aria-label': 'Drag to reorder', role: 'button' }),
           C.exThumb(ex || {}),
           U.h('.wo-block-title', [
             U.h('.ex-name', { text: ex ? ex.name : 'Missing exercise' }),
@@ -339,48 +399,19 @@
       ]);
 
       drawSets();
-      wireDrag(block, it);
       return block;
     }
 
+    /* The up / down buttons stay. They are the keyboard and accessibility route
+       to the same result, and they are what you want for a single nudge. */
     function moveItem(i, dir) {
       const j = i + dir;
       if (j < 0 || j >= draft.items.length) return;
       const tmp = draft.items[i];
       draft.items[i] = draft.items[j];
       draft.items[j] = tmp;
-      grouping = 'none';
+      setGrouping('none');
       refreshItems(); scheduleRefresh();
-    }
-
-    let dragId = null;
-    function wireDrag(block, it) {
-      block.addEventListener('dragstart', function (e) {
-        dragId = it.id;
-        block.classList.add('is-drag');
-        e.dataTransfer.effectAllowed = 'move';
-        try { e.dataTransfer.setData('text/plain', it.id); } catch (err) { /* Safari */ }
-      });
-      block.addEventListener('dragend', function () {
-        block.classList.remove('is-drag'); dragId = null;
-      });
-      block.addEventListener('dragover', function (e) {
-        if (!dragId || dragId === it.id) return;
-        e.preventDefault();
-        block.classList.add('is-over');
-      });
-      block.addEventListener('dragleave', function () { block.classList.remove('is-over'); });
-      block.addEventListener('drop', function (e) {
-        e.preventDefault();
-        block.classList.remove('is-over');
-        if (!dragId || dragId === it.id) return;
-        const from = draft.items.findIndex(function (x) { return x.id === dragId; });
-        const to = draft.items.findIndex(function (x) { return x.id === it.id; });
-        if (from < 0 || to < 0) return;
-        draft.items.splice(to, 0, draft.items.splice(from, 1)[0]);
-        grouping = 'none';
-        refreshItems(); scheduleRefresh();
-      });
     }
 
     const scheduleRefresh = U.debounce(refreshStats, 220);
@@ -395,7 +426,10 @@
         ]),
         U.h('.field', [
           U.h('label.label', 'Smart grouping'),
-          U.h('select.select', {
+          /* The id is what lets a hand reorder switch this back to "Keep my
+             order" — otherwise the control keeps claiming a grouping that the
+             list has just stopped obeying. */
+          U.h('select.select#woGrouping', {
             onchange: function () { grouping = this.value; refreshItems(); }
           }, [
             U.h('option', { value: 'none' }, 'Keep my order'),

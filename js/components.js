@@ -219,6 +219,8 @@
   function heatPanel(heat, opts) {
     opts = opts || {};
     const fig = U.h('.anat-wrap');
+    /* Hold the figure's space from the start; it is built a tick later. */
+    App.Anatomy.reserve(fig, { compact: opts.compact });
     const wrap = U.h('.heat-panel' + (opts.stack ? '.is-stacked' : ''), [
       fig,
       opts.list === false ? null : U.h('.heat-panel-list', [
@@ -357,7 +359,7 @@
               editExercise(null, function (ex) {
                 if (opts.multi) { selected.add(ex.id); draw(); updateFoot(); }
                 else { m.close(); opts.onPick(ex); }
-              });
+              }, { reveal: false });
             }
           }));
         }
@@ -380,6 +382,13 @@
       updateFoot();
     }
     return m;
+  }
+
+  /** Show a movement in the library, with the search narrowed to it. */
+  function revealExercise(ex) {
+    const page = App.Pages && App.Pages.exercises;
+    if (page && page.reveal) page.reveal(ex);
+    else if (App.Shell) App.Shell.navigate('exercises');
   }
 
   function topMuscleLabel(ex) {
@@ -405,8 +414,13 @@
    * Muscle percentages are edited as raw weights and normalised on save, so the
    * numbers never have to add to exactly 100 while you are typing.
    */
-  function editExercise(ex, onSaved) {
-    const isNew = !ex;
+  function editExercise(ex, onSaved, opts) {
+    opts = opts || {};
+    /* The empty-state "Create it" button seeds the dialog with { name: query },
+       which is still a NEW exercise — testing the object alone titled that
+       dialog "Edit exercise" and skipped everything that only happens on
+       create. What makes it an edit is having an id. */
+    const isNew = !ex || !ex.id;
     const settings = App.Store.getSettings();
     const draft = Object.assign({
       name: '', equipment: 'barbell', pattern: 'other', unilateral: false,
@@ -422,11 +436,45 @@
     let wrTouched = !!(draft.wr && Number(draft.wr.value) > 0);
 
     const figWrap = U.h('.anat-wrap');
+    App.Anatomy.reserve(figWrap, { compact: true });
     const sumEl = U.h('.u-xs.u-muted');
+    let figReady = false;
+
+    /**
+     * The figure is not just a preview any more — tap a region to identify it,
+     * hold it to assign it. Building a split by pointing at the body is a lot
+     * more direct than hunting for "Vastus lateralis" in a dropdown, and it is
+     * the only one of the two that works one-handed on a phone.
+     */
+    function assignFromFigure(id) {
+      /* An exercise written against a composite ("biceps") already covers the
+         region that was held ("biceps_long"), so adding it again would be a
+         silent duplicate that then skews the normalised split. */
+      const covered = Object.keys(draft.muscles).some(function (k) {
+        if (k === id) return true;
+        const parts = App.Muscles.PARTS[k];
+        return !!(parts && parts.indexOf(id) >= 0);
+      });
+      if (covered) {
+        U.toast('Already assigned', App.Muscles.label(id, true) + ' is in this split.');
+        return;
+      }
+      draft.muscles[id] = 10;
+      drawMuscles();
+      redrawFigure();
+      U.toast('Added', App.Muscles.label(id, true) + ' — set its share below.', 'good');
+    }
 
     function redrawFigure() {
-      App.Anatomy.render(figWrap, App.Muscles.normalise(draft.muscles),
-        { compact: true, legend: false, interactive: false });
+      if (!figReady) return;
+      App.Anatomy.render(figWrap, App.Muscles.normalise(draft.muscles), {
+        compact: true, legend: false,
+        onLongPress: assignFromFigure
+      });
+      syncSum();
+    }
+
+    function syncSum() {
       const total = Object.keys(draft.muscles)
         .reduce(function (a, k) { return a + (Number(draft.muscles[k]) || 0); }, 0);
       sumEl.textContent = total ? 'Raw total ' + U.num(total, 0) +
@@ -466,14 +514,15 @@
 
     function defaultLoadLabel() {
       return App.Store.getSettings().dumbbellLoad === 'total'
-        ? 'the total for both' : 'one implement';
+        ? App.Ranks.LOAD_LABELS.total : App.Ranks.LOAD_LABELS['per-hand'];
     }
 
     function rebuildLoadOptions() {
       U.clear(loadSel);
-      [['', 'Use the default (' + defaultLoadLabel() + ')'],
-       ['per-hand', 'One implement \u2014 both sides working'],
-       ['total', 'The total load']].forEach(function (o) {
+      [['', 'Use the default (' + defaultLoadLabel().toLowerCase() + ')'],
+       ['per-hand', App.Ranks.LOAD_LABELS['per-hand'] + ' \u2014 the weight of ONE implement'],
+       ['total', App.Ranks.LOAD_LABELS.total + ' \u2014 both implements added together']]
+      .forEach(function (o) {
         loadSel.appendChild(U.h('option', {
           value: o[0], selected: (draft.loadMode || '') === o[0] }, o[1]));
       });
@@ -482,8 +531,28 @@
     function syncLoadHint() {
       const mode = App.Ranks.loadMode(draft, App.Store.getSettings());
       loadHint.textContent = mode === 'per-hand'
-        ? 'A logged 40 counts as 80 of work, and records are shown per hand.'
-        : 'The number you log is taken as the whole load.';
+        ? 'Single arm / leg: you write down what one implement weighs while both ' +
+          'sides work, so a logged 40 counts as 80 of work and records are shown per side.'
+        : 'Double arm / leg: the number you write down is already the whole load ' +
+          'for both sides, and is taken as it stands.';
+    }
+
+    /* --- unilateral vs bilateral -------------------------------------------
+       "One side at a time" left it to the reader to work out whether that was a
+       description of the movement or an instruction about the weight. It is
+       neither: it is what the movement IS, and it decides how the logged number
+       is read, so the switch now names the term and then spells out both the
+       consequence and its opposite. */
+    const uniHint = U.h('.hint');
+
+    function syncUniHint() {
+      uniHint.textContent = draft.unilateral
+        ? 'Unilateral: one arm or one leg works per set — a single-arm row, a ' +
+          'split squat, a one-leg curl. The weight you log is the whole load, ' +
+          'because there is only one implement to begin with.'
+        : 'Bilateral: both limbs work together — a barbell row, a back squat, ' +
+          'a two-dumbbell press. With paired equipment you then have to say ' +
+          'whether you log one implement or both.';
     }
 
     /* Only paired equipment raises the question at all. */
@@ -532,7 +601,7 @@
       const isBw = draft.equipment === 'bodyweight';
       const v = Number(wrInput.value) || 0;
       /* The record is always stored as TOTAL load, so a two-dumbbell record is
-         the pair. It is displayed per hand further down, next to the lifts it
+         the pair. It is displayed per side further down, next to the lifts it
          will be compared with. */
       const probe = { pattern: draft.pattern, equipment: draft.equipment,
         unilateral: draft.unilateral, loadMode: draft.loadMode,
@@ -546,7 +615,7 @@
         out += 'Scaled to your ' + settings.bodyweight + ' ' + settings.units + ': ' +
           Math.round(scaled) + ' ' + settings.units +
           (perHand ? ', shown to you as ' + Math.round(scaled / 2) + ' ' +
-            settings.units + ' per hand.' : '.');
+            settings.units + ' per side.' : '.');
       } else {
         out += 'Required \u2014 this is what your rank is measured against.';
       }
@@ -620,16 +689,17 @@
           U.h('.field', [U.h('label.label', 'Movement pattern'), patternSel,
             U.h('.hint', 'Drives push / pull grouping and strength standards.')]),
           U.h('.field', [
-            U.h('label.label', 'Options'),
+            U.h('label.label', 'Movement type'),
             U.h('label.switch', [
               U.h('input', { type: 'checkbox', checked: draft.unilateral,
                 onchange: function () {
                   draft.unilateral = this.checked;
-                  syncLoadRow(); syncWrHint();
+                  syncLoadRow(); syncWrHint(); syncUniHint();
                 } }),
               U.h('i.switch-track'),
-              U.h('span.u-sm', 'One side at a time')
-            ])
+              U.h('span.u-sm', 'Unilateral — one limb at a time')
+            ]),
+            uniHint
           ])
         ]));
 
@@ -683,7 +753,9 @@
           ]),
           U.h('div', { style: { minWidth: 0 } }, [
             U.h('.label', { style: { marginBottom: '8px' } }, 'Preview'),
-            figWrap
+            figWrap,
+            U.h('.hint', 'Tap a muscle to name it. Press and hold one to add it ' +
+              'to the split.')
           ])
         ]));
 
@@ -696,9 +768,18 @@
         ]));
 
         drawMuscles();
-        redrawFigure();
+        syncSum();
         syncLoadRow();
         syncWrHint();
+        syncUniHint();
+      },
+      /* The two anatomy figures are by far the most expensive thing in this
+         dialog, and none of it is needed for the first frame. Building them
+         after the sheet is on screen is what turned "tap, wait, sheet appears
+         already half-way through its animation" into an immediate open. */
+      onShown: function () {
+        figReady = true;
+        redrawFigure();
       },
       actions: [
         { label: 'Cancel' },
@@ -725,6 +806,13 @@
               close();
               U.toast(isNew ? 'Exercise created' : 'Exercise saved', saved.name, 'good');
               if (onSaved) onSaved(saved);
+              /* A movement you have just built is the one you want to look at,
+                 and a 470-entry library will not volunteer it. Creating one
+                 therefore lands you on the library with the search already
+                 narrowed to its exact name. The picker opts out: it is
+                 mid-flow inside another dialog, and navigating out from under
+                 it would throw away whatever was being assembled. */
+              if (isNew && opts.reveal !== false) revealExercise(saved);
             });
           } }
       ]
@@ -774,6 +862,7 @@
     pickExercise: pickExercise,
     editExercise: editExercise,
     exThumb: exThumb,
+    revealExercise: revealExercise,
     topMuscleLabel: topMuscleLabel,
     rangePicker: rangePicker,
     rangeById: rangeById,

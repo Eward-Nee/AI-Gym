@@ -20,7 +20,7 @@
     App.Shell.setTopActions([
       U.h('button.btn.btn-sm', {
         type: 'button', html: U.icon('plus') + '<span>Exercise</span>',
-        onclick: function () { C.editExercise(null, function () {}); }
+        onclick: function () { C.editExercise(null); }
       }),
       U.h('button.btn.btn-primary.btn-sm', {
         type: 'button', html: U.icon('play') + '<span>Start workout</span>',
@@ -38,7 +38,7 @@
     el.appendChild(U.h('.grid.grid-3', [
       quickAction('plus', 'Add an exercise',
         'Build a movement with its own muscle split and image.',
-        function () { C.editExercise(null, function () {}); }),
+        function () { C.editExercise(null); }),
       quickAction('play', 'Start a workout',
         App.Store.allWorkouts().length
           ? 'Log a session from one of your ' + App.Store.allWorkouts().length + ' plans.'

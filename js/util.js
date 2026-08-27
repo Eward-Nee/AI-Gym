@@ -223,16 +223,30 @@
      ------------------------------------------------------------------------ */
 
   /**
-   * modal({title, body, actions:[{label, kind, onClick(close)}], wide})
+   * modal({title, body, actions:[{label, kind, onClick(close)}], wide, onShown})
    * `body` may be a node or a function(bodyEl) for imperative building.
+   *
+   * WHY THERE IS AN `onShown`
+   * -------------------------
+   * Everything `body` builds runs BEFORE the dialog is in the document, so on a
+   * phone the gap between tapping "New exercise" and seeing anything at all was
+   * the full cost of building the form — two anatomy figures included. The
+   * dialog appeared late and then animated, which reads as a stall rather than
+   * as a transition.
+   *
+   * `onShown(body, close)` runs after the browser has painted the open dialog,
+   * so the cheap chrome goes up immediately and the expensive content fills in
+   * underneath a frame later. Two rAFs, not one: the first is the frame the
+   * dialog is painted in, and doing heavy work there would stall the very first
+   * frame of the entry animation, which is exactly the jank being avoided.
    */
   function modal(opts) {
     const root = h('.modal-root', { role: 'dialog', 'aria-modal': 'true' });
     const body = h('.modal-body');
 
     function close() {
-      root.style.animation = 'fade 140ms var(--ease) reverse';
-      setTimeout(function () { root.remove(); }, 130);
+      root.classList.add('is-closing');
+      setTimeout(function () { root.remove(); }, 140);
       document.removeEventListener('keydown', onKey);
     }
     function onKey(e) { if (e.key === 'Escape') close(); }
@@ -265,8 +279,31 @@
     document.addEventListener('keydown', onKey);
     document.body.appendChild(root);
 
-    const focusable = box.querySelector('input, select, textarea, button.btn-primary');
-    if (focusable) setTimeout(function () { focusable.focus(); }, 60);
+    if (typeof opts.onShown === 'function') {
+      /* Two rAFs, with a timer behind them. rAF is the right signal — it lands
+         after the dialog has actually painted — but it does not fire at all
+         while the page is throttled, which a web-to-app webview does more
+         eagerly than a browser tab does. Without the timer, a dialog opened
+         either side of that throttling would keep its placeholder for good.
+         Whichever arrives first wins; `done` makes sure only one of them runs. */
+      let done = false;
+      const fire = function () {
+        if (done || !root.isConnected) return;
+        done = true;
+        opts.onShown(body, close);
+      };
+      requestAnimationFrame(function () { requestAnimationFrame(fire); });
+      setTimeout(fire, 120);
+    }
+    /* Release the compositor layer once the entry animation is over. */
+    setTimeout(function () { box.classList.add('is-settled'); }, 260);
+
+    /* Focusing an input on a phone summons the keyboard over the sheet that is
+       still animating up, so only do it where there is a real keyboard. */
+    if (!matchMedia('(hover: none)').matches) {
+      const focusable = box.querySelector('input, select, textarea, button.btn-primary');
+      if (focusable) setTimeout(function () { focusable.focus(); }, 60);
+    }
 
     return { root: root, body: body, close: close };
   }
@@ -647,6 +684,211 @@
     };
   }
 
+  /* ---------------------------------------------------------------------------
+     DRAG TO REORDER
+
+     HTML5 drag-and-drop, which this replaces, fires nothing at all on a phone:
+     `dragstart` requires a mouse. In an app built phone-first that made the
+     whole feature invisible to almost everyone using it, which is why the
+     builder still carries move-up / move-down buttons as the only route that
+     actually worked.
+
+     The gesture starts from a HANDLE, never from the item body. A handle can
+     declare `touch-action: none`, which is what lets the drag win against the
+     page scroll; an item that did the same could never be scrolled past. The
+     handle is the standard mobile affordance for this anyway.
+
+     Nothing is re-laid-out while dragging. Item positions are measured once at
+     the start, and every item that has to move is moved with a `transform`, so
+     the whole gesture stays on the compositor.
+     ------------------------------------------------------------------------ */
+
+  /**
+   * @param {Element} container
+   * @param {Object}  opts  {item, handle, onReorder(from, to)}
+   * @returns {Function} detach
+   */
+  function dragList(container, opts) {
+    opts = opts || {};
+    const itemSel = opts.item || '[data-drag-item]';
+    const handleSel = opts.handle || '[data-grip]';
+
+    /* The list is rebuilt on every reorder, on the same element. Without this
+       each rebuild would leave another listener attached, all of them holding
+       stale measurements. */
+    if (container.__dragList) container.__dragList();
+    if (!window.PointerEvent) return function () {};
+
+    let items = [], rects = [], from = -1, target = -1, stride = 0;
+    let dragEl = null, pointerId = null, startY = 0, lastY = 0;
+    let scrollTimer = 0, scrollDir = 0, scroller = null;
+
+    function scrollParent(el) {
+      let n = el.parentElement;
+      while (n && n !== document.body) {
+        const cs = getComputedStyle(n);
+        if (/(auto|scroll)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight + 1) return n;
+        n = n.parentElement;
+      }
+      return null;
+    }
+
+    function paint(clientY) {
+      const dy = clientY - startY;
+      dragEl.style.transform = 'translate3d(0,' + Math.round(dy) + 'px,0)';
+
+      /* Where the dragged item's own centre now sits decides the slot. */
+      const centre = rects[from].mid + dy;
+      let to = from;
+      for (let i = 0; i < rects.length; i++) {
+        if (i === from) continue;
+        if (i < from && centre < rects[i].mid) to = Math.min(to, i);
+        else if (i > from && centre > rects[i].mid) to = Math.max(to, i);
+      }
+      target = to;
+
+      /* Everything between the old slot and the new one shifts by exactly the
+         height the dragged item vacates — which is right even when the rows are
+         different heights, because only one item ever leaves a slot. */
+      for (let i = 0; i < items.length; i++) {
+        if (i === from) continue;
+        let t = 0;
+        if (to > from && i > from && i <= to) t = -stride;
+        else if (to < from && i >= to && i < from) t = stride;
+        items[i].style.transform = t ? 'translate3d(0,' + t + 'px,0)' : '';
+      }
+    }
+
+    function stopScroll() {
+      if (scrollTimer) clearInterval(scrollTimer);
+      scrollTimer = 0; scrollDir = 0;
+    }
+
+    /* Dragging to a slot that is off-screen has to be possible, so the view
+       creeps once the finger reaches an edge. Scrolling moves every measured
+       rect, and moves the grab point with it, or the item would slide out from
+       under the finger. */
+    function autoScroll(clientY) {
+      const edge = 72;
+      let top = 0, bottom = window.innerHeight;
+      if (scroller) {
+        const r = scroller.getBoundingClientRect();
+        top = r.top; bottom = r.bottom;
+      }
+      const dir = clientY < top + edge ? -1 : clientY > bottom - edge ? 1 : 0;
+      if (dir !== scrollDir) stopScroll();
+      if (!dir) return;
+      scrollDir = dir;
+      if (scrollTimer) return;
+      scrollTimer = setInterval(function () {
+        const before = scroller ? scroller.scrollTop : window.pageYOffset;
+        if (scroller) scroller.scrollTop = before + dir * 14;
+        else window.scrollTo(0, Math.max(0, before + dir * 14));
+        const moved = (scroller ? scroller.scrollTop : window.pageYOffset) - before;
+        if (!moved) { stopScroll(); return; }
+        rects.forEach(function (r) { r.top -= moved; r.mid -= moved; });
+        startY -= moved;
+        paint(lastY);
+      }, 16);
+    }
+
+    function onDown(e) {
+      if (e.button != null && e.button !== 0) return;
+      const grip = e.target.closest ? e.target.closest(handleSel) : null;
+      if (!grip || !container.contains(grip)) return;
+      const el = grip.closest(itemSel);
+      if (!el) return;
+
+      items = $$(itemSel, container);
+      from = items.indexOf(el);
+      if (from < 0) return;
+
+      e.preventDefault();
+      dragEl = el;
+      pointerId = e.pointerId;
+      startY = lastY = e.clientY;
+      target = from;
+      scroller = scrollParent(container);
+
+      rects = items.map(function (n) {
+        const r = n.getBoundingClientRect();
+        return { top: r.top, h: r.height, mid: r.top + r.height / 2 };
+      });
+      const gap = rects.length > 1
+        ? Math.max(0, rects[1].top - (rects[0].top + rects[0].h)) : 0;
+      stride = rects[from].h + gap;
+
+      document.body.classList.add('is-reordering');
+      dragEl.classList.add('is-dragging');
+      items.forEach(function (n) { n.style.willChange = 'transform'; });
+
+      window.addEventListener('pointermove', onMove, { passive: false });
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+    }
+
+    function onMove(e) {
+      if (e.pointerId !== pointerId) return;
+      e.preventDefault();
+      lastY = e.clientY;
+      paint(e.clientY);
+      autoScroll(e.clientY);
+    }
+
+    function onUp(e) {
+      if (pointerId === null || (e && e.pointerId !== pointerId)) return;
+      window.removeEventListener('pointermove', onMove, { passive: false });
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      stopScroll();
+
+      document.body.classList.remove('is-reordering');
+      dragEl.classList.remove('is-dragging');
+      items.forEach(function (n) { n.style.transform = ''; n.style.willChange = ''; });
+
+      const a = from, b = target;
+      dragEl = null; pointerId = null; from = -1; target = -1;
+      if (b >= 0 && b !== a && opts.onReorder) opts.onReorder(a, b);
+    }
+
+    container.addEventListener('pointerdown', onDown);
+    container.__dragList = function () {
+      container.removeEventListener('pointerdown', onDown);
+      container.__dragList = null;
+    };
+    return container.__dragList;
+  }
+
+  /* ---------------------------------------------------------------------------
+     HANDLES
+
+     A handle is stored bare — the hub's own format check is `^[a-z0-9_]{3,24}$`
+     and an `@` would fail it — but it is never SHOWN bare. Half the app printed
+     '@' + handle and half printed the handle, and the search box accepted
+     either, so the same identifier appeared in two spellings and neither looked
+     authoritative. One pair of functions now decides: `handle()` for anything
+     on screen, `bareHandle()` for anything going to the hub.
+     ------------------------------------------------------------------------ */
+
+  /** For display: always exactly one leading @. */
+  function handle(h) {
+    const bare = bareHandle(h);
+    return bare ? '@' + bare : '';
+  }
+
+  /** For storage and lookup: no @, lower case, nothing the hub would reject. */
+  function bareHandle(h) {
+    return String(h === null || h === undefined ? '' : h)
+      .trim().replace(/^@+/, '').toLowerCase().replace(/[^a-z0-9_]/g, '');
+  }
+
+  /** Move one item of an array to another index, in place. */
+  function moveIn(arr, from, to) {
+    if (from === to || from < 0 || to < 0 || from >= arr.length || to >= arr.length) return arr;
+    arr.splice(to, 0, arr.splice(from, 1)[0]);
+    return arr;
+  }
+
   App.U = {
     $: $, $$: $$, h: h, append: append, clear: clear, esc: esc, on: on, debounce: debounce,
     num: num, compact: compact, pct: pct, dur: dur,
@@ -656,6 +898,8 @@
     copy: copy, copyOrShow: copyOrShow, showManualCopy: showManualCopy,
     openExternal: openExternal, androidIntentUrl: androidIntentUrl,
     download: download, readFile: readFile, shrinkImage: shrinkImage,
-    virtualList: virtualList, rowStride: rowStride
+    virtualList: virtualList, rowStride: rowStride,
+    dragList: dragList, moveIn: moveIn,
+    handle: handle, bareHandle: bareHandle
   };
 })(window.App = window.App || {});

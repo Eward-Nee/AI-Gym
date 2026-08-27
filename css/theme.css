@@ -61,6 +61,15 @@
 
   --anat-body:   #dfe3ea;
   --anat-idle:   #cbd2dc;
+  /* SELECTION ON THE FIGURE IS DELIBERATELY OUTSIDE THE COLOUR SCHEME.
+     Every other colour here is derived from the scheme, which is exactly what
+     a selection must not be: against Ice or Flux an accent-coloured highlight
+     sits a few points away from the heat ramp it is drawn on top of, and the
+     region you just tapped becomes the hardest one on the figure to pick out.
+     A near-black block ringed in white (inverted for the dark modes) reads the
+     same against every scheme and every heat colour there is. */
+  --anat-sel:    #0b0e12;
+  --anat-sel-ink:#ffffff;
 
   --good:        #1f9254;
   --warn:        #b7791f;
@@ -94,6 +103,8 @@
 
   --anat-body:   #232932;
   --anat-idle:   #2e3641;
+  --anat-sel:    #ffffff;
+  --anat-sel-ink:#05070a;
 
   --good:        #3ecf8e;
   --warn:        #e0a33a;
@@ -127,6 +138,8 @@
 
   --anat-body:   #121519;
   --anat-idle:   #1c2027;
+  --anat-sel:    #ffffff;
+  --anat-sel-ink:#000000;
 
   --good:        #3ecf8e;
   --warn:        #e0a33a;

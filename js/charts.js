@@ -120,6 +120,75 @@
   }
 
   /* ---------------------------------------------------------------------------
+     SATURATING GROWTH — a projection that knows strength has a ceiling
+
+     A straight line through someone's estimated 1RM says the next twelve months
+     will look exactly like the last three did. They will not. Progress against
+     a ceiling slows as the gap to it closes: the training that adds 10 kg to a
+     60 kg bench adds a fraction of that to a 160 kg one, because what is left
+     to gain is what is left. Extrapolated a year out, a straight line promises
+     a number nobody has ever lifted, and it is most confident exactly where it
+     is most wrong.
+
+     The model is the standard bounded-growth curve
+
+         y(t) = C - (C - y0) * e^(-k t)
+
+     which starts at y0, rises fast while the gap is wide, and flattens as it
+     approaches the ceiling C. Taking logs of the REMAINING GAP linearises it:
+
+         ln(C - y) = ln(C - y0) - k t
+
+     so the same least-squares fit above solves it, and the decay rate k falls
+     out of the slope. One substitution, and the curve does the rest.
+     ------------------------------------------------------------------------ */
+
+  /**
+   * @param {Array}  points   [{x: epoch ms, y}] oldest first
+   * @param {number} ceiling  the asymptote to approach, in the same units as y
+   * @returns {Object|null} {at(x), k, r2, n, ceiling, halfLifeDays, growing}
+   */
+  function saturating(points, ceiling) {
+    if (!points || points.length < 3 || !(ceiling > 0)) return null;
+
+    let maxY = 0;
+    points.forEach(function (p) { maxY = Math.max(maxY, p.y); });
+
+    /* A ceiling at or below what has already been lifted leaves no gap to fit,
+       and ln() of zero or of a negative gap is not a number. Someone who has
+       beaten the estimate simply has a higher ceiling than the estimate knew. */
+    const C = Math.max(ceiling, maxY * 1.02 + 0.5);
+
+    /* Fit against time SINCE THE FIRST POINT. Epoch milliseconds are ~1.7e12,
+       and the sums of squares a least-squares fit takes then land near the edge
+       of what a double can hold apart — the subtraction inside it cancels most
+       of the significant digits. Shifting the origin costs one subtraction and
+       removes the problem. */
+    const x0 = points[0].x;
+    const lin = regress(points.map(function (p) {
+      return { x: p.x - x0, y: Math.log(C - p.y) };
+    }));
+    if (!lin) return null;
+
+    const k = -lin.slope;
+    return {
+      ceiling: C,
+      k: k,
+      n: lin.n,
+      r2: lin.r2,
+      growing: k > 0,
+      /* k in a unit a person can hold: how long to close half the gap that is
+         left. "Half of what remains, every four months" is a statement about
+         training; "k = 5.9e-9" is not. */
+      halfLifeDays: k > 0 ? Math.LN2 / k / 86400000 : Infinity,
+      at: function (x) {
+        const y = C - Math.exp(lin.at(x - x0));
+        return Math.max(0, Math.min(C, y));
+      }
+    };
+  }
+
+  /* ---------------------------------------------------------------------------
      LINE / AREA CHART
      ------------------------------------------------------------------------ */
 
@@ -160,8 +229,15 @@
     const xMin = Math.min.apply(null, xs), xMax = Math.max.apply(null, xs);
     const yScale = niceScale(
       opts.yMin !== undefined ? opts.yMin : Math.min.apply(null, ys),
-      Math.max.apply(null, ys), narrow ? 3 : (opts.yTicks || 4));
+      opts.yMax !== undefined ? Math.max(opts.yMax, Math.max.apply(null, ys))
+                              : Math.max.apply(null, ys),
+      narrow ? 3 : (opts.yTicks || 4));
     if (opts.yMin !== undefined) yScale.min = Math.min(yScale.min, opts.yMin);
+    /* A reference rule above the data is dropped rather than clamped, which is
+       right — but a caller drawing a CEILING wants the ceiling on screen, not
+       silently discarded for being higher than everything under it. `yMax`
+       makes room for it. */
+    if (opts.yMax !== undefined) yScale.max = Math.max(yScale.max, opts.yMax);
 
     const iw = Wv - pad.l - pad.r, ih = H - pad.t - pad.b;
     const sx = function (x) {
@@ -447,6 +523,7 @@
     bars: bars,
     spark: spark,
     regress: regress,
+    saturating: saturating,
     niceScale: niceScale
   };
 })(window.App = window.App || {});

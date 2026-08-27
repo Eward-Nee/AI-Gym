@@ -316,6 +316,19 @@ a:hover { text-decoration: underline; }
   pointer-events: none; }
 .search .input { padding-left: 34px; }
 
+/* A handle field with the @ built into it. The symbol is furniture rather than
+   text you have to remember to type — which also means the value can never
+   carry one, so what goes to the hub is always the bare handle it stores. */
+.handle-field { position: relative; display: flex; align-items: center; }
+.handle-at {
+  position: absolute; left: 12px;
+  font-weight: 640; color: var(--text-3);
+  pointer-events: none; line-height: 1;
+}
+.handle-field .input { padding-left: 27px; width: 100%; }
+.handle-results { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.handle-results:empty { margin-top: 0; }
+
 .switch { display: inline-flex; align-items: center; gap: var(--sp-3); cursor: pointer; }
 .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
 .switch-track {
@@ -424,14 +437,23 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
    MODAL / DRAWER
    ============================================================================= */
 
+/* NO backdrop-filter HERE.
+   A blur across the whole viewport is one of the two most expensive things a
+   mobile browser can be asked for — the same reason backgrounds.css dropped
+   its own — and it was being asked for at exactly the worst moment: while the
+   dialog was animating in, on top of whatever the page underneath was still
+   painting. Removing it is most of why the New exercise sheet now opens
+   without a stall. The scrim is a shade deeper to make up the separation,
+   which costs one flat fill. */
 .modal-root {
   position: fixed; inset: 0; z-index: 100;
   display: grid; place-items: center;
   padding: var(--sp-4);
   background: var(--scrim);
-  backdrop-filter: blur(3px);
-  animation: fade var(--dur) var(--ease);
+  animation: fade 150ms var(--ease);
 }
+.modal-root.is-closing { animation: fade-out 140ms var(--ease) forwards; }
+.modal-root.is-closing .modal { animation: none; opacity: 0; transition: opacity 120ms var(--ease); }
 .modal {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -446,8 +468,13 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   max-width: 100%;
   max-height: min(86vh, 900px);
   display: flex; flex-direction: column;
-  animation: pop 200ms var(--ease);
+  /* Only opacity and transform, so the entry never leaves the compositor, and
+     will-change is dropped the moment the animation ends rather than holding a
+     layer for a dialog that has finished moving. */
+  animation: pop 190ms var(--ease);
+  will-change: transform, opacity;
 }
+.modal.is-settled { will-change: auto; }
 .modal.is-wide { width: min(1000px, 100%); }
 .modal-head {
   display: flex; align-items: center; gap: var(--sp-3);
@@ -466,7 +493,39 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 }
 
 @keyframes fade { from { opacity: 0; } }
-@keyframes pop { from { opacity: 0; transform: translateY(10px) scale(0.985); } }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes pop { from { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.985); } }
+
+/* =============================================================================
+   DRAG TO REORDER  (U.dragList)
+   ============================================================================= */
+
+/* The grip is the only part that takes the gesture, so it is the only part
+   that may refuse the page scroll. Making the whole row touch-action:none
+   would mean a list you could never scroll past. */
+[data-grip] {
+  touch-action: none;
+  cursor: grab;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none; user-select: none;
+}
+body.is-reordering { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+body.is-reordering [data-grip] { cursor: grabbing; }
+
+/* Items that are only being pushed out of the way glide; the one under the
+   finger must not, or it lags behind the pointer by the transition duration. */
+[data-drag-item] { transition: transform 160ms var(--ease); }
+[data-drag-item].is-dragging {
+  transition: none;
+  position: relative; z-index: 20;
+  box-shadow: var(--shadow-3);
+  opacity: 0.96;
+}
+body.is-reordering [data-drag-item]:not(.is-dragging) { pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-drag-item] { transition: none; }
+}
 
 /* =============================================================================
    TOASTS
@@ -532,6 +591,14 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
    ============================================================================= */
 
 .anat-wrap { position: relative; min-width: 0; }
+/* Stand-in for a figure that is still a frame away — see App.Anatomy.reserve().
+   It borrows `.anat-svg`, so it is exactly the size of what replaces it at
+   every breakpoint, and nothing below it moves when the swap happens. */
+.anat-skel {
+  display: block;
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+}
 .anat-pair { display: flex; gap: var(--sp-2); justify-content: center; align-items: flex-end; }
 .anat-fig { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2);
   min-width: 0; flex: 1 1 0; }
@@ -572,7 +639,23 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
   stroke: var(--ink); stroke-width: 0.8; vector-effect: non-scaling-stroke;
   transition: opacity var(--dur) var(--ease);
 }
-.anat-m.is-hot { stroke-width: 1.6; }
+/* A mouse sweeping across the figure is not a choice, so hover only thickens
+   the outline. A tap IS a choice, and gets the solid block below. */
+.anat-m.is-hot { stroke-width: 1.8; stroke: var(--anat-sel); }
+
+/* THE SELECTED REGION.
+   `paint-order: stroke` lays the stroke down first and then covers its inner
+   half with the fill, so the whole stroke width reads as a ring OUTSIDE the
+   shape rather than eating into it — which is what keeps a small belly like
+   the rotator cuff from being swallowed by its own outline. Both colours are
+   fixed rather than scheme-derived: see the note in theme.css. */
+.anat-m.is-sel {
+  fill: var(--anat-sel) !important;
+  stroke: var(--anat-sel-ink);
+  stroke-width: 3.2;
+  paint-order: stroke;
+  stroke-linejoin: round;
+}
 .anat-detail path {
   fill: none; stroke: var(--ink-soft); stroke-width: 0.55;
   vector-effect: non-scaling-stroke; opacity: 0.55; stroke-linecap: round;
@@ -615,9 +698,16 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
    presence than something you merely swept a mouse over. */
 .anat-tip.is-pinned { box-shadow: var(--shadow-2); }
 
-/* Muscles are tappable, so say so — and stop the long-press callout and
-   double-tap zoom that otherwise fire instead of the tap. */
-.anat-m { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+/* Muscles are tappable, so say so — and stop the long-press callout, the text
+   selection and the double-tap zoom that otherwise fire instead of the gesture.
+   The callout in particular used to pop up in the middle of a tap-and-hold,
+   which is now a real action rather than a no-op. */
+.anat-m {
+  cursor: pointer; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none; user-select: none;
+}
 
 /* muscle breakdown list beside a figure */
 .mlist { display: flex; flex-direction: column; gap: 7px; }
@@ -819,7 +909,13 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 
 /* Builder rows carry a drag grip as well, so the gutter is wider. */
 .wo-block-head.is-editable { padding-left: 86px; }
-.wo-block-head.is-editable .wo-grip { position: absolute; left: 10px; top: 17px; }
+.wo-block-head.is-editable .wo-grip { position: absolute; left: 2px; top: 8px; }
+
+/* The workout list. A single column, so "drag it above that one" has exactly
+   one meaning; the cards were already stacking at every phone width. */
+.wo-list { display: flex; flex-direction: column; gap: var(--sp-4); }
+.wo-list > .card { margin: 0; }
+.wo-list .card-head > .wo-grip { flex: none; margin-left: -6px; }
 .wo-block-head.is-editable .ex-thumb { left: 34px; }
 
 .wo-block-actions {
@@ -845,10 +941,17 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 }
 .wo-block-title .ex-meta { align-items: center; }
 .wo-block-body { padding: var(--sp-3) var(--sp-4) var(--sp-4); }
-.wo-grip { cursor: grab; color: var(--text-3); display: grid; place-items: center; }
+/* The grip is the drag target, so it needs a real hit area rather than the size
+   of the glyph inside it — on a phone a 16px icon is not something a thumb can
+   reliably land on, and missing it scrolls the page instead. */
+.wo-grip {
+  cursor: grab; color: var(--text-3);
+  display: grid; place-items: center;
+  width: 30px; height: 34px;
+  border-radius: var(--r-sm);
+}
 .wo-grip:active { cursor: grabbing; }
-.wo-block.is-drag { opacity: 0.4; }
-.wo-block.is-over { border-color: var(--accent); }
+.wo-grip:hover { color: var(--text-2); background: var(--surface-3); }
 
 .set-grid {
   display: grid;

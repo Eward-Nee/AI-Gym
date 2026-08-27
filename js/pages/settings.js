@@ -89,8 +89,17 @@
      PROFILE
      ======================================================================== */
 
+  /** "90" -> "90 seconds (1:30)." — the unit, spelled out. */
+  function secondsHint(v) {
+    v = Math.max(0, Math.round(Number(v) || 0));
+    if (!v) return 'No rest — the timer is skipped.';
+    return v + ' seconds' + (v >= 60 ? ' (' + U.dur(v) + ')' : '') + '.';
+  }
+
   function profileCard() {
     const s = App.Store.getSettings();
+    const restSetHint = U.h('.hint', { text: secondsHint(s.restDefault) });
+    const restExHint = U.h('.hint', { text: secondsHint(s.restBetweenExercises) });
     return U.h('.card', [
       U.h('.card-head', [
         U.h('div', [
@@ -124,20 +133,39 @@
           ])
         ])
       ]),
+      /* BOTH OF THESE ARE SECONDS, and neither field said so. "90" with no unit
+         reads as a minute and a half or as an hour and a half depending on what
+         the reader brought with them, and the rest timer that follows is then
+         wrong by a factor of sixty. The unit is now in the label, beside the
+         field, and restated underneath as a clock value. */
       U.h('.grid.grid-2', [
         U.h('.field', [
-          U.h('label.label', 'Default rest between sets'),
-          U.h('input.input.input-num', { type: 'number', min: '0', step: '5',
-            value: s.restDefault,
-            onchange: function () {
-              App.Store.saveSettings({ restDefault: Number(this.value) || 90 }); } })
+          U.h('label.label', 'Default rest between sets (seconds)'),
+          U.h('.row', [
+            U.h('input.input.input-num', { type: 'number', min: '0', step: '5',
+              value: s.restDefault, inputmode: 'numeric',
+              onchange: function () {
+                const v = Number(this.value) || 90;
+                App.Store.saveSettings({ restDefault: v });
+                restSetHint.textContent = secondsHint(v);
+              } }),
+            U.h('span.u-sm.u-muted', 'sec')
+          ]),
+          restSetHint
         ]),
         U.h('.field', [
-          U.h('label.label', 'Default rest between exercises'),
-          U.h('input.input.input-num', { type: 'number', min: '0', step: '15',
-            value: s.restBetweenExercises,
-            onchange: function () {
-              App.Store.saveSettings({ restBetweenExercises: Number(this.value) || 150 }); } })
+          U.h('label.label', 'Default rest between exercises (seconds)'),
+          U.h('.row', [
+            U.h('input.input.input-num', { type: 'number', min: '0', step: '15',
+              value: s.restBetweenExercises, inputmode: 'numeric',
+              onchange: function () {
+                const v = Number(this.value) || 150;
+                App.Store.saveSettings({ restBetweenExercises: v });
+                restExHint.textContent = secondsHint(v);
+              } }),
+            U.h('span.u-sm.u-muted', 'sec')
+          ]),
+          restExHint
         ])
       ])
     ]);
@@ -184,14 +212,17 @@
           }
         }, [
           U.h('option', { value: 'per-hand', selected: s.dumbbellLoad !== 'total' },
-            'One implement \u2014 both sides working'),
+            App.Ranks.LOAD_LABELS['per-hand'] + ' \u2014 the weight of ONE dumbbell'),
           U.h('option', { value: 'total', selected: s.dumbbellLoad === 'total' },
-            'The total load')
+            App.Ranks.LOAD_LABELS.total + ' \u2014 both dumbbells added together')
         ]),
         U.h('.hint', s.dumbbellLoad === 'total'
-          ? 'A logged 80 counts as 80 of work.'
-          : 'A logged 40 counts as 80 of work, and world records are shown per hand. ' +
-            'Movements marked "one side at a time" are never doubled.'),
+          ? 'Double arm / leg: for a pair of 40s you write down 80, and it counts ' +
+            'as 80 of work exactly as written.'
+          : 'Single arm / leg: for a pair of 40s you write down 40. That counts as ' +
+            '80 of work, and world records are shown per side. Unilateral ' +
+            'movements \u2014 one limb at a time \u2014 are never doubled, because ' +
+            'there is only one implement to start with.'),
         U.h('.u-xs.u-muted', { text: counts.paired + ' movement' +
           (counts.paired === 1 ? '' : 's') + ' use paired equipment' +
           (counts.overridden
@@ -571,10 +602,62 @@
       U.h('.field', { style: { marginTop: '20px' } }, [
         U.h('label.label', 'Background'),
         bgGrid,
-        U.h('.hint', 'Four static and four animated. Every one is built from the colour ' +
-          'scheme above, so it follows your scheme and your light / dark mode. Animated ' +
-          'backgrounds hold still if your device asks for reduced motion.')
-      ])
+        U.h('.hint', 'Six static and six animated, including a sci-fi skyline and a ' +
+          'cyberpunk board. Every one is built from the colour scheme above, so it ' +
+          'follows your scheme and your light / dark mode. Animated backgrounds hold ' +
+          'still if your device asks for reduced motion.')
+      ]),
+      motionField()
+    ]);
+  }
+
+  /* ---------------------------------------------------------------------------
+     BACKGROUND MOTION
+
+     An animated background is fill rate and nothing else: each moving layer
+     repaints a viewport-sized area every frame. Six of them are free on a
+     desktop and are not free on a phone from five years ago, so how many are
+     allowed to move is a budget rather than a fixed part of the design.
+
+     Auto reads the device, which is the right default; the manual settings are
+     here because a guess about somebody else's hardware should not be the last
+     word on it, in either direction.
+     ------------------------------------------------------------------------ */
+
+  function motionField() {
+    const s = App.Store.getSettings();
+    const hint = U.h('.hint');
+
+    const OPTIONS = [
+      ['auto', 'Automatic — match the device'],
+      ['full', 'Full — every layer moves'],
+      ['low',  'Light — fewer layers move, and slower'],
+      ['off',  'Still — animated backgrounds hold their pose']
+    ];
+
+    function describe(v) {
+      const resolved = App.Shell.resolveMotion(v === 'auto' ? undefined : v);
+      const named = { full: 'full motion', low: 'light motion', off: 'held still' }[resolved];
+      return (v === 'auto'
+        ? 'This device is being given ' + named + '. '
+        : 'Animated backgrounds run at ' + named + '. ') +
+        'Lowering this does not change how a background looks — the layers that ' +
+        'stop moving stay exactly where they are, so the picture is the same one ' +
+        'with less to repaint.';
+    }
+    hint.textContent = describe(s.bgMotion || 'auto');
+
+    return U.h('.field', { style: { marginTop: '20px' } }, [
+      U.h('label.label', 'Background motion'),
+      U.h('select.select', {
+        onchange: function () {
+          App.Store.saveSettings({ bgMotion: this.value });
+          hint.textContent = describe(this.value);
+        }
+      }, OPTIONS.map(function (o) {
+        return U.h('option', { value: o[0], selected: (s.bgMotion || 'auto') === o[0] }, o[1]);
+      })),
+      hint
     ]);
   }
 
@@ -985,7 +1068,7 @@
       ]),
       U.h('.spacer'),
       st.hub.signedIn
-        ? U.h('span.chip.chip-accent', { text: '@' + (st.hub.account.handle || '…') })
+        ? U.h('span.chip.chip-accent', { text: U.handle(st.hub.account.handle) || '@…' })
         : U.h('span.chip', 'Signed out')
     ]));
     card.appendChild(body);
@@ -1010,6 +1093,32 @@
           type: 'button', text: 'Sign out',
           onclick: function () { App.Sync.signOut().then(draw); }
         })
+      ]));
+
+      /* WHAT THE HANDLE IS FOR.
+         It was displayed as a chip in the corner and never explained, so there
+         was nothing to tell anyone that it is the thing you hand out — the one
+         piece of the account another person needs in order to reach you. Saying
+         so, and putting a Copy button next to it, is the difference between a
+         label and an instruction. */
+      body.appendChild(U.h('.field', { style: { marginTop: '16px' } }, [
+        U.h('label.label', 'Your handle'),
+        U.h('.row.row-wrap', [
+          U.h('span.chip.chip-accent', { style: { fontSize: 'var(--fs-md)' },
+            text: U.handle(st.hub.account.handle) }),
+          U.h('button.btn.btn-sm', {
+            type: 'button', html: U.icon('copy') + '<span>Copy handle</span>',
+            onclick: function () {
+              U.copyOrShow(U.handle(st.hub.account.handle), {
+                title: 'Your handle',
+                label: 'Give this to whoever wants to add you.'
+              });
+            }
+          })
+        ]),
+        U.h('.hint', 'This is how other people find you. Give it to someone and they ' +
+          'search for it under Friends to send you a request, which then shows up ' +
+          'here for you to accept. It always starts with @.')
       ]));
 
       if (!st.personal.verified) {
@@ -1227,35 +1336,180 @@
     ]));
     body.appendChild(inviteOut);
 
+    /* --- FINDING SOMEONE BY HANDLE --------------------------------------------
+       The old field was a bare text box and a Send button: you had to know the
+       handle exactly, spell it right, and find out you had not only after the
+       request failed. It is now a search — the @ is part of the furniture
+       rather than something to remember to type, and matches appear as you go.
+
+       Five results, sorted alphabetically. The hub sorts by rank points, which
+       is the wrong order for picking a person out of a list: someone scanning
+       for a name they already know wants it where the alphabet says it is, not
+       wherever their bench press put them. */
     const handleInput = U.h('input.input', {
-      placeholder: 'their handle, e.g. eward', spellcheck: 'false'
+      placeholder: 'their handle', spellcheck: 'false',
+      autocomplete: 'off', autocapitalize: 'none',
+      'aria-label': 'Search for a handle'
+    });
+    const results = U.h('.handle-results');
+    const searchNote = U.h('.hint', 'Type at least two characters. The @ is added for you.');
+
+    /* The @ is a fixed prefix drawn beside the field, and anything typed is
+       forced into the shape the hub will actually accept, so a pasted
+       "@Eward " or "eward!" cannot become a lookup that silently finds nobody. */
+    handleInput.addEventListener('input', function () {
+      const clean = U.bareHandle(this.value);
+      if (this.value !== clean) this.value = clean;
+      runSearch(clean);
+    });
+    handleInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); sendTo(U.bareHandle(this.value)); }
     });
 
-    body.appendChild(U.h('.row.row-wrap', [
-      U.h('.field', { style: { flex: 1, minWidth: '220px' } },
-        [U.h('label.label', 'Add by handle'), handleInput]),
-      U.h('button.btn.btn-primary.btn-sm', {
-        type: 'button', style: { alignSelf: 'flex-end' },
-        html: U.icon('plus') + '<span>Send request</span>',
-        onclick: function () {
-          const h = handleInput.value.trim();
-          if (!h) return;
-          const btn = this;
-          btn.disabled = true;
-          App.Sync.requestFriend(h).then(function (res) {
-            btn.disabled = false;
-            handleInput.value = '';
-            U.toast(res === 'accepted' ? 'Friends!' :
-              res === 'already_friends' ? 'Already connected' : 'Request sent',
-              '@' + h, 'good');
-            loadList();
-          }).catch(function (err) {
-            btn.disabled = false;
-            U.toast('Could not send', err.message, 'bad');
-          });
+    function sendTo(bare, btn) {
+      if (!bare) return;
+      if (btn) btn.disabled = true;
+      App.Sync.requestFriend(bare).then(function (res) {
+        if (btn) btn.disabled = false;
+        handleInput.value = '';
+        U.clear(results);
+        U.toast(res === 'accepted' ? 'Friends!' :
+          res === 'already_friends' ? 'Already connected' : 'Request sent',
+          U.handle(bare), 'good');
+        loadList();
+      }).catch(function (err) {
+        if (btn) btn.disabled = false;
+        U.toast('Could not send', err.message, 'bad');
+      });
+    }
+
+    const runSearch = U.debounce(function (q) {
+      U.clear(results);
+      if (!q || q.length < 2) return;
+      results.appendChild(U.h('.row', [U.h('.spinner'),
+        U.h('span.u-xs.u-muted', 'Searching…')]));
+
+      App.Sync.searchProfiles(q).then(function (rows) {
+        U.clear(results);
+        const list = (rows || [])
+          .filter(function (r) { return r.relation !== 'self'; })
+          .sort(function (a, b) { return String(a.handle).localeCompare(String(b.handle)); })
+          .slice(0, 5);
+
+        if (!list.length) {
+          results.appendChild(U.h('.u-xs.u-muted', { style: { padding: '8px 2px' },
+            text: 'No account matches ' + U.handle(q) + '.' }));
+          return;
         }
-      })
+        list.forEach(function (r) { results.appendChild(searchRow(r)); });
+      }).catch(function (err) {
+        U.clear(results);
+        results.appendChild(U.h('.u-xs.u-muted', { text: 'Search failed: ' + err.message }));
+      });
+    }, 260);
+
+    function searchRow(r) {
+      const rk = App.Ranks.RANKS.find(function (x) { return x.id === r.rank_id; })
+        || App.Ranks.RANKS[0];
+      const already = { friend: 'Already friends', outgoing: 'Request sent',
+        incoming: 'They asked you' }[r.relation];
+      return U.h('.ex-row', [
+        U.h('.ex-thumb', { style: { fontSize: '20px' }, text: r.avatar_emoji || '💪' }),
+        U.h('div', { style: { minWidth: 0 } }, [
+          U.h('.ex-name', { text: U.handle(r.handle) }),
+          U.h('.ex-meta', [
+            r.display_name ? U.h('span', { text: r.display_name }) : null,
+            U.h('span', { style: { color: rk.color }, text: rk.name })
+          ])
+        ]),
+        already
+          ? U.h('span.chip', { text: already })
+          : U.h('button.btn.btn-primary.btn-sm', {
+              type: 'button', html: U.icon('plus') + '<span>Add</span>',
+              onclick: function () { sendTo(r.handle, this); }
+            })
+      ]);
+    }
+
+    body.appendChild(U.h('.field', { style: { marginTop: '18px' } }, [
+      U.h('label.label', 'Find someone by handle'),
+      U.h('.row.row-wrap', [
+        U.h('.handle-field', { style: { flex: 1, minWidth: '220px' } }, [
+          U.h('span.handle-at', '@'), handleInput
+        ]),
+        U.h('button.btn.btn-primary.btn-sm', {
+          type: 'button', style: { alignSelf: 'center' },
+          html: U.icon('plus') + '<span>Send request</span>',
+          onclick: function () { sendTo(U.bareHandle(handleInput.value), this); }
+        })
+      ]),
+      searchNote,
+      results
     ]));
+
+    /* --- INCOMING REQUESTS ----------------------------------------------------
+       These used to be a heading part-way down a list you had to already be
+       scrolling. A request is the one thing here that is waiting on YOU, so it
+       gets its own block above everything else, with the sender named and the
+       Accept button in reach. */
+    const requestsWrap = U.h('div');
+    body.insertBefore(requestsWrap, body.firstChild);
+
+    function drawRequests(incoming) {
+      U.clear(requestsWrap);
+      if (!incoming || !incoming.length) return;
+      requestsWrap.appendChild(U.h('.callout.is-good', { style: { marginBottom: '16px' } }, [
+        U.h('.callout-bar'),
+        U.h('div', { style: { minWidth: 0, width: '100%' } }, [
+          U.h('.row', [
+            U.h('strong', { text: incoming.length + ' friend request' +
+              (incoming.length === 1 ? '' : 's') + ' waiting for you' }),
+            U.h('.spacer'),
+            U.h('span.chip.chip-accent', { text: String(incoming.length) })
+          ]),
+          U.h('.stack-sm', { style: { marginTop: '10px' } },
+            incoming.map(function (f) { return requestRow(f); }))
+        ])
+      ]));
+    }
+
+    function requestRow(f) {
+      return U.h('.ex-row', [
+        U.h('.ex-thumb', { style: { fontSize: '20px' }, text: f.avatar_emoji || '💪' }),
+        U.h('div', { style: { minWidth: 0 } }, [
+          U.h('.ex-name', { text: U.handle(f.handle) }),
+          U.h('.ex-meta', [
+            U.h('span', { text: f.display_name || 'wants to be friends' }),
+            U.h('span', 'sent you a request')
+          ])
+        ]),
+        U.h('.row', { style: { gap: '6px' } }, [
+          U.h('button.btn.btn-primary.btn-sm', {
+            type: 'button', html: U.icon('check') + '<span>Accept</span>',
+            onclick: function () {
+              const btn = this;
+              btn.disabled = true;
+              /* respond_friend keys off the friendship row, not the account. */
+              App.Sync.respondFriend(f.friendship_id, true).then(function () {
+                U.toast('Connected', U.handle(f.handle), 'good');
+                loadList();
+              }).catch(function (e) {
+                btn.disabled = false;
+                U.toast('Failed', e.message, 'bad');
+              });
+            }
+          }),
+          U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+            type: 'button', 'aria-label': 'Decline', title: 'Decline', html: U.icon('x'),
+            onclick: function () {
+              App.Sync.respondFriend(f.friendship_id, false)
+                .then(function () { U.toast('Declined', U.handle(f.handle)); loadList(); })
+                .catch(function (e) { U.toast('Failed', e.message, 'bad'); });
+            }
+          })
+        ])
+      ]);
+    }
 
     const listWrap = U.h('div', { style: { marginTop: '18px' } });
     body.appendChild(listWrap);
@@ -1267,24 +1521,22 @@
 
       App.Sync.listFriends().then(function (rows) {
         U.clear(listWrap);
+        const incomingAll = (rows || []).filter(function (r) {
+          return r.status === 'pending' && r.direction === 'incoming'; });
+        drawRequests(incomingAll);
+
         if (!rows || !rows.length) {
           listWrap.appendChild(U.h('.empty', [
-            U.h('p', 'No friends yet. Share your handle: ') ,
-            U.h('span.chip.chip-accent', { text: '@' +
-              (App.Sync.cfg.account.handle || '') })
+            U.h('p', 'No friends yet. Share your handle: '),
+            U.h('span.chip.chip-accent', {
+              text: U.handle(App.Sync.cfg.account.handle) })
           ]));
           return;
         }
-        const incoming = rows.filter(function (r) {
-          return r.status === 'pending' && r.direction === 'incoming'; });
         const outgoing = rows.filter(function (r) {
           return r.status === 'pending' && r.direction === 'outgoing'; });
         const accepted = rows.filter(function (r) { return r.status === 'accepted'; });
 
-        if (incoming.length) {
-          listWrap.appendChild(U.h('.group-head', [U.h('span', 'Requests for you')]));
-          incoming.forEach(function (f) { listWrap.appendChild(friendRow(f, loadList, true)); });
-        }
         if (accepted.length) {
           listWrap.appendChild(U.h('.group-head', [U.h('span', 'Connected')]));
           accepted.forEach(function (f) { listWrap.appendChild(friendRow(f, loadList, false)); });
@@ -1325,9 +1577,9 @@
     return U.h('.ex-row', [
       U.h('.ex-thumb', { style: { fontSize: '20px' }, text: f.avatar_emoji || '💪' }),
       U.h('div', { style: { minWidth: 0 } }, [
-        U.h('.ex-name', { text: f.display_name || f.handle }),
+        U.h('.ex-name', { text: f.display_name || U.handle(f.handle) }),
         U.h('.ex-meta', [
-          U.h('span', { text: '@' + f.handle }),
+          U.h('span', { text: U.handle(f.handle) }),
           U.h('span', { style: { color: rk.color }, text: rk.name }),
           U.h('span', { text: U.num(f.rank_points, 0) + ' pts' }),
           f.has_connection ? null : U.h('span', { text: 'no project linked' })
@@ -1339,14 +1591,14 @@
           onclick: function () {
             /* respond_friend keys off the friendship row, not the account. */
             App.Sync.respondFriend(f.friendship_id, true)
-              .then(function () { U.toast('Connected', '@' + f.handle, 'good'); reload(); })
+              .then(function () { U.toast('Connected', U.handle(f.handle), 'good'); reload(); })
               .catch(function (e) { U.toast('Failed', e.message, 'bad'); });
           }
         }) : null,
         U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
           type: 'button', 'aria-label': 'Remove', title: 'Remove', html: U.icon('trash'),
           onclick: function () {
-            U.confirm({ title: 'Remove @' + f.handle + '?',
+            U.confirm({ title: 'Remove ' + U.handle(f.handle) + '?',
               message: 'They will no longer be able to read your training data.',
               confirmLabel: 'Remove', danger: true }).then(function (ok) {
               if (!ok) return;

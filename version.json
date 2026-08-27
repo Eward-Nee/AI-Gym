@@ -1,5 +1,5 @@
 {
-  "version": "0.5.3",
+  "version": "0.6.0",
   "name": "AI-Gym",
-  "notes": "Updating actually updates: the reload no longer serves cached code."
+  "notes": "Growth forecasting that knows strength has a ceiling, drag to reorder that works on a phone, and a sci-fi/cyberpunk background set."
 }
