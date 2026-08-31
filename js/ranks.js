@@ -170,26 +170,35 @@
      ------------------------------------------------------------------------ */
 
   /**
-   * Estimated one-rep max. Epley is used up to 10 reps; beyond that it drifts
-   * high, so the Brzycki/Epley average keeps long sets honest.
+   * Estimated one-rep max.
+   *
+   * This used to be Epley below ten reps and an Epley/Brzycki average above,
+   * which is what everyone does and what the reps-to-failure literature says
+   * is wrong at the long end. Both formulas were fitted to small samples and,
+   * read backwards, they turn a long set into a 1RM nobody could lift: a set
+   * of thirty came out at 3.6x the bar, where the meta-regression of 952
+   * reps-to-failure tests puts it near 1.85x.
+   *
+   * It now defers to App.Science, which holds the published curve and knows
+   * that a leg press allows more reps at the same fraction of a max than a
+   * bench press does. Pass the exercise and the estimate uses its curve;
+   * leave it out and it uses the general one, which is what the source paper
+   * recommends for everything it did not model separately.
+   *
+   * @param {number} weight
+   * @param {number} reps
+   * @param {Object} [exercise]
    */
-  function e1rm(weight, reps) {
-    weight = Number(weight) || 0;
-    reps = Math.max(1, Math.round(Number(reps) || 0));
-    if (!weight || !reps) return 0;
-    if (reps === 1) return weight;
-    const epley = weight * (1 + reps / 30);
-    if (reps <= 10) return epley;
-    const brzycki = weight * (36 / (37 - Math.min(reps, 36)));
-    return (epley + brzycki) / 2;
+  function e1rm(weight, reps, exercise) {
+    return App.Science.e1rm(weight, reps, exercise);
   }
 
   /** Best estimated 1RM across a set list. */
-  function bestE1RM(sets) {
+  function bestE1RM(sets, exercise) {
     let best = 0;
     (sets || []).forEach(function (s) {
       if (s.done === false) return;
-      best = Math.max(best, e1rm(s.weight, s.reps));
+      best = Math.max(best, e1rm(s.weight, s.reps, exercise));
     });
     return best;
   }
@@ -387,7 +396,7 @@
 
       (s.entries || []).forEach(function (en) {
         const ex = exMap[en.exerciseId];
-        const one = bestE1RM(en.sets);
+        const one = bestE1RM(en.sets, ex);
         const vol = volumeOf(en.sets);
         let reps = 0;
         (en.sets || []).forEach(function (st) {

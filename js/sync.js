@@ -1048,14 +1048,65 @@
     });
   }
 
+  /* ---------------------------------------------------------------------------
+     STAYING AWAKE WITHOUT BEING ASKED
+
+     A free Supabase project is paused after a stretch with nothing touching
+     it, and the write that prevents that is one call a day. Hanging it off
+     start() alone left three ways to miss a day, all of them ordinary:
+
+       * OPENED OFFLINE. start() returns immediately when there is no network,
+         so the day's write never happened — not even once the signal came
+         back ten minutes later.
+       * NEVER RELOADED. In a web-to-app wrapper the page stays in memory for
+         days. start() runs once, on the first launch, and a week of daily use
+         after that is a week of the app never asking again.
+       * LEFT OPEN OVER MIDNIGHT. The guard is per calendar day, so a page that
+         was already running when the day turned over is a page that has
+         already done "today".
+
+     So the same call is now made on every way back in: returning to the
+     foreground, regaining a network, and a slow timer behind both. It is free
+     to call — runKeepalive() returns immediately once the day is done — which
+     is exactly what makes it safe to call this often.
+     ------------------------------------------------------------------------ */
+
+  const WAKE_AFTER_MS = 5 * 60 * 1000;      /* away this long counts as a return */
+  const WAKE_EVERY_MS = 3 * 60 * 60 * 1000; /* backstop for a page never hidden */
+  let hiddenAt = 0;
+
+  /** Everything the first cloud call of a day needs, in order, never throwing. */
+  function wake() {
+    if (!navigator.onLine) return Promise.resolve(false);
+    if (!enabled() && !(hub && cfg.hub.enabled)) return Promise.resolve(false);
+    return keepSessionAlive()
+      .then(function () { return runKeepalive(); })
+      .then(function () { return pushPending().catch(function () {}); })
+      .then(function () { return true; })
+      .catch(function (e) {
+        console.warn('[sync] wake', e.message);
+        return false;
+      });
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+    if (!hiddenAt || Date.now() - hiddenAt < WAKE_AFTER_MS) return;
+    hiddenAt = 0;
+    wake();
+  });
+
+  setInterval(function () { if (!document.hidden) wake(); }, WAKE_EVERY_MS);
+
   window.addEventListener('online', function () {
     if (enabled()) schedulePush();
+    wake();
   });
 
   App.Sync = {
     HUB_DEFAULT: HUB_DEFAULT,
     cfg: cfg,
-    load: load, start: start, boot: boot,
+    load: load, start: start, boot: boot, wake: wake,
     status: status, onStatus: onStatus, enabled: enabled, signedIn: signedIn,
 
     testPersonal: testPersonal, connectPersonal: connectPersonal,

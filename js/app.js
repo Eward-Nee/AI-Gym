@@ -14,7 +14,7 @@
     { id: 'settings',  title: 'Control Panel', sub: 'Account, sync, theme',   icon: 'settings' }
   ];
 
-  const VERSION = '0.6.2';
+  const VERSION = '0.6.4';
 
   /* Six static, six animated. All derive their colour from the active scheme
      and mode, so they never fight the theme. */
@@ -290,8 +290,19 @@
           U.h('h2', 'AI-Gym could not start'),
           U.h('p.u-sm.u-muted', { text: err.message }),
           U.h('p.u-sm.u-muted', 'Try opening the app through a local server rather than ' +
-            'directly from the file system.')
+            'directly from the file system.'),
+          /* A version that will not start is the one case where an update is
+             most likely to be the fix, so the check has to survive the failure
+             that made it necessary. */
+          U.h('button.btn.btn-primary', {
+            type: 'button', html: U.icon('refresh') + '<span>Check for an update</span>',
+            onclick: function () { App.Update.autoCheck(true); }
+          })
         ]));
+        /* The automatic check is bound here as well as on the happy path — it
+           is idempotent, and a boot that died before reaching it would
+           otherwise never look for the release that fixes it. */
+        try { App.Update.boot(); } catch (e) { /* nothing left to fall back to */ }
       });
   }
 

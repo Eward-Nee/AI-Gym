@@ -13,6 +13,7 @@
 
   const TABS = [
     { id: 'overview', label: 'Overview' },
+    { id: 'volume', label: 'Volume' },
     { id: 'records', label: 'Records' },
     { id: 'forecast', label: 'Forecast' },
     { id: 'ranks', label: 'Ranks' },
@@ -52,12 +53,13 @@
     root.appendChild(U.h('.row.row-wrap', [
       tabs,
       U.h('.spacer'),
-      tab === 'overview' || tab === 'records' || tab === 'ranks'
+      tab === 'overview' || tab === 'volume' || tab === 'records' || tab === 'ranks'
         ? C.rangePicker(view.range, function (r) { view.range = r.id; draw(); })
         : null
     ]));
 
     if (tab === 'overview') drawOverview();
+    else if (tab === 'volume') drawVolume();
     else if (tab === 'records') drawRecords();
     else if (tab === 'forecast') drawForecast();
     else if (tab === 'ranks') drawRanks();
@@ -462,6 +464,180 @@
         }))
       ])])
     ]));
+  }
+
+  /* ===========================================================================
+     VOLUME — HOW MUCH, AND HOW IT WAS SPREAD
+
+     The heat figure answers "did this muscle get what it needs" in one colour.
+     This tab shows the two numbers underneath that answer, because they are
+     the two the training research actually has dose-response curves for:
+
+       WEEKLY SETS, which is the one that decides how much you grow, and
+       SETS PER SESSION, which is the one that decides how much of what you did
+       was worth doing.
+
+     There is deliberately no frequency target here. Volume-equated, training a
+     muscle more often does not by itself grow it faster — what costs you is
+     stacking more into one session than a session can use, and that is what
+     the "per session" column is for. Train chest twice because twenty sets on
+     Monday is fifteen sets' worth of stimulus, not because two is the magic
+     number. See js/science.js for the papers.
+     ========================================================================= */
+
+  function drawVolume() {
+    const sessions = rangeSessions();
+
+    if (!sessions.length) {
+      root.appendChild(U.h('.card', [U.h('.empty', [
+        U.h('.empty-title', 'Nothing logged in this period'),
+        U.h('p', 'Weekly volume needs sessions to count. Widen the range, or run a workout.')
+      ])]));
+      return;
+    }
+
+    const target = App.Store.weeklyTarget();
+    const rows = App.Store.muscleVolume(sessions);
+    const weeks = App.Store.trainingWeeks(sessions);
+    const puos = App.Science.SESSION_PUOS;
+
+    /* --- the headline ----------------------------------------------------- */
+    let inRange = 0, under = 0, lost = 0;
+    rows.forEach(function (r) {
+      const v = App.Science.volumeVerdict(r.sets, target);
+      if (v.key === 'in' || v.key === 'high') inRange++;
+      else if (r.sets >= 1) under++;
+      lost += r.wasted;
+    });
+
+    root.appendChild(U.h('.grid.grid-4', [
+      C.statTile('Muscles at target', inRange, 'of ' + rows.length),
+      C.statTile('Under-trained', under, 'muscles'),
+      C.statTile('Sets lost to stacking', U.num(lost, 1), '/ week'),
+      C.statTile('Weeks counted', weeks, weeks === 1 ? 'week' : 'weeks')
+    ]));
+
+    /* --- per muscle group ------------------------------------------------- */
+    const setsMap = Object.create(null);
+    rows.forEach(function (r) { setsMap[r.id] = r.sets; });
+    const byGroup = App.Muscles.groupAverages(setsMap);
+    const groupRows = Object.keys(byGroup)
+      .filter(function (g) { return byGroup[g] > 0; })
+      .sort(function (a, b) { return byGroup[b] - byGroup[a]; });
+
+    const groupEl = U.h('div');
+    root.appendChild(U.h('.card', [
+      U.h('.card-head', [U.h('div', [
+        U.h('h2', 'Weekly sets by muscle group'),
+        U.h('.card-sub', 'Hard-set equivalents per week, against a target of ' +
+          target + '. Groups are averaged across their regions, not summed — ' +
+          'four chest regions at eight sets each is a chest trained eight times, ' +
+          'not thirty-two.')
+      ])]),
+      groupEl
+    ]));
+    setTimeout(function () {
+      App.Charts.bars(groupEl, {
+        horizontal: true,
+        yFormat: function (v) { return U.num(v, 1) + ' sets'; },
+        data: groupRows.map(function (g) {
+          return { label: App.Muscles.GROUPS[g].name, value: byGroup[g] };
+        })
+      });
+    }, 0);
+
+    /* --- per muscle, with the spread --------------------------------------- */
+    root.appendChild(U.h('.card', [
+      U.h('.card-head', [U.h('div', [
+        U.h('h2', 'Every muscle'),
+        U.h('.card-sub', 'Credited sets are what the week was worth. Performed ' +
+          'is what you did. They part company when more than about ' + puos +
+          ' sets for one muscle land in a single session, past which another ' +
+          'set buys nothing the research can detect.')
+      ])]),
+      U.h('.table-wrap', [U.h('table.tbl', [
+        U.h('thead', [U.h('tr', [
+          U.h('th', 'Muscle'),
+          U.h('th.num', 'Sets / week'),
+          U.h('th.shrink', 'vs ' + target),
+          U.h('th.num', 'Days / week'),
+          U.h('th.num', 'Per session'),
+          U.h('th', 'Reading')
+        ])]),
+        U.h('tbody', rows.map(function (r) {
+          const v = App.Science.volumeVerdict(r.sets, target);
+          const sp = App.Science.spreadVerdict(r.perSession);
+          const pct = Math.min(100, (r.sets / (target * 1.5)) * 100);
+          /* Where the target sits on a bar that runs to 1.5x it. */
+          return U.h('tr', [
+            U.h('td', [
+              U.h('div', { style: { fontWeight: '560' }, text: r.name }),
+              U.h('.u-xs.u-muted', {
+                text: (App.Muscles.GROUPS[r.group] || {}).name || r.group })
+            ]),
+            U.h('td.num', [
+              U.h('div', { text: U.num(r.sets, 1) }),
+              r.wasted >= 0.3
+                ? U.h('.u-xs.u-muted', { text: U.num(r.raw, 1) + ' done' })
+                : null
+            ]),
+            U.h('td.shrink', [
+              U.h('.vol-bar', [
+                U.h('i.vol-fill.is-' + v.tone, { style: { width: pct + '%' } }),
+                U.h('i.vol-mark', { style: { left: (100 / 1.5) + '%' } })
+              ])
+            ]),
+            U.h('td.num', { text: U.num(r.sessions, 1) }),
+            U.h('td.num', { text: U.num(r.perSession, 1) }),
+            U.h('td', [
+              U.h('span.badge' + (v.tone === 'good' ? '.badge-good' :
+                v.tone === 'low' ? '.badge-bad' : ''), { text: v.label }),
+              sp.key === 'clean' ? null
+                : U.h('.u-xs.u-muted', { style: { marginTop: '3px' }, text: sp.label })
+            ])
+          ]);
+        }))
+      ])])
+    ]));
+
+    /* --- what it is scored against ----------------------------------------- */
+    root.appendChild(U.h('.card', [
+      U.h('.card-head', [U.h('div', [
+        U.h('h2', 'What these numbers are scored against'),
+        U.h('.card-sub', 'The dose-response research behind the figures, and ' +
+          'what it does not say.')
+      ])]),
+      U.h('.stack-sm', [
+        sciNote('Volume is the lever.',
+          'Across 67 studies and 2,058 people, muscle size keeps rising with ' +
+          'weekly sets — with diminishing returns, and with no ceiling the data ' +
+          'can find. Twelve sets a muscle is the middle of the useful range, ' +
+          'not a wall; it is a setting for that reason.'),
+        sciNote('Frequency is not.',
+          'With weekly volume held equal, training a muscle more often does ' +
+          'not clearly grow it faster. The reason twice a week keeps beating ' +
+          'once in the trials is that the second day is where the sets a single ' +
+          'session cannot use go.'),
+        sciNote('A session saturates around ' + puos + ' sets.',
+          'Past roughly ' + puos + ' sets for one muscle in one session, another ' +
+          'set no longer produces a difference large enough to detect. Sets ' +
+          'beyond it are credited at a floor rather than at zero — "not ' +
+          'detectably better" is not "worthless".'),
+        sciNote('Effort decides what a set is worth.',
+          'Strength gains are much the same whether sets end at failure or ' +
+          'several reps short. Growth is not: it rises as sets end closer to ' +
+          'failure, and falls away past about four or five reps in reserve. ' +
+          'Nothing has to be typed in — the reps-to-failure curve reads it off ' +
+          'the load and the reps.')
+      ])
+    ]));
+  }
+
+  function sciNote(title, body) {
+    return U.h('.sci-note', [
+      U.h('.sci-note-title', { text: title }),
+      U.h('p.u-sm.u-muted', { text: body })
+    ]);
   }
 
   /* ===========================================================================

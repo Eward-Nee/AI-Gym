@@ -189,6 +189,29 @@
       });
     }
 
+    /**
+     * More sets for one muscle than a single session can use.
+     *
+     * Past about eleven sets for one muscle in one day, another set stops
+     * producing a difference large enough for the research to detect — so the
+     * plan is asking for work it will not be paid for. The fix is not to do
+     * less; it is to do the same amount on two days, which is the only thing
+     * training a muscle more often reliably buys.
+     */
+    function stackedNote(stacked) {
+      if (!stacked || !stacked.length) return null;
+      const top = stacked.slice(0, 3);
+      return U.h('.sci-note', { style: { marginTop: '14px' } }, [
+        U.h('.sci-note-title', { text: 'More than one session can use' }),
+        U.h('p.u-sm.u-muted', { text: top.map(function (m) {
+          return m.name + ' (' + U.num(m.sets, 1) + ' sets, about ' +
+            U.num(m.lost, 1) + ' of them wasted)';
+        }).join(', ') + '. Past roughly ' + App.Science.SESSION_PUOS +
+          ' sets for one muscle in a day another set buys nothing measurable. ' +
+          'Split them over two days and every one counts.' })
+      ]);
+    }
+
     function refreshStats() {
       U.clear(statsWrap);
       const st = App.Store.workoutStats(draft);
@@ -208,7 +231,8 @@
         ]),
         figWrap,
         U.h('.label', { style: { marginTop: '12px' } }, 'Muscle load'),
-        C.muscleList(st.heat, 10, { absolute: true })
+        C.muscleList(st.heat, 10, { absolute: true }),
+        stackedNote(st.stacked)
       ]));
 
       statsWrap.appendChild(U.h('.card', [
@@ -871,15 +895,42 @@
 
         function drawSets() {
           U.clear(setsWrap);
+          /* What this movement says you can do, as of today. It is what turns
+             a weight and a rep count into "that was two short of failure",
+             which is the one thing about a set that a log cannot see and the
+             growth research cares most about. */
+          const reference = App.Store.referenceOneRM(en.exerciseId);
+
           en.sets.forEach(function (st, si) {
-            const e1rmCell = U.h('span.u-xs.u-muted.u-center');
+            const oneCell = U.h('span');
+            const rirCell = U.h('span.set-rir');
+            const e1rmCell = U.h('span.u-xs.u-muted.u-center.set-est',
+              [oneCell, rirCell]);
 
             /* The estimate is the entire reason the weight and rep boxes sit
                next to each other, so it has to move as they are typed — not
                when the set is finally ticked. */
             function syncE1rm() {
-              e1rmCell.textContent = st.weight && st.reps
-                ? U.num(App.Ranks.e1rm(st.weight, st.reps), 0) : '—';
+              if (!st.weight || !st.reps) {
+                oneCell.textContent = '—';
+                rirCell.textContent = '';
+                return;
+              }
+              oneCell.textContent = U.num(App.Ranks.e1rm(st.weight, st.reps, ex), 0);
+
+              const load = Number(st.weight) *
+                App.Ranks.loadFactor(ex, App.Store.getSettings()) +
+                (ex && ex.equipment === 'bodyweight'
+                  ? Number(App.Store.getSettings().bodyweight) || 0 : 0);
+              const near = App.Science.proximity(load, st.reps, reference, ex);
+              /* Rounded to whole reps and capped at "5+": the between-person
+                 spread at these loads is two to four reps, so a decimal here
+                 would be a precision the curve does not have. */
+              if (!near) { rirCell.textContent = ''; return; }
+              const rir = Math.round(near.rir);
+              rirCell.textContent = 'RIR ' + (rir >= 5 ? '5+' : rir);
+              rirCell.classList.toggle('is-hard', rir <= 1);
+              rirCell.classList.toggle('is-easy', rir >= 4);
             }
             syncE1rm();
 
@@ -1232,7 +1283,7 @@
     sessions.forEach(function (s) {
       const ratios = [];
       (s.entries || []).forEach(function (en) {
-        const one = App.Ranks.bestE1RM(en.sets);
+        const one = App.Ranks.bestE1RM(en.sets, App.Store.getExercise(en.exerciseId));
         if (!one) return;
         if (!baseline[en.exerciseId]) { baseline[en.exerciseId] = one; }
         ratios.push((one / baseline[en.exerciseId]) * 100);

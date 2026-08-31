@@ -724,6 +724,39 @@ body.is-reordering [data-drag-item]:not(.is-dragging) { pointer-events: none; }
 .mlist-pct { font-variant-numeric: tabular-nums; font-size: var(--fs-xs); color: var(--text-3);
   font-family: var(--font-mono); }
 
+/* --- the live estimate in the session runner ------------------------------
+   Two lines in one narrow column: the estimated max on top, and how far the
+   set was from failure underneath. The second line is the useful one while
+   the set is being typed, because it is the only thing on the row that says
+   whether the set was hard. */
+.set-est { display: flex; flex-direction: column; align-items: center;
+  justify-content: center; line-height: 1.25; min-width: 0; }
+.set-rir { font-size: 10px; letter-spacing: 0.02em; color: var(--text-3);
+  white-space: nowrap; }
+.set-rir.is-hard { color: var(--good); }
+.set-rir.is-easy { color: var(--warn); }
+
+/* --- weekly volume, against its target ------------------------------------
+   The bar runs to 1.5x the target rather than to the largest value on screen,
+   so the tick is always in the same place and two rows can be read against
+   each other instead of each against itself. */
+.vol-bar { position: relative; width: 92px; height: 6px; border-radius: var(--r-full);
+  background: var(--surface-3); overflow: hidden; }
+.vol-fill { display: block; height: 100%; border-radius: var(--r-full);
+  background: var(--heat-4); }
+.vol-fill.is-good { background: var(--good); }
+.vol-fill.is-mid  { background: var(--warn); }
+.vol-fill.is-low  { background: var(--text-3); }
+/* The target tick sits ON the bar, so it stays visible through the fill. */
+.vol-mark { position: absolute; top: -1px; bottom: -1px; width: 2px; margin-left: -1px;
+  background: var(--text-1); opacity: 0.55; border-radius: 1px; }
+
+/* --- a research note ------------------------------------------------------ */
+.sci-note { border-left: 2px solid var(--line-strong);
+  padding: 2px 0 2px var(--sp-3); }
+.sci-note-title { font-weight: 600; font-size: var(--fs-sm); margin-bottom: 2px; }
+.sci-note p { margin: 0; }
+
 /* =============================================================================
    CHARTS
    ============================================================================= */
@@ -963,7 +996,7 @@ body.is-reordering [data-drag-item]:not(.is-dragging) { pointer-events: none; }
 /* The runner adds a per-set remove button, so it carries one more column than
    the builder. The weight/rep boxes keep the flexible track; both buttons sit
    in auto tracks so they stay finger-sized as the row narrows. */
-.set-grid-run { grid-template-columns: 26px repeat(2, minmax(52px, 1fr)) minmax(34px, auto) auto auto; }
+.set-grid-run { grid-template-columns: 26px repeat(2, minmax(52px, 1fr)) minmax(52px, auto) auto auto; }
 .set-grid-run.is-done { opacity: 0.62; }
 .set-idx { font-size: var(--fs-xs); color: var(--text-3); font-family: var(--font-mono);
   text-align: center; }
@@ -1278,7 +1311,7 @@ body.is-reordering [data-drag-item]:not(.is-dragging) { pointer-events: none; }
   /* Touch targets are 36px here, so both action tracks are sized to hold one
      rather than to a guess — a 30px track clipped the button by 6px. */
   .set-grid-run {
-    grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr) 38px 36px 36px;
+    grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr) 48px 36px 36px;
     gap: 4px;
   }
 

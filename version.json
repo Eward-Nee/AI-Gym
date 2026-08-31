@@ -1,5 +1,5 @@
 {
-  "version": "0.6.2",
+  "version": "0.6.4",
   "name": "AI-Gym",
-  "notes": "Heat is a weekly rate, so a hard week no longer reports 3%. Windows are rectangles. Hologrid is tuned for both a phone and a desktop."
+  "notes": "The update check now runs every time the app is opened - on boot, on returning to the foreground, and on regaining a network - and opens the dialog itself. Later means a day, not forever. The daily keep-alive follows the same triggers, so a project cannot be missed because the app was offline at launch or never reloaded."
 }

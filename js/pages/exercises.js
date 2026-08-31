@@ -392,10 +392,89 @@
       detailEl.appendChild(U.h('.card', [
         U.h('.empty', [
           U.h('.empty-title', 'Not logged yet'),
-          U.h('p', 'Once you train this movement, its estimated 1RM curve appears here.')
+          U.h('p', 'Once you train this movement, its estimated 1RM curve and its ' +
+            'own load-to-reps table appear here.')
         ])
       ]));
     }
+
+    const reps = repsCard(ex, units);
+    if (reps) detailEl.appendChild(reps);
+  }
+
+  /* ---------------------------------------------------------------------------
+     LOAD AND REPS
+
+     The reps-to-failure curve, pointed at one movement and one lifter. It
+     answers the question people actually plan in — "what do I put on the bar
+     for eights?" — and it answers it with this movement's own curve, which is
+     the part the classic percentage chart on the gym wall gets wrong.
+
+     A leg press allows thirteen reps at 80% of a max where the general case
+     allows eight. Handed the same chart, someone picking a weight for tens
+     picks one they will finish four reps short of failure on, and wonders why
+     their legs are not growing.
+
+     The spread is shown because it is large and real: between two people with
+     the same one-rep max, reps at the same load differ by an SD of two and a
+     half at 80% and over four at 60%. The table is a starting point to be
+     corrected by what actually happens, and it says so.
+     ------------------------------------------------------------------------ */
+
+  const REP_TARGETS = [1, 3, 5, 8, 10, 12, 15, 20, 25, 30];
+
+  function repsCard(ex, units) {
+    const reference = App.Store.referenceOneRM(ex.id);
+    if (!(reference > 0)) return null;
+
+    const profile = App.Science.profileFor(ex);
+    const step = ex.equipment === 'bodyweight' ? 0 :
+      (App.Store.getSettings().units === 'lb' ? 5 : 2.5);
+
+    return U.h('.card', [
+      U.h('.card-head', [U.h('div', [
+        U.h('h2', 'Load and reps'),
+        U.h('.card-sub', 'What each rep target costs on this movement, from ' +
+          'your best estimated max of ' + U.num(App.Store.loggedLoad(reference, ex), 0) +
+          ' ' + units + (ex.equipment === 'bodyweight' ? ' of system load' : '') +
+          '. Built on the ' + (profile.id === 'legs'
+            ? 'leg-press curve, which allows markedly more reps at the same ' +
+              'fraction of a max than the general one'
+            : 'general reps-to-failure curve') + '.')
+      ])]),
+      U.h('.table-wrap', [U.h('table.tbl', [
+        U.h('thead', [U.h('tr', [
+          U.h('th.num', 'Reps'),
+          U.h('th.num', '% of max'),
+          U.h('th.num', 'Load'),
+          U.h('th', 'Expect')
+        ])]),
+        U.h('tbody', REP_TARGETS.map(function (r) {
+          const pct = App.Science.percentForReps(r, profile);
+          const raw = App.Store.loggedLoad(reference * pct / 100, ex);
+          /* Rounded to something loadable, but never above the max itself —
+             a single prescribed at 245 against a 244 max reads as an error. */
+          const load = step
+            ? Math.min(Math.round(raw / step) * step, App.Store.loggedLoad(reference, ex))
+            : raw;
+          const sd = App.Science.repsSD(pct);
+          const lo = Math.max(1, Math.round(r - sd));
+          const hi = Math.round(r + sd);
+          return U.h('tr', [
+            U.h('td.num', { text: String(r) }),
+            U.h('td.num.u-muted', { text: U.num(pct, 0) + '%' }),
+            U.h('td.num', { style: { fontWeight: '560' },
+              text: load > 0 ? U.num(load, step >= 1 ? 0 : 1) + ' ' + units : 'bodyweight' }),
+            U.h('td.u-sm.u-muted', { text: lo + '–' + hi + ' reps' })
+          ]);
+        }))
+      ])]),
+      U.h('p.u-xs.u-muted', { style: { marginTop: '10px' },
+        text: 'The last column is the spread between people with the same max, ' +
+          'not a margin of error in the load. Where your own sets land inside ' +
+          'it is worth more than the table — log a set to failure and the ' +
+          'estimate moves with you.' })
+    ]);
   }
 
   /* ---------------------------------------------------------------------------

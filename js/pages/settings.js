@@ -50,6 +50,10 @@
           U.h('div', { style: { fontWeight: '620' }, text: 'AI-Gym ' + App.VERSION }),
           U.h('.u-xs.u-muted', 'Offline-first training log. Your data stays on this ' +
             'device unless you link a project.'),
+          /* The button beside this is a convenience, not the mechanism. Saying
+             so stops it reading as the only way an update is ever found. */
+          U.h('.u-xs.u-muted', 'Checked automatically every time you open the app. ' +
+            'This button asks now.'),
           status
         ]),
         U.h('.spacer'),
@@ -99,6 +103,7 @@
   function profileCard() {
     const s = App.Store.getSettings();
     const restSetHint = U.h('.hint', { text: secondsHint(s.restDefault) });
+    const weeklyHint = U.h('.hint', { text: weeklySetsHint(s.weeklySets) });
     const restExHint = U.h('.hint', { text: secondsHint(s.restBetweenExercises) });
     return U.h('.card', [
       U.h('.card-head', [
@@ -167,8 +172,48 @@
           ]),
           restExHint
         ])
+      ]),
+      /* THE ONE NUMBER THE HEAT FIGURES ARE SCORED AGAINST.
+         It is a setting rather than a constant because the dose-response
+         research does not find a ceiling: size keeps rising with weekly sets,
+         with diminishing returns, as far out as the data goes. Twelve is the
+         middle of the range where the returns are still clearly worth having,
+         and someone running a higher-volume programme is not wrong — their
+         figures should just be scored against what they are actually doing. */
+      U.h('.grid.grid-2', [
+        U.h('.field', [
+          U.h('label.label', 'Weekly hard sets per muscle'),
+          U.h('.row', [
+            U.h('input.input.input-num', { type: 'number', min: '4', max: '40', step: '1',
+              value: s.weeklySets, inputmode: 'numeric',
+              onchange: function () {
+                const v = Math.min(40, Math.max(4, Number(this.value) || 12));
+                this.value = v;
+                App.Store.saveSettings({ weeklySets: v });
+                weeklyHint.textContent = weeklySetsHint(v);
+                U.toast('Saved', 'Heat figures rescored.');
+              } }),
+            U.h('span.u-sm.u-muted', 'sets')
+          ]),
+          weeklyHint
+        ])
       ])
     ]);
+  }
+
+  /**
+   * What a weekly set target means, in the words of the evidence behind it.
+   * Ten to twenty is where the meta-regressions put returns that are still
+   * clearly worth having; below and above that the sentence should change,
+   * because the number has stopped meaning the same thing.
+   */
+  function weeklySetsHint(v) {
+    if (v < 8) return v + ' sets a week per muscle — below where the dose-response ' +
+      'research finds most of the growth. Fine as a maintenance target.';
+    if (v <= 20) return v + ' sets a week per muscle, which is inside the range ' +
+      'the volume meta-regressions find worth training in.';
+    return v + ' sets a week per muscle — past this the returns per set are small, ' +
+      'and no single session can absorb more than about eleven of them.';
   }
 
   /* ===========================================================================
@@ -1769,11 +1814,13 @@
     card.appendChild(U.h('.card-head', [
       U.h('div', [
         U.h('h2', 'Diagnostics'),
-        U.h('.card-sub', 'What is stored where, and whether the daily keep-alive ran.')
+        U.h('.card-sub', 'What is stored where, and whether today’s keep-alive ran. ' +
+          'It runs on its own — on opening the app, on coming back to it, and ' +
+          'on regaining a network — so nothing here needs pressing.')
       ]),
       U.h('.spacer'),
       U.h('button.btn.btn-sm', {
-        type: 'button', html: U.icon('refresh') + '<span>Run keep-alive now</span>',
+        type: 'button', html: U.icon('refresh') + '<span>Run it now</span>',
         onclick: function () {
           const btn = this;
           btn.disabled = true;

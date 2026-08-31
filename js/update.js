@@ -21,11 +21,31 @@
   const REPO = 'Eward-Nee/AI-Gym';
   const RELEASES_API = 'https://api.github.com/repos/' + REPO + '/releases/latest';
   const RELEASES_PAGE = 'https://github.com/' + REPO + '/releases';
-  const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;   /* at most four times a day */
+  /* A DEBOUNCE, NOT A SCHEDULE.
+     This used to be a six-hour gate, which meant the app looked for updates at
+     most four times a day: open it a second time that morning and it did not
+     look at all, so a release published in between sat there unnoticed and the
+     automatic check looked broken. Opening the app should check, every time.
+     All this interval is for now is collapsing the burst that a boot and an
+     immediate foreground event would otherwise produce. */
+  const MIN_GAP_MS = 45 * 1000;
+
+  /* "Later" means later, not never. A version dismissed is re-offered a day
+     on, and immediately if something newer than it appears. */
+  const SKIP_FOR_MS = 24 * 60 * 60 * 1000;
+
+  /* Hidden for longer than this and coming back counts as opening the app.
+     In a web-to-app wrapper that IS how the app is opened most of the time —
+     the page is never torn down, so a boot-only check would run once and then
+     never again for as long as the wrapper lived. */
+  const RESUME_AFTER_MS = 5 * 60 * 1000;
+
   const RESUME_MAX_AGE_MS = 12 * 60 * 60 * 1000;  /* stale snapshots are dropped */
 
   let snapshotProvider = null;
   let pending = null;      /* the version we found, if newer */
+  let checking = false;    /* one check in flight at a time */
+  let hiddenAt = 0;
 
   /* ---------------------------------------------------------------------------
      VERSION COMPARISON
@@ -88,23 +108,70 @@
    */
   function check(force) {
     return App.DB.getMeta('update.lastCheck', 0).then(function (last) {
-      if (!force && Date.now() - (last || 0) < CHECK_INTERVAL_MS) return null;
+      if (!force && Date.now() - (last || 0) < MIN_GAP_MS) return null;
       if (!navigator.onLine) return null;
 
       return checkGithub()
         .catch(function () { return null; })
         .then(function (gh) { return gh || checkDeployed().catch(function () { return null; }); })
         .then(function (found) {
-          App.DB.setMeta('update.lastCheck', Date.now());
+          /* Only a check that actually reached something counts as a check.
+             Stamping the clock on a failed one meant an app opened with no
+             signal went quiet for the whole window afterwards, including once
+             the network came back. */
+          if (found) App.DB.setMeta('update.lastCheck', Date.now());
           if (!found || !isNewer(found.version)) return null;
-          return App.DB.getMeta('update.skipped', null).then(function (skipped) {
-            /* Respect "Later" until a version newer than the skipped one appears. */
-            if (skipped && compare(found.version, skipped) <= 0 && !force) return null;
+          return readSkip().then(function (sk) {
+            if (!force && sk && compare(found.version, sk.version) <= 0 &&
+                Date.now() - (sk.at || 0) < SKIP_FOR_MS) return null;
             pending = found;
             return found;
           });
         });
     }).catch(function () { return null; });
+  }
+
+  /**
+   * Run a check and act on it — the automatic path, as opposed to check(),
+   * which only answers the question.
+   *
+   * Never opens a second dialog over a first. A resume can land while the
+   * first-run walkthrough or a schema prompt is still on screen, and stacking
+   * sheets on a phone leaves the user tapping through a pile of them.
+   */
+  function autoCheck(force) {
+    if (checking) return Promise.resolve(null);
+    if (document.querySelector('.modal-root')) return Promise.resolve(null);
+    checking = true;
+    return check(force).then(function (found) {
+      if (found) { prompt(found); return null; }
+      /* No app update pending — is the project itself behind? */
+      return checkSchema().then(function (st) { if (st) promptSchema(st); });
+    }).catch(function () {}).then(function (r) {
+      checking = false;
+      return r || null;
+    });
+  }
+
+  /**
+   * Every way the app can be "opened" without being loaded.
+   *
+   * A reload is the obvious one and boot() covers it. The others are a wrapper
+   * or a phone browser bringing a page that never left memory back to the
+   * front, and a device that was offline at boot finding a network later —
+   * both of which are, to the user, opening the app.
+   */
+  function bindAutoCheck() {
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+      if (!hiddenAt || Date.now() - hiddenAt < RESUME_AFTER_MS) return;
+      hiddenAt = 0;
+      setTimeout(function () { autoCheck(false); }, 800);
+    });
+
+    window.addEventListener('online', function () {
+      setTimeout(function () { autoCheck(false); }, 1500);
+    });
   }
 
   /* ---------------------------------------------------------------------------
@@ -283,8 +350,24 @@
     }).catch(function () { return null; });
   }
 
+  /**
+   * Remember a "Later", with the time it was said.
+   *
+   * The time is the point. Stored as a bare version string this was a
+   * permanent dismissal — the one button in the dialog that quietly turned the
+   * automatic check off for good.
+   */
   function skip(version) {
-    return App.DB.setMeta('update.skipped', version);
+    return App.DB.setMeta('update.skipped', { version: version, at: Date.now() });
+  }
+
+  /** Reads both shapes: the old bare string counts as long expired. */
+  function readSkip() {
+    return App.DB.getMeta('update.skipped', null).then(function (r) {
+      if (!r) return null;
+      if (typeof r === 'string') return { version: r, at: 0 };
+      return r.version ? r : null;
+    }).catch(function () { return null; });
   }
 
   /* ---------------------------------------------------------------------------
@@ -492,29 +575,30 @@
   }
 
   /** Never rejects: an update check must not be able to break start-up. */
+  let booted = false;
+
   function boot() {
+    if (booted) return;
+    booted = true;
+
     bindLifecycle();
+    bindAutoCheck();
 
     /* Settle the previous update before looking for the next one, otherwise a
        failed update is immediately re-offered with no explanation of why the
        last attempt changed nothing. */
     verifyApplied();
 
-    /* Give the app a moment to settle before spending network on this. */
-    setTimeout(function () {
-      check(false)
-        .then(function (found) {
-          if (found) { prompt(found); return null; }
-          /* No app update pending — is the project itself behind? */
-          return checkSchema().then(function (st) { if (st) promptSchema(st); });
-        })
-        .catch(function () {});
-    }, 4000);
+    /* Give the app a moment to settle before spending network on this — and
+       long enough that the first-run walkthrough, if this is a first run, is
+       already on screen and owns the one dialog slot. */
+    setTimeout(function () { autoCheck(false); }, 3500);
   }
 
   App.Update = {
     VERSION_URL: RELEASES_PAGE,
     check: check,
+    autoCheck: autoCheck,
     checkSchema: checkSchema,
     prompt: prompt,
     promptSchema: promptSchema,

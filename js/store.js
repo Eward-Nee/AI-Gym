@@ -27,6 +27,11 @@
        A per-exercise `loadMode` overrides it; see App.Ranks.loadMode(). */
     dumbbellLoad: 'per-hand',  /* per-hand | total */
     restBetweenExercises: 150,
+    /* Hard sets per muscle per week the heat figures are scored against.
+       Twelve is the middle of the range the dose-response meta-regressions
+       find useful returns in, and it is a setting because those same papers
+       find the returns continue past it rather than stopping there. */
+    weeklySets: 12,
     /* Muscle-group ordering for "group by muscle group" in the builder. Off by
        default, in which case groups follow the taxonomy's own `order`.
        See App.Muscles.orderGroups(). */
@@ -508,90 +513,208 @@
      two figures, because no two figures were on the same scale.
 
      Heat is now measured against a fixed requirement: **how much work a muscle
-     needs in order to get stronger**, for a person of this bodyweight. 100%
-     means "this muscle got the training it needs". Below is under-trained,
-     above is more than the minimum. That number means the same thing on every
-     figure in the app, this week and next.
+     needs in order to grow**, for a person of this bodyweight. 100% means "this
+     muscle got the training it needs". Below is under-trained, above is more
+     than the minimum. That number means the same thing on every figure in the
+     app, this week and next.
 
      The unit is the HARD SET, which is how training volume is actually
-     prescribed. Roughly ten to twenty hard sets per muscle per week is the
-     productive range; twelve is the working figure here.
+     prescribed, and the requirement is twelve of them a week per muscle — the
+     middle of the range the dose-response meta-regressions put the useful
+     returns in. It is a setting, because those same papers find the returns
+     carry on past twelve rather than stopping there.
 
-     What makes a set "hard" has three parts:
+     WHAT MAKES A SET HARD is no longer decided here. It is decided in
+     App.Science, against the published curves, and this file's job is to point
+     those curves at the log. Three things go into it:
 
-       * How heavy it was FOR A BODY THIS SIZE. The world record for the
-         movement is already re-scaled allometrically to the lifter's
-         bodyweight (see ranks.js), so the fraction of it a set represents is a
-         size-fair measure of load. It moves the credit within a band rather
-         than scaling it outright — a beginner training hard is still training
-         hard, and must still be able to fill the figure.
+       * HOW CLOSE TO FAILURE IT WAS. The one thing a volume count cannot see,
+         and the one thing the growth literature is clearest about: strength
+         gains are flat across a wide band of reps-in-reserve, growth is not.
+         Nothing has to be typed in for this. The reps-to-failure curve says
+         how many reps the load allowed, the log says how many were done, and
+         the difference is the reps left in reserve.
 
-       * How long the set was. Strength work lives in roughly three to fifteen
-         reps. A heavy single and a set of thirty both contribute less per set
-         than a set in that range.
+       * HOW LONG THE SET WAS. Only at the ends now. A set of twenty taken near
+         failure grows a muscle about as well as a set of eight, so the old
+         three-to-fifteen band — a strength heuristic wearing a growth hat — is
+         gone. Singles and thirty-rep sets still count for less.
 
-       * WHETHER IT ENDED IN FAILURE. This is the part a volume count misses.
-         Falling short of the reps that were planned does not mean the set was
-         worse — it means the set could not be finished, which is the clearest
-         evidence available that the muscle was taken to its limit. Coming up
-         short therefore earns MORE credit per set, not less.
+       * WHERE IT SAT IN THE SESSION. The eleventh set for one muscle in one
+         session is the point past which another one buys nothing detectable,
+         so late sets are discounted. This is the entire frequency model, and
+         it is deliberately indirect: see App.Science for why training a muscle
+         on more days is worth something without being worth anything in
+         itself.
+
+     A set is scored against the lifter's OWN best, not against a world record.
+     "Near failure" is a statement about this person on this movement, and the
+     record only ever entered the old formula as a stand-in for the thing that
+     actually mattered.
      ------------------------------------------------------------------------ */
 
-  /** Hard sets a muscle needs per week to be trained for strength. */
-  const HARD_SETS_PER_WEEK = 12;
+  /** Hard sets a muscle needs per week, when the setting says nothing. */
+  const HARD_SETS_PER_WEEK = App.Science.WEEKLY_SETS;
 
   /** Ceiling on a reported percentage, so "well past the requirement" is still
       a readable number rather than a runaway one. */
   const HEAT_MAX = 150;
 
+  /** The weekly requirement in force — the setting, or the default. */
+  function weeklyTarget() {
+    const n = Number(state.settings && state.settings.weeklySets);
+    return n >= 4 && n <= 40 ? n : HARD_SETS_PER_WEEK;
+  }
+
+  /* --- the lifter's own yardstick ------------------------------------------
+     Proximity to failure is relative to what THIS person can lift, so every
+     movement needs a reference 1RM: the best estimate the log had produced for
+     it BY THE DAY OF THE SET.
+
+     By that day, not ever. Judging a set from two years ago against today's
+     best would read the whole of someone's early training as easy sets a long
+     way from failure, when at the time they were maximal. A running best is
+     what the lifter actually knew about themselves at the time, and it is the
+     only reading that keeps a two-year figure comparable with a one-week one.
+
+     The first set of a new movement is therefore its own reference, and reads
+     as a set to failure — which is the right default, since there is no
+     evidence yet that anything heavier was possible. It stops reading that way
+     the moment it is beaten.
+
+     Built as one pass over the log, in date order, and dropped on any change.
+     ------------------------------------------------------------------------ */
+
+  let refIndex = null;
+
   /**
-   * One set's contribution, in hard-set equivalents.
+   * What the body actually moved, from what was written down: a per-hand
+   * dumbbell entry is half of it, and a bodyweight movement carries the
+   * athlete as well as any added plate.
+   */
+  function systemLoad(weight, ex) {
+    const load = (Number(weight) || 0) * App.Ranks.loadFactor(ex, state.settings);
+    return ex && ex.equipment === 'bodyweight'
+      ? load + Math.max(30, Number(state.settings.bodyweight) || 80)
+      : load;
+  }
+
+  /** The inverse — a system load written back in the units the log uses. */
+  function loggedLoad(load, ex) {
+    const bw = ex && ex.equipment === 'bodyweight'
+      ? Math.max(30, Number(state.settings.bodyweight) || 80) : 0;
+    return Math.max(0, (Number(load) || 0) - bw) /
+      App.Ranks.loadFactor(ex, state.settings);
+  }
+
+  /**
+   * The best 1RM an entry is evidence for, in SYSTEM load.
+   *
+   * System load, not logged weight, because that is what proximity to failure
+   * is measured in. Comparing a doubled dumbbell load against a reference
+   * built from the single written-down number would put every dumbbell set at
+   * twice its real fraction of a max, and read all of them as failure.
+   */
+  function entryOneRM(en, ex) {
+    let best = 0;
+    (en.sets || []).forEach(function (st) {
+      if (st.done === false) return;
+      best = Math.max(best, App.Ranks.e1rm(systemLoad(st.weight, ex), st.reps, ex));
+    });
+    return best;
+  }
+
+  function buildRefIndex() {
+    refIndex = Object.create(null);
+    const byDay = Object.create(null);
+
+    state.sessions.forEach(function (s) {
+      (s.entries || []).forEach(function (en) {
+        const one = entryOneRM(en, getExercise(en.exerciseId));
+        if (!(one > 0)) return;
+        const day = s.date || '9999-99-99';
+        const k = en.exerciseId;
+        const m = byDay[k] || (byDay[k] = Object.create(null));
+        if (one > (m[day] || 0)) m[day] = one;
+      });
+    });
+
+    for (const k in byDay) {
+      const days = Object.keys(byDay[k]).sort();
+      let run = 0;
+      refIndex[k] = days.map(function (d) {
+        run = Math.max(run, byDay[k][d]);
+        return { date: d, best: run };
+      });
+    }
+  }
+
+  /**
+   * The best estimated 1RM for a movement as at `date` — or ever, when no date
+   * is given, which is what a plan that has not happened yet should be judged
+   * against.
+   */
+  function referenceOneRM(exerciseId, date) {
+    if (!refIndex) buildRefIndex();
+    const rows = refIndex[exerciseId];
+    if (!rows || !rows.length) return 0;
+    if (!date) return rows[rows.length - 1].best;
+
+    let lo = 0, hi = rows.length - 1, found = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (rows[mid].date <= date) { found = mid; lo = mid + 1; } else hi = mid - 1;
+    }
+    /* A set predating every record can only be the very first one logged, and
+       its own session is in the index, so this is the empty-log case. */
+    return found < 0 ? 0 : rows[found].best;
+  }
+
+  on('change', function () { refIndex = null; });
+  on('ready', function () { refIndex = null; });
+
+  /**
+   * How many reps were left in the tank.
+   *
+   * Two sources, and the stronger one wins. Coming up short of the reps the
+   * plan asked for is not an estimate at all — it is a set that could not be
+   * finished, which is the clearest evidence of failure there is. Only when
+   * there is no plan to fall short of, or the plan was met, does the curve get
+   * consulted.
+   */
+  function estimateRIR(plannedReps, load, reps, ex, date) {
+    if (plannedReps > 0 && reps < plannedReps) return 0;
+
+    /* An unloaded set still trains the muscle, and there is nothing to judge
+       its heaviness by. Assume the ordinary working set rather than either
+       extreme. */
+    if (load <= 0) return 2.5;
+
+    const near = App.Science.proximity(load, reps, referenceOneRM(ex.id, date), ex);
+    return near ? near.rir : 2.5;
+  }
+
+  /**
+   * One set's contribution, in hard-set equivalents, before its share of each
+   * muscle and before its position in the session are applied.
    *
    * @param {Object} set          {weight, reps}
    * @param {number} plannedReps  reps the plan asked for, or 0 if unknown
    * @param {Object} ex           the exercise
-   * @param {number} bw           bodyweight
-   * @param {Object} settings
-   * @returns {number} usually 0.5 - 1.6
+   * @param {string} [date]       the day it was logged, for the reference 1RM
+   * @returns {number} usually 0.6 - 1.25
    */
-  function setStimulus(set, plannedReps, ex, bw, settings) {
+  function setStimulus(set, plannedReps, ex, date) {
     const reps = Number(set.reps) || 0;
     if (reps <= 0) return 0;
 
-    /* Three to fifteen reps is the productive band; outside it a set still
-       counts, just for less. */
-    const repFactor = reps < 3 ? 0.6 + reps * 0.13
-      : reps <= 15 ? 1
-      : Math.max(0.7, 1 - (reps - 15) * 0.02);
-
-    /* Falling short of the plan is evidence of failure, not of a poor set. */
-    const effort = plannedReps > 0
-      ? 1 + 0.6 * Math.min(1, Math.max(0, (plannedReps - reps) / plannedReps))
-      : 1;
-
-    /* What the body actually moved: a per-hand entry is half of it, and a
-       bodyweight movement carries the athlete as well as the added plate. */
-    let load = (Number(set.weight) || 0) * App.Ranks.loadFactor(ex, settings);
-    if (ex.equipment === 'bodyweight') load += bw;
-
-    if (load <= 0) {
-      /* An unloaded set still trains the muscle; there is simply nothing to
-         judge its heaviness by, so it sits at the bottom of the band. */
-      return 0.5 * repFactor * effort;
-    }
-
-    const ceiling = App.Ranks.exerciseRecord(ex, bw);
-    const rel = ceiling > 0 ? Math.min(1.2, App.Ranks.e1rm(load, reps) / ceiling) : 0.4;
-    /* A band, not a multiplier: load shifts the credit between 0.55 and 1.25
-       rather than deciding it outright. */
-    const quality = 0.55 + 0.7 * Math.min(1, Math.max(0, rel / 0.55));
-
-    return quality * repFactor * effort;
+    const rir = estimateRIR(plannedReps, systemLoad(set.weight, ex), reps, ex, date);
+    return App.Science.repFactor(reps) * App.Science.effortFactor(rir);
   }
 
   /**
    * The planned reps for each exercise of a session, from the workout it was
-   * run from — the baseline the failure bonus is measured against.
+   * run from — the baseline the failure reading is measured against.
    */
   function planFor(session) {
     if (!session || !session.workoutId) return null;
@@ -603,15 +726,28 @@
   }
 
   /**
-   * @param {Array}  groups  [{entries, plan}]
-   * @param {Object} opts    {days} — the window the requirement is scaled to
+   * Hard-set equivalents per muscle across a list of sessions.
+   *
+   * Raw and credited totals are kept apart. They differ by exactly the
+   * per-session saturation, which is what makes the gap between them readable
+   * as "work you stacked into one day and were not paid for".
+   *
+   * @param {Array} groups  [{entries, plan, date}] — one group per session
+   * @returns {Object} muscleId -> {raw, credited, sessions}
    */
-  function heatFrom(groups, opts) {
-    const settings = state.settings;
-    const bw = Math.max(30, Number(settings.bodyweight) || 80);
+  function volumeFrom(groups) {
     const acc = Object.create(null);
 
+    function cell(m) {
+      return acc[m] || (acc[m] = { raw: 0, credited: 0, sessions: 0 });
+    }
+
     groups.forEach(function (g) {
+      /* Sets accumulate WITHIN a session, because that is the window the
+         per-session ceiling applies to. A new group starts everything back at
+         zero, which is precisely why spreading the work pays. */
+      const inSession = Object.create(null);
+
       (g.entries || []).forEach(function (en) {
         const ex = getExercise(en.exerciseId);
         if (!ex || !ex.muscles) return;
@@ -629,15 +765,35 @@
         (en.sets || []).forEach(function (st, i) {
           if (st.done === false) return;
           const planned = plan && plan[i] ? Number(plan[i].reps) || 0 : 0;
-          const stim = setStimulus(st, planned, ex, bw, settings);
+          const stim = setStimulus(st, planned, ex, g.date);
           if (!stim) return;
           for (const m in ex.muscles) {
             const share = Math.min(1, (Number(ex.muscles[m]) || 0) / top);
-            acc[m] = (acc[m] || 0) + stim * share;
+            const add = stim * share;
+            if (add <= 0) continue;
+            const have = inSession[m] || 0;
+            const c = cell(m);
+            c.raw += add;
+            c.credited += App.Science.marginalCredit(have, add);
+            inSession[m] = have + add;
           }
         });
       });
+
+      for (const m in inSession) {
+        if (inSession[m] >= App.Science.SESSION_TOUCH) cell(m).sessions++;
+      }
     });
+
+    return acc;
+  }
+
+  /**
+   * @param {Array}  groups  [{entries, plan, date}]
+   * @param {Object} opts    {weeks} — the window the requirement is scaled to
+   */
+  function heatFrom(groups, opts) {
+    const acc = volumeFrom(groups);
 
     /* THE REQUIREMENT IS WEEKLY, AND SO IS THE ANSWER.
        Scaling the target by the length of the selected RANGE was wrong in the
@@ -651,14 +807,49 @@
        That number stays put whether you are looking at a month or a year, which
        is the whole point of an absolute scale. */
     const weeks = Math.max(1, Number(opts && opts.weeks) || 1);
-    const target = HARD_SETS_PER_WEEK * weeks;
+    const target = weeklyTarget() * weeks;
 
     const out = Object.create(null);
     for (const k in acc) {
-      const v = Math.round((acc[k] / target) * 1000) / 10;
+      const v = Math.round((acc[k].credited / target) * 1000) / 10;
       if (v >= 0.5) out[k] = Math.min(HEAT_MAX, v);
     }
     return out;
+  }
+
+  /**
+   * The weekly picture behind the figure, per muscle, for the report.
+   *
+   * Everything is a WEEKLY RATE, for the same reason heat is: the range is a
+   * filter on what to look at, not a claim about how long you trained. `sets`
+   * is what got credited, `raw` is what was performed, and `wasted` is the
+   * difference the per-session ceiling took.
+   *
+   * @param {Array} sessions
+   * @returns {Array} [{id, name, group, sets, raw, wasted, sessions, perSession}]
+   */
+  function muscleVolume(sessions) {
+    const acc = volumeFrom((sessions || []).map(function (s) {
+      return { entries: s.entries, plan: planFor(s), date: s.date };
+    }));
+    const weeks = trainingWeeks(sessions);
+
+    const out = [];
+    for (const id in acc) {
+      const m = App.Muscles.BY_ID[id];
+      const c = acc[id];
+      out.push({
+        id: id,
+        name: m ? m.name : id,
+        group: m ? m.group : 'other',
+        sets: c.credited / weeks,
+        raw: c.raw / weeks,
+        wasted: Math.max(0, (c.raw - c.credited) / weeks),
+        sessions: c.sessions / weeks,
+        perSession: c.sessions ? c.raw / c.sessions : 0
+      });
+    }
+    return out.sort(function (a, b) { return b.sets - a.sets; });
   }
 
   /**
@@ -712,7 +903,7 @@
    */
   function sessionsHeat(sessions) {
     return heatFrom((sessions || []).map(function (s) {
-      return { entries: s.entries, plan: planFor(s) };
+      return { entries: s.entries, plan: planFor(s), date: s.date };
     }), { weeks: trainingWeeks(sessions) });
   }
 
@@ -740,7 +931,7 @@
         const wgt = Number(s.weight) || 0, rp = Number(s.reps) || 0;
         vol += wgt * rp;
         r += rp;
-        best = Math.max(best, App.Ranks.e1rm(wgt, rp));
+        best = Math.max(best, App.Ranks.e1rm(wgt, rp, ex));
         timeSec += (it.restSets || 0) + rp * 3.5;
       });
       timeSec += it.restAfter || 0;
@@ -760,8 +951,38 @@
       perExercise: perExercise,
       heat: heat,
       groups: groups,
+      stacked: overStacked(workout),
       chains: chainSplit(workout)
     };
+  }
+
+  /**
+   * Muscles this plan asks to do more in one session than one session can use.
+   *
+   * Worth saying before the session rather than after it: the fix — move half
+   * of it to another day — is free while the plan is still being written, and
+   * costs a redone workout afterwards.
+   */
+  function overStacked(workout) {
+    const acc = volumeFrom([{
+      entries: (workout.items || []).map(function (it) {
+        return { exerciseId: it.exerciseId, sets: it.sets };
+      }),
+      plan: null
+    }]);
+
+    const out = [];
+    for (const id in acc) {
+      if (acc[id].raw <= App.Science.SESSION_PUOS) continue;
+      const m = App.Muscles.BY_ID[id];
+      out.push({
+        id: id,
+        name: m ? m.name : id,
+        sets: acc[id].raw,
+        lost: acc[id].raw - acc[id].credited
+      });
+    }
+    return out.sort(function (a, b) { return b.lost - a.lost; });
   }
 
   /** Push / pull / legs / core split by work share. */
@@ -816,7 +1037,7 @@
         if (en.exerciseId !== exerciseId) return;
         out.push({
           date: s.date,
-          e1rm: App.Ranks.bestE1RM(en.sets),
+          e1rm: App.Ranks.bestE1RM(en.sets, getExercise(en.exerciseId)),
           volume: App.Ranks.volumeOf(en.sets),
           sets: (en.sets || []).length,
           topWeight: Math.max.apply(null, [0].concat((en.sets || [])
@@ -832,7 +1053,7 @@
     const best = Object.create(null);
     state.sessions.forEach(function (s) {
       (s.entries || []).forEach(function (en) {
-        const one = App.Ranks.bestE1RM(en.sets);
+        const one = App.Ranks.bestE1RM(en.sets, getExercise(en.exerciseId));
         if (!one) return;
         const cur = best[en.exerciseId];
         if (!cur || one > cur.e1rm) {
@@ -945,7 +1166,9 @@
     allFriends: allFriends, saveFriend: saveFriend, deleteFriend: deleteFriend,
 
     exerciseHeat: exerciseHeat, workoutHeat: workoutHeat, sessionsHeat: sessionsHeat,
-    trainingWeeks: trainingWeeks,
+    trainingWeeks: trainingWeeks, muscleVolume: muscleVolume,
+    weeklyTarget: weeklyTarget, referenceOneRM: referenceOneRM,
+    systemLoad: systemLoad, loggedLoad: loggedLoad,
     HEAT_MAX: HEAT_MAX, HARD_SETS_PER_WEEK: HARD_SETS_PER_WEEK,
     workoutStats: workoutStats, chainSplit: chainSplit, suggestSplit: suggestSplit,
     exerciseHistory: exerciseHistory, personalRecords: personalRecords, rank: rank,

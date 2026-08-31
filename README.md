@@ -1,18 +1,20 @@
 # AI-Gym
 
-**Version 0.6.2**
+**Version 0.6.4**
 
 A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No build step, no framework, no npm install, no CDN — open it and it works.
 
 - **Built for the phone**: bottom tab bar, bottom-sheet dialogs, 40px+ touch targets, one column by default, and charts that measure their container instead of being scaled to fit
 - **468 built-in exercises**, each with a weighted muscle split, an equipment tag and its own world record — including wide/close grip variants across the bar movements
 - **Anatomical heat figures** (anterior + posterior) on every exercise, workout, session and report, scored against **what each muscle actually needs** rather than against whichever muscle you hit hardest
+- **Scored against the published dose-response research** rather than gym folklore: a reps-to-failure curve fitted to 952 studies' worth of tests instead of a 1985 formula, proximity to failure read off the log rather than typed in, and a per-session ceiling that makes the case for training a muscle twice a week instead of asserting it
+- **A Volume tab** showing weekly hard sets and how they were spread, per muscle, with the sets a single session was too full to use called out by name — in the workout builder, before you run it
 - **Workout builder** with sets, reps, load, per-set and per-exercise rest (all in seconds, and it says so), **drag reordering that works with a thumb**, and smart push/pull/legs grouping, in a **muscle-group order you set** — with templates that apply to the exact splits you run
 - **Session runner** with a rest timer and live volume
 - **Progression reports** with least-squares trend lines and a 60-day forecast band, **training load filtered by the kind of session it was**, plus a **ranking chart** tracking your points and your friends' against the tier thresholds
 - **Growth forecasting that bends**, projecting each lift against the world-record ceiling for your bodyweight instead of extrapolating a straight line into a number nobody has lifted
 - **Eight ranks scored against world records** for your bodyweight — your rank is the average across everything you train, and Diamond is 99%
-- **In-app update check** against GitHub releases, with an update that never costs you work in progress
+- **Update check on every open**, against GitHub releases, offering the update by itself — with a manual check in the Control Panel as well, and an update that never costs you work in progress
 - **End-to-end encryption** of everything written to the cloud — AES-GCM with a key that never leaves your devices in the clear
 - **Invite codes** for adding friends: generate, share, redeem — redeeming is the acceptance
 - **Friends and head-to-head comparison** through a shared hub
@@ -50,6 +52,7 @@ js/
   db.js               IndexedDB with a localStorage fallback
   anatomy.js          the front/back figures
   charts.js           SVG line/bar/spark charts + linear regression
+  science.js          the training research: reps~%1RM, RIR, volume curves
   ranks.js            1RM estimation, strength scoring, the 8-tier ladder
   store.js            domain model, CRUD, derived stats, events
   supabase.js         dependency-free Supabase REST + auth client
@@ -102,7 +105,7 @@ The yardstick is the **world record for your bodyweight**, and your rank is the 
 | Platinum | 90% — close to complete |
 | **Diamond** | **99% — a world record in all of them** |
 
-Records are stored as a 1RM-to-bodyweight ratio at an 80 kg reference and re-scaled allometrically (strength ≈ mass^⅔), because absolute strength tracks cross-sectional area. A 60 kg lifter is therefore held to a higher bodyweight multiple than a 120 kg lifter for the same rank. 1RM uses Epley up to 10 reps and an Epley/Brzycki average beyond that, where Epley alone starts to overestimate.
+Records are stored as a 1RM-to-bodyweight ratio at an 80 kg reference and re-scaled allometrically (strength ≈ mass^⅔), because absolute strength tracks cross-sectional area. A 60 kg lifter is therefore held to a higher bodyweight multiple than a 120 kg lifter for the same rank. 1RM comes from the reps-to-failure curve in `js/science.js`, not from Epley or Brzycki — see *The research this is built on*.
 
 The ladder is steep at the top and gentler at the bottom. For an 80 kg lifter:
 
@@ -160,21 +163,32 @@ rather than dividing by the bare span. The reading then means "in a week you
 train, this muscle gets X% of what it needs", and it stays put whether you are
 looking at a month or a year.
 
-Three things decide what a set is worth:
+Three things decide what a set is worth, and all three now come from the
+dose-response literature rather than from a rule of thumb:
 
-- **How heavy it was, for a body this size.** The world record for the movement
-  is already re-scaled allometrically to your bodyweight (see *How ranks work*),
-  so the fraction of it a set represents is a size-fair measure of load. It moves
-  the credit within a band rather than scaling it outright: a beginner training
-  hard is still training hard, and must still be able to fill the figure.
-- **How long the set was.** Strength work lives in roughly three to fifteen reps.
-  A heavy single and a set of thirty each contribute less per set than one inside
-  that band.
-- **Whether it ended in failure.** This is the part a volume count misses.
-  **Falling short of the reps the plan asked for earns *more* credit, not less** —
-  a set that could not be finished is the clearest evidence available that the
-  muscle was taken to its limit. The plan's reps are the baseline, so this only
-  applies to a session run from a workout.
+- **How close to failure it was.** The part a volume count cannot see, and the
+  part the growth research is clearest about: strength gains are much the same
+  whether a set ends at failure or several reps short, and growth is not — it
+  rises as sets end closer to failure and falls away past about four or five
+  reps in reserve. **Nothing has to be typed in.** The reps-to-failure curve
+  says how many reps the load allowed; the log says how many were done; the
+  difference is the reps left in reserve. Falling short of the reps a plan asked
+  for still overrides the estimate, because a set that could not be finished is
+  not an estimate of failure — it is failure.
+- **How long the set was.** Only at the ends. A set of twenty taken near failure
+  grows a muscle about as well as a set of eight, so the old three-to-fifteen
+  band — a strength heuristic wearing a growth hat — is gone. Singles and
+  thirty-rep sets still count for less.
+- **Where it sat in the session.** The eleventh set for one muscle in one
+  session is where another set stops buying anything detectable, so late sets
+  are discounted toward a floor. **This is the whole frequency model**, and the
+  indirection is deliberate — see below.
+
+A set is judged against **your own** best on that movement as at the day you did
+it, not against a world record and not against your best ever. Against a record,
+because "near failure" is a statement about this person on this movement. As at
+that day, because judging a set from two years ago against today's best reads
+the whole of someone's early training as easy.
 
 Shares are renormalised against each exercise's own prime mover, so a set of
 bench press is one hard set for the chest and a fraction of one for the triceps.
@@ -189,6 +203,91 @@ the serratus cannot drag a well-pressed chest down to a quarter of what its pecs
 are reporting. And an exercise's own figure in the library still scales to
 itself, because there the numbers are a *composition* (a muscle split adding to
 100) rather than a dose, and the largest share genuinely is the reference.
+
+---
+
+## How often should you train a muscle?
+
+The honest answer is that **frequency is not a requirement in its own right**,
+and the app is built to say so rather than to hand out a number.
+
+With weekly volume held equal, training a muscle more often does not clearly
+grow it faster. The reason twice a week keeps beating once in the trials is
+visible one level down: a session saturates. Past roughly eleven sets for one
+muscle in one day, another set no longer produces a difference large enough to
+detect, so a week's volume crammed into one session is a week's volume with the
+tail cut off it.
+
+So there is no frequency target anywhere in the app. What there is instead:
+
+- Sets accumulate **within a session**, and the credit per set falls away past
+  six, reaching a floor around eleven. A new session starts everything back at
+  full credit — which is exactly why spreading the work pays.
+- The **workout builder** names the muscles a plan stacks past that point while
+  the plan is still being written, with how many sets it expects to waste.
+- The Report's **Volume** tab shows, per muscle, credited sets a week, sets
+  actually performed, days a week, and sets per session — so the gap between
+  the first two has a cause you can see.
+
+Twelve sets a muscle a week is the working target, and it is a **setting**,
+because the volume research does not find a ceiling: size keeps rising with
+weekly sets, with diminishing returns, as far out as the data goes.
+
+---
+
+## The research this is built on
+
+Everything above lives in one file, `js/science.js`, with the numbers written
+down next to the code that uses them. Four questions, four answers:
+
+**How many reps can you do at a given fraction of your 1RM?**
+Nuzzo, Pinto, Nosaka & Steele (2024), *Maximal Number of Repetitions at
+Percentages of the One Repetition Maximum*, Sports Medicine 54:303–321 — a
+meta-regression of 952 reps-to-failure tests by 7,289 people across 269 studies.
+Two findings, both of which contradicted what the app used to do:
+
+- **People do more reps than the classic tables say** — about 8 at 80% of a max,
+  15 at 70%, 5 at 90%. Read backwards, Epley and Brzycki therefore turn a long
+  set into a 1RM nobody could lift. A set of thirty used to be scored here at
+  3.6× the bar. It is closer to 1.85×.
+- **The curve is not the same for every movement.** A leg press allows 13.1 reps
+  at 80% of a max where a bench press allows 8.8. The app carries the paper's
+  two tables, and picks between them by movement pattern and implement.
+
+The spread between people is large enough to show rather than hide — an SD of
+2.5 reps at 80% and 4.4 at 60% — so the load-and-reps table on every exercise
+prints the range, not just the number.
+
+**How close to failure does a set have to be?**
+Robinson, Pelland, Remmert, Refalo, Jukic, Steele & Zourdos (2024), *Exploring
+the Dose-Response Relationship Between Estimated Resistance Training Proximity
+to Failure, Strength Gain, and Muscle Hypertrophy*, Sports Medicine
+54:2209–2231, with Refalo et al. (2023) behind it. Strength is flat across a
+wide band of reps-in-reserve; growth is not.
+
+**How much volume, and how much of it in one session?**
+Pelland, Remmert, Robinson, Hinson & Zourdos (2025), *The Resistance Training
+Dose Response*, Sports Medicine — 67 studies, 2,058 participants; and Remmert et
+al. (2025), *Is There Too Much of a Good Thing?*, which asks the same question
+per session and puts the point of undetectable superiority at about eleven
+fractional sets.
+
+**Does load matter?**
+Schoenfeld, Grgic & Krieger (2017), *Strength and Hypertrophy Adaptations
+Between Low- vs. High-Load Resistance Training*, JSCR 31:3508–3523. Taken near
+failure, growth is much the same anywhere above roughly 30% of a max — which is
+why the rep-range penalty now only bites at the ends.
+
+**And frequency?**
+Schoenfeld, Grgic & Krieger (2019), *How many times per week should a muscle be
+trained to maximize muscle hypertrophy?*, J Sports Sci 37:1286–1295, plus the
+frequency arm of the Pelland dose-response above. See the section before this
+one for what the app does with the answer.
+
+**What changed when this went in.** Estimated 1RMs from long sets dropped, most
+of all on machine leg work and on anything logged above fifteen reps, so records
+and ranks moved with them. Nothing was lost — the same sets are scored, against
+a better curve.
 
 ---
 
@@ -303,13 +402,47 @@ Two gotchas worth recording. `radial-gradient(closest-side …)` anchored at an 
 
 ### Updating
 
-The app checks GitHub releases for a newer version (falling back to the deployed `version.json`, since a build can be live before anyone tags a release) at most four times a day, and offers an update. There is also a manual check in the Control Panel.
+**The check runs by itself, every time the app is opened.** It asks GitHub releases for a newer version — falling back to the deployed `version.json`, since a build can be live before anyone tags a release — and puts the update dialog up on its own. The button in the Control Panel is still there, for when you want to ask rather than be told.
+
+"Every time the app is opened" is doing real work in that sentence. It used to mean "at most four times a day", which is not the same thing: open the app a second time that morning and it did not look at all, so a release published in between sat unnoticed and the automatic check looked broken. What remains of the interval is a 45-second debounce, and only a check that actually reached the network resets it — an app opened with no signal used to go quiet for the rest of the window, including once the signal came back.
+
+It also means more than a reload. In a web-to-app wrapper the page is never torn down, so a boot-only check runs once on the first launch and then never again for as long as the wrapper lives. The check is therefore bound to **returning to the foreground** after five minutes away and to **regaining a network**, as well as to boot. It will not open a second dialog over a first, so a resume during the first-run walkthrough waits its turn.
+
+**"Later" now means later.** It was stored as a bare version string and suppressed that version for good — the one button in the dialog that quietly turned the automatic check off. It is stored with a timestamp and lasts a day, or until something newer than it appears.
+
+A boot that fails outright still runs the check, and the error card carries its own button. A version that will not start is the one case where an update is most likely to be the fix.
 
 **An update never costs you work in progress.** Pages register a snapshot provider; the snapshot is written to IndexedDB on every edit and on `pagehide`/`visibilitychange`, so an OS-initiated kill is survivable too, not just our own reload. Take an update mid-workout and you come back to the same sets ticked, the same weights entered, and the elapsed clock still counting from the original start rather than restarting at zero.
 
 **Getting the new code is the hard part, not the reload.** The document reloads against a cache-busting query, but the app *is* the twenty script and stylesheet files `index.html` references by unchanging relative paths. Busting the document alone fetched a fresh page and then filled it with cached JavaScript, so the app came back running the version it had been asked to leave — appearing to update only once those cache entries aged out on their own, several attempts later. Every same-origin asset is now pulled through `fetch(url, {cache: 'reload'})` first, which skips the cache on the way out and writes the fresh response into it, so the reload that follows parses the new files.
 
 If an update still does not take, the app says so on the next boot — naming both versions and pointing at a hard refresh — instead of quietly carrying on as though it had worked.
+
+### Keeping the projects awake
+
+A free Supabase project is paused after a stretch with nothing touching it, so
+the app makes **one real write to each project per calendar day, per device**.
+Nobody has to press anything; the button in Diagnostics only exists to run it
+early and show what happened.
+
+Hanging that off start-up alone left three ordinary ways to miss a day, and all
+three are now covered:
+
+- **Opened offline.** Start-up returns immediately with no network, so the
+  day's write never happened — not even once the signal came back ten minutes
+  later. It now also runs on the `online` event.
+- **Never reloaded.** In a web-to-app wrapper the page stays in memory for days,
+  so start-up runs once on the first launch and a week of daily use after that
+  is a week of never asking again. It now also runs on returning to the
+  foreground.
+- **Left open over midnight.** The guard is per calendar day, so a page already
+  running when the day turned over had already done "today". A slow timer sits
+  behind the other two for exactly that case.
+
+Calling it this often is free: the call returns immediately once the day is
+done, which is what makes it safe. The hub write is guarded server-side too —
+whichever user opens the app first that day performs it, and everyone else gets
+`ran = false`.
 
 ### Encryption
 
