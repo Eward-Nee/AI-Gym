@@ -1,5 +1,5 @@
 {
-  "version": "0.6.5",
+  "version": "0.6.6",
   "name": "AI-Gym",
-  "notes": "The rest-timer sound is now a choice — chime, beep, bell, triple beep, buzz or silent — with its own loudness slider in the Control Panel, and a play button to hear it first. The progress report measures each workout on its own curve and averages those, with every workout shown underneath on one shared scale. The skyline and neon city are darker, every window glows onto its wall, no window sits on a building edge, and there is a moon over the dark city and a sun over the light one."
+  "notes": "The city, toned down: towers are solid rather than see-through, windows sit further apart and glow far less, the sky behind the skyline is close to black, and the diagonal dark bands across buildings are gone."
 }

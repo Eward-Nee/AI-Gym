@@ -68,32 +68,25 @@ const TINT = 0.5;
    window core and back down, which is the sideways half of the glow. */
 const BANDS = {
   far: {
-    towers: FAR, col: 8, row: 16, bottom: 'var(--c3)', top: 'var(--c3)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.30) 1px, #000 3px 5px, rgba(0,0,0,0.30) 7px, transparent 7px 8px)'
+    towers: FAR, col: 12, row: 24, ink: 'var(--city-ink-far)', bottom: 'var(--c3)', top: 'var(--c3)',
+    mask: 'repeating-linear-gradient(to right, transparent 0 3px, rgba(0,0,0,0.18) 3px, #000 5px 7px, rgba(0,0,0,0.18) 9px, transparent 9px 12px)'
   },
   mid: {
-    towers: MID, col: 12, row: 16, bottom: 'var(--c4)', top: 'var(--c4)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.35) 1px, #000 4px 8px, rgba(0,0,0,0.35) 11px, transparent 11px 12px)'
+    towers: MID, col: 18, row: 24, ink: 'var(--city-ink)', bottom: 'var(--c4)', top: 'var(--c4)',
+    mask: 'repeating-linear-gradient(to right, transparent 0 4px, rgba(0,0,0,0.2) 4px, #000 7px 11px, rgba(0,0,0,0.2) 14px, transparent 14px 18px)'
   },
   near: {
-    towers: NEAR, col: 16, row: 20, bottom: 'var(--c4)', top: 'var(--c3)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 2px, rgba(0,0,0,0.35) 2px, #000 5px 11px, rgba(0,0,0,0.35) 14px, transparent 14px 16px)'
+    towers: NEAR, col: 24, row: 30, ink: 'var(--city-ink)', bottom: 'var(--c4)', top: 'var(--c3)',
+    mask: 'repeating-linear-gradient(to right, transparent 0 5px, rgba(0,0,0,0.2) 5px, #000 9px 15px, rgba(0,0,0,0.2) 19px, transparent 19px 24px)'
   }
 };
 
 /* Rows: transparent gap, ramp, core, ramp, gap — the vertical half of the
    glow. The core is the lit glass. */
 const ROWS = {
-  16: 'repeating-linear-gradient(to top, transparent 0 2px, W10 2px, W40 5px, W95 6px 10px, W40 11px, W10 14px, transparent 14px 16px)',
-  20: 'repeating-linear-gradient(to top, transparent 0 2px, W10 2px, W40 6px, W95 7px 13px, W40 14px, W10 18px, transparent 18px 20px)'
+  24: 'repeating-linear-gradient(to top, transparent 0 6px, W10 6px, W40 9px, W95 10px 14px, W40 15px, W10 18px, transparent 18px 24px)',
+  30: 'repeating-linear-gradient(to top, transparent 0 7px, W10 7px, W40 11px, W95 12px 18px, W40 19px, W10 23px, transparent 23px 30px)'
 };
-
-/* Diagonal bands of ink laid OVER the rows, listed first so they paint on
-   top: the floors under them stay dark. Without this every window in the
-   city is lit and the towers read as a texture rather than as buildings. The
-   periods are deliberately not multiples of any tower width, so the dark
-   patches fall differently on each. */
-const UNLIT = 'repeating-linear-gradient(107deg, transparent 0 53px, var(--city-ink) 53px 71px, transparent 71px 131px, var(--city-ink) 131px 149px, transparent 149px 233px)';
 
 function snap(v, unit) { return Math.max(unit, Math.round(v / unit) * unit); }
 
@@ -104,14 +97,14 @@ function towers(band) {
   });
 }
 
-function mix(color, pct) {
-  return 'color-mix(in srgb, ' + color + ' ' + pct + '%, var(--city-ink))';
+function mix(color, pct, ink) {
+  return 'color-mix(in srgb, ' + color + ' ' + pct + '%, ' + ink + ')';
 }
 
 function towerLayer(sel, band, extra) {
   const ts = towers(band);
   const imgs = ts.map(function (t) {
-    return '    linear-gradient(to top, ' + mix(band.bottom, t.lo) + ', ' + mix(band.top, t.hi) + ')';
+    return '    linear-gradient(to top, ' + mix(band.bottom, t.lo, band.ink) + ', ' + mix(band.top, t.hi, band.ink) + ')';
   });
   return sel + ' {\n' +
     (extra || []).map(function (l) { return '  ' + l + '\n'; }).join('') +
@@ -124,9 +117,9 @@ function towerLayer(sel, band, extra) {
 
 function rows(pitch) {
   return ROWS[pitch]
-    .replace(/W95/g, 'color-mix(in srgb, var(--city-win) 95%, transparent)')
-    .replace(/W40/g, 'color-mix(in srgb, var(--city-win) 40%, transparent)')
-    .replace(/W10/g, 'color-mix(in srgb, var(--city-win) 10%, transparent)');
+    .replace(/W95/g, 'color-mix(in srgb, var(--city-win) 72%, transparent)')
+    .replace(/W40/g, 'color-mix(in srgb, var(--city-win) 22%, transparent)')
+    .replace(/W10/g, 'color-mix(in srgb, var(--city-win) 5%, transparent)');
 }
 
 function windowLayer(sel, bands, extra) {
@@ -140,10 +133,10 @@ function windowLayer(sel, bands, extra) {
   const pos = all.map(function (e) { return e.t.x + '% bottom'; }).join(', ');
   return sel + ' {\n' +
     (extra || []).map(function (l) { return '  ' + l + '\n'; }).join('') +
-    '  background-image:\n    ' + UNLIT + ',\n    ' + rows(pitch) + ';\n' +
-    '  background-size: auto, 100% ' + pitch + 'px;\n' +
-    '  background-position: 0 0, 0 bottom;\n' +
-    '  background-repeat: repeat, repeat;\n' +
+    '  background-image: ' + rows(pitch) + ';\n' +
+    '  background-size: 100% ' + pitch + 'px;\n' +
+    '  background-position: 0 bottom;\n' +
+    '  background-repeat: repeat;\n' +
     '  -webkit-mask-image:\n' + masks + ';\n' +
     '  -webkit-mask-size: ' + sizes + ';\n' +
     '  -webkit-mask-position: ' + pos + ';\n' +
@@ -161,7 +154,8 @@ const LIGHTING = `/* CITY LIGHTING — shared by Skyline and Neon.
 
    --city-ink is what the towers are made of: the scheme colour is mixed INTO
    it, not into nothing, so a building is a dark thing with a tint rather than
-   a tinted haze. It is also what the picker swatches use, so it lives on the
+   a tinted haze. Towers are opaque; the far band reads as far because it is
+   made of --city-ink-far, a hazier ink, not because it is see-through. It is also what the picker swatches use, so it lives on the
    mode, not on the background.
 
    The sky is the host's ::before, under every layer, and carries the moon
@@ -170,9 +164,10 @@ const LIGHTING = `/* CITY LIGHTING — shared by Skyline and Neon.
    lights a skyline is a floodlight. */
 :root {
   --city-ink: #161b27;
+  --city-ink-far: #4b5266;
   --city-win: var(--c5);
-  --city-alpha: 0.9;
-  --city-win-alpha: 0.4;
+  --city-win-alpha: 0.3;
+  --city-glow-alpha: 0.08;
   --city-sky:
     radial-gradient(circle at 20% 11%, #fff9dc 0 26px, rgba(255, 236, 170, 0.75) 30px,
       rgba(255, 220, 120, 0.28) 72px, rgba(255, 210, 100, 0.08) 130px, transparent 190px),
@@ -182,19 +177,21 @@ const LIGHTING = `/* CITY LIGHTING — shared by Skyline and Neon.
 }
 [data-mode='dark'] {
   --city-ink: #05070d;
-  --city-alpha: 0.94;
-  --city-win-alpha: 0.95;
+  --city-ink-far: #10141f;
+  --city-win-alpha: 0.5;
+  --city-glow-alpha: 0.04;
   --city-sky:
     radial-gradient(circle at 77% 13%, rgba(216, 224, 238, 0.82) 0 13px, rgba(216, 224, 238, 0.22) 15px,
       rgba(190, 204, 232, 0.08) 34px, transparent 90px),
     linear-gradient(to bottom, #02030a, #060a15 55%, #0a0f1e);
   --city-sky-alpha: 0.94;
-  --city-cast: radial-gradient(70% 55% at 77% 13%, rgba(200, 212, 240, 0.09), transparent 70%);
+  --city-cast: radial-gradient(70% 55% at 77% 13%, rgba(200, 212, 240, 0.06), transparent 70%);
 }
 [data-mode='amoled'] {
   --city-ink: #000000;
-  --city-alpha: 0.96;
-  --city-win-alpha: 0.95;
+  --city-ink-far: #0a0d16;
+  --city-win-alpha: 0.45;
+  --city-glow-alpha: 0.03;
   --city-sky:
     radial-gradient(circle at 77% 13%, rgba(200, 210, 228, 0.7) 0 13px, rgba(200, 210, 228, 0.16) 15px,
       rgba(180, 196, 226, 0.06) 34px, transparent 90px),
@@ -236,13 +233,13 @@ const SKYLINE = `/* --- 9. Skyline: a sci-fi city under a moon or a sun (static)
    everything. Both are in the CITY LIGHTING block that follows.
    -------------------------------------------------------------------------- */
 ` + LIGHTING +
-  towerLayer("[data-bg='skyline'] .bg-l1", BANDS.far, ['inset: 0;', 'opacity: calc(var(--city-alpha) * 0.6);']) +
-  towerLayer("[data-bg='skyline'] .bg-l2", BANDS.mid, ['inset: 0;', 'opacity: var(--city-alpha);']) +
-  towerLayer("[data-bg='skyline'] .bg-l3", BANDS.near, ['inset: 0;', 'opacity: var(--city-alpha);']) +
-  windowLayer("[data-bg='skyline'] .bg-l4", [BANDS.far, BANDS.mid], ['inset: 0;', 'opacity: calc(var(--city-win-alpha) * 0.8);']) +
+  towerLayer("[data-bg='skyline'] .bg-l1", BANDS.far, ['inset: 0;', 'opacity: 1;']) +
+  towerLayer("[data-bg='skyline'] .bg-l2", BANDS.mid, ['inset: 0;', 'opacity: 1;']) +
+  towerLayer("[data-bg='skyline'] .bg-l3", BANDS.near, ['inset: 0;', 'opacity: 1;']) +
+  windowLayer("[data-bg='skyline'] .bg-l4", [BANDS.far, BANDS.mid], ['inset: 0;', 'opacity: calc(var(--city-win-alpha) * 0.75);']) +
   windowLayer("[data-bg='skyline'] .bg-l5", [BANDS.near], ['inset: 0;', 'opacity: var(--city-win-alpha);']) +
 `[data-bg='skyline'] .bg-l6 {
-  opacity: calc(var(--city-alpha) * 0.35);
+  opacity: var(--city-glow-alpha);
   background: radial-gradient(94% 44% at 50% 82%, var(--c4), transparent 100%);
 }
 
@@ -259,13 +256,13 @@ const NEON = `/* --- 11. Neon City: the same city, alive (animated) ------------
    unlit: it is haze, and it has no layer to spare.
    -------------------------------------------------------------------------- */
 ` +
-  towerLayer("[data-bg='neon'] .bg-l1", BANDS.far, ['inset: 0 -22%;', 'opacity: calc(var(--city-alpha) * 0.55);', 'animation: city-far 74s linear infinite;']) +
-  towerLayer("[data-bg='neon'] .bg-l2", BANDS.mid, ['inset: 0 -22%;', 'opacity: var(--city-alpha);', 'animation: city-mid 47s linear infinite;']) +
-  towerLayer("[data-bg='neon'] .bg-l3", BANDS.near, ['inset: 0 -22%;', 'opacity: var(--city-alpha);', 'animation: city-near 29s linear infinite;']) +
+  towerLayer("[data-bg='neon'] .bg-l1", BANDS.far, ['inset: 0 -22%;', 'opacity: 1;', 'animation: city-far 74s linear infinite;']) +
+  towerLayer("[data-bg='neon'] .bg-l2", BANDS.mid, ['inset: 0 -22%;', 'opacity: 1;', 'animation: city-mid 47s linear infinite;']) +
+  towerLayer("[data-bg='neon'] .bg-l3", BANDS.near, ['inset: 0 -22%;', 'opacity: 1;', 'animation: city-near 29s linear infinite;']) +
   windowLayer("[data-bg='neon'] .bg-l4", [BANDS.mid], ['inset: 0 -22%;', 'opacity: calc(var(--city-win-alpha) * 0.85);', 'animation: city-mid 47s linear infinite;']) +
   windowLayer("[data-bg='neon'] .bg-l5", [BANDS.near], ['inset: 0 -22%;', 'opacity: var(--city-win-alpha);', 'animation: city-near 29s linear infinite;']) +
 `[data-bg='neon'] .bg-l6 {
-  opacity: calc(var(--city-alpha) * 0.35);
+  opacity: var(--city-glow-alpha);
   background: radial-gradient(96% 46% at 50% 84%, var(--c4), transparent 100%);
 }
 
