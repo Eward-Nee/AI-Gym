@@ -1,5 +1,5 @@
 {
-  "version": "0.6.7",
+  "version": "0.6.8",
   "name": "AI-Gym",
-  "notes": "The rest-timer tones are much louder: 100% is now full volume through a limiter, the notes use richer waveforms, every tone plays twice, and the phone vibrates with it."
+  "notes": "Rest timer fixes: finishing an exercise now rests you for the between-exercise time, not the between-set time, and ticking a forgotten or catch-up set from an exercise you have already moved past no longer resets or shortens whatever rest is actually running."
 }

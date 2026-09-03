@@ -649,6 +649,10 @@
     }
 
     let restTimer = null, restLeft = 0;
+    /* The furthest entry (by plan position) that has had a set ticked done.
+       A tick only drives the rest countdown when it reaches this far or
+       further — see the done-button handler below for why. */
+    let furthestEntryIdx = -1;
     const timerEl = U.h('.stat-value.is-sm', { text: '0:00' });
     const restEl = U.h('span.chip', { text: 'Rest —' });
 
@@ -823,8 +827,11 @@
        ------------------------------------------------------------------ */
     const listWrap = U.h('.stack');
 
-    /* Rest between sets: the plan's value for a planned exercise, the account
-       default for one added mid-session.
+    /* Rest after a set: the plan's between-SET value while the exercise still
+       has sets left, its between-EXERCISE value once the set just ticked was
+       the last of them — so finishing a movement hands you the longer rest
+       before the next one, never the short one meant for its own next set.
+       (It used to always return the between-set value, regardless.)
 
        Looked up BY MOVEMENT, not by position. The runner's list and the plan's
        list stop lining up the moment an exercise is added, dropped or moved,
@@ -835,6 +842,11 @@
       const it = en && (w.items || []).find(function (x) {
         return x.exerciseId === en.exerciseId;
       });
+      const finished = en && en.sets && en.sets.length > 0 &&
+        en.sets.every(function (s) { return s.done; });
+      if (finished) {
+        return (it && it.restAfter) || App.Store.getSettings().restBetweenExercises;
+      }
       return (it && it.restSets) || App.Store.getSettings().restDefault;
     }
 
@@ -874,6 +886,9 @@
       const logged = en.sets.filter(function (st) { return st.done; }).length;
       const go = function () {
         session.entries.splice(ei, 1);
+        /* Every later index just shifted down a slot, so the pointer no
+           longer names the entry it used to. The next tick sets it fresh. */
+        furthestEntryIdx = -1;
         drawList(); refreshSummary(); persist();
       };
       /* Only interrupt when there is something to lose. */
@@ -964,7 +979,16 @@
                   st.done = !st.done;
                   this.classList.toggle('btn-primary', st.done);
                   row.classList.toggle('is-done', st.done);
-                  if (st.done) restLeft = restFor(ei);
+                  /* The rest countdown follows the workout forward. Ticking a
+                     set for an exercise you have already moved past — catching
+                     up on logging, or finishing everything before going back
+                     to record it — must not reset or shorten whatever rest is
+                     actually running now. That would charge training time for
+                     admin the lifter did late, not for effort. */
+                  if (st.done && ei >= furthestEntryIdx) {
+                    furthestEntryIdx = ei;
+                    restLeft = restFor(ei);
+                  }
                   syncE1rm();
                   refreshSummary();
                   persist();
