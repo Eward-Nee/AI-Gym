@@ -27,6 +27,9 @@
        A per-exercise `loadMode` overrides it; see App.Ranks.loadMode(). */
     dumbbellLoad: 'per-hand',  /* per-hand | total */
     restBetweenExercises: 150,
+    /* The rest-timer tone and how loud it is (0–100). See App.Sound. */
+    restSound: 'chime',
+    restVolume: 60,
     /* Hard sets per muscle per week the heat figures are scored against.
        Twelve is the middle of the range the dose-response meta-regressions
        find useful returns in, and it is a setting because those same papers

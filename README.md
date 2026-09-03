@@ -1,6 +1,6 @@
 # AI-Gym
 
-**Version 0.6.4**
+**Version 0.6.5**
 
 A mobile-first, offline-first training log in plain HTML, CSS and JavaScript. No build step, no framework, no npm install, no CDN — open it and it works.
 

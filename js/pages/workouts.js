@@ -1076,24 +1076,8 @@
     refreshSummary();
   }
 
-  /** Short tone at the end of a rest period; silently ignored if blocked. */
-  function beep() {
-    try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.36);
-      setTimeout(function () { ctx.close(); }, 600);
-    } catch (e) { /* audio is a nicety, never a failure */ }
-  }
+  /** The rest-timer tone, at the loudness set in the Control Panel. */
+  function beep() { App.Sound.play(); }
 
   /* ===========================================================================
      PROGRESS REPORT (under the workout list)
@@ -1111,35 +1095,45 @@
       const sessions = App.Store.sessionsBetween(from, U.today())
         .slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
 
-      if (sessions.length < 2) {
+
+      /* --- ONE LINE PER WORKOUT, THEN THEIR MEAN, THEN THE LINES ARE TAKEN
+         AWAY AGAIN. Every exercise is indexed to its first value WITHIN THE
+         WORKOUT it belongs to, each workout gets its own curve from those,
+         and the headline is the mean of the curves. The workout lines are
+         not drawn on the headline chart — six of them over one another is
+         noise — but each is shown on its own underneath, on a shared scale,
+         so a programme that is stalling can be told apart from one that is
+         carrying the average. --- */
+      const lines = workoutLines(sessions);
+      const usable = lines.filter(function (l) { return l.points.length >= 2; });
+      if (!usable.length) {
         body.appendChild(U.h('.empty', [
           U.h('div', { html: U.icon('chart') }),
           U.h('.empty-title', 'Not enough history yet'),
-          U.h('p', 'Log at least two sessions in this period and you will get an average ' +
-            'strength curve, per-exercise progression, and a forecast.')
+          U.h('p', 'Progress is measured per workout, so run the same workout at least ' +
+            'twice in this period to get its curve and the average across all of them.')
         ]));
         return;
       }
-
-      /* --- average across all exercises, indexed to the first session --- */
-      const avgSeries = averageIndex(sessions);
-      const fit = App.Charts.regress(avgSeries.map(function (p, i) {
+      const avgSeries = meanLine(usable);
+      const fit = avgSeries.length >= 2 ? App.Charts.regress(avgSeries.map(function (p) {
         return { x: p.x, y: p.y };
-      }));
+      })) : null;
 
       const chartEl = U.h('div');
       body.appendChild(U.h('.sec-head', [
-        U.h('h2', 'Average progress across every exercise'),
+        U.h('h2', 'Average progress across every workout'),
         U.h('.spacer'),
-        fit ? U.h('span.chip' + (fit.slope > 0 ? '.chip-accent' : ''), {
-          text: (fit.slope >= 0 ? '+' : '') +
-            U.num(fit.slope * 86400000 * 30, 1) + '% / month'
-        }) : null
+        fit ? slopeChip(fit) : null
       ]));
+      body.appendChild(U.h('.card-sub', { style: { marginBottom: '8px' } },
+        'The mean of ' + usable.length + ' workout curve' + (usable.length === 1 ? '' : 's') +
+        ' — each exercise indexed to its first session of that workout, so every ' +
+        'lift counts equally.'));
       body.appendChild(chartEl);
 
       /* forecast 60 days beyond the last point */
-      const series = [{ name: 'Average index', accent: true, area: true, points: avgSeries }];
+      const series = [{ name: 'Average of all workouts', accent: true, area: true, points: avgSeries }];
       const bands = [];
       if (fit && fit.n >= 3) {
         const lastX = avgSeries[avgSeries.length - 1].x;
@@ -1165,12 +1159,57 @@
         });
         if (fit) {
           chartEl.appendChild(U.h('.u-xs.u-muted', { style: { marginTop: '8px' },
-            text: 'Least-squares fit over ' + fit.n + ' sessions · r² = ' +
+            text: 'Least-squares fit over ' + fit.n + ' points · r² = ' +
               U.num(fit.r2, 2) + (fit.r2 < 0.3
                 ? ' — a weak fit, so treat the projection as a rough direction only.'
                 : '') }));
         }
       }, 0);
+
+      /* --- each workout on its own, on one shared scale --- */
+      let lo = Infinity, hi = -Infinity;
+      usable.forEach(function (l) {
+        l.points.forEach(function (p) { lo = Math.min(lo, p.y); hi = Math.max(hi, p.y); });
+      });
+      body.appendChild(U.h('.sec-head', { style: { marginTop: '28px' } }, [
+        U.h('h2', 'Per workout'),
+        U.h('.spacer'),
+        U.h('span.u-xs.u-muted', 'Same scale on every chart')
+      ]));
+      const wgrid = U.h('.grid.grid-2', { style: { marginTop: '14px' } });
+      usable.forEach(function (l) {
+        const wfit = App.Charts.regress(l.points.map(function (p) {
+          return { x: p.x, y: p.y };
+        }));
+        const cell = U.h('.card', { style: { padding: 'var(--sp-4)' } }, [
+          U.h('.card-head', { style: { marginBottom: '8px' } }, [
+            U.h('div', { style: { minWidth: 0 } }, [
+              U.h('div', { class: 'u-truncate', style: { fontWeight: '600' }, text: l.name }),
+              U.h('.u-xs.u-muted', { text: l.sessions + ' session' +
+                (l.sessions === 1 ? '' : 's') + ' · ' + l.exercises + ' exercise' +
+                (l.exercises === 1 ? '' : 's') })
+            ]),
+            U.h('.spacer'),
+            wfit ? slopeChip(wfit) : null
+          ])
+        ]);
+        const c = U.h('div');
+        cell.appendChild(c);
+        wgrid.appendChild(cell);
+        setTimeout(function () {
+          App.Charts.line(c, {
+            xType: 'date', height: 150, legend: false, yMin: lo, yMax: hi,
+            yFormat: function (v) { return U.num(v, 0) + '%'; },
+            series: [{ name: l.name, accent: true, area: true, points: l.points }]
+          });
+        }, 0);
+      });
+      body.appendChild(wgrid);
+      lines.filter(function (l) { return l.points.length < 2; }).forEach(function (l) {
+        body.appendChild(U.h('.u-xs.u-muted', { style: { marginTop: '8px' },
+          text: l.name + ' has only one session in this period, so it has no curve yet ' +
+            'and is left out of the average.' }));
+      });
 
       /* --- chosen exercises --- */
       body.appendChild(U.h('.sec-head', { style: { marginTop: '28px' } }, [
@@ -1270,39 +1309,97 @@
     return top.concat(low);
   }
 
+  /** "+3.2% / month" as a chip, tinted when the direction is up. */
+  function slopeChip(fit) {
+    return U.h('span.chip' + (fit.slope > 0 ? '.chip-accent' : ''), {
+      text: (fit.slope >= 0 ? '+' : '') + U.num(fit.slope * 86400000 * 30, 1) + '% / month'
+    });
+  }
+
   /**
-   * A single "how am I doing" curve: each session's mean estimated 1RM per
-   * exercise, expressed as a percentage of that exercise's first value in the
-   * range. Indexing this way lets a 200 kg squat and a 20 kg curl contribute
-   * equally instead of the heaviest lift dominating the shape.
+   * One curve per workout. Sessions are grouped by the workout they were run
+   * from (ad-hoc sessions form a group of their own), and within a group each
+   * session's value is the mean, across its exercises, of that exercise's
+   * estimated 1RM as a percentage of its FIRST value in the group. Indexing
+   * per workout matters: a bench press that lives in two programmes is
+   * baselined in each, so a heavier day in one does not read as a jump in the
+   * other. Multiple sessions on one day collapse to their mean.
    */
-  function averageIndex(sessions) {
-    const baseline = Object.create(null);
-    const out = [];
-
+  function workoutLines(sessions) {
+    const groups = Object.create(null);
+    const order = [];
     sessions.forEach(function (s) {
-      const ratios = [];
-      (s.entries || []).forEach(function (en) {
-        const one = App.Ranks.bestE1RM(en.sets, App.Store.getExercise(en.exerciseId));
-        if (!one) return;
-        if (!baseline[en.exerciseId]) { baseline[en.exerciseId] = one; }
-        ratios.push((one / baseline[en.exerciseId]) * 100);
-      });
-      if (!ratios.length) return;
-      const mean = ratios.reduce(function (a, b) { return a + b; }, 0) / ratios.length;
-      out.push({ x: new Date(s.date + 'T12:00:00').getTime(), y: mean });
+      const key = s.workoutId || '_adhoc';
+      if (!groups[key]) {
+        const w = s.workoutId ? App.Store.getWorkout(s.workoutId) : null;
+        groups[key] = {
+          id: key,
+          name: (w && w.name) || (s.workoutId && s.name) || 'Unplanned sessions',
+          list: []
+        };
+        order.push(key);
+      }
+      groups[key].list.push(s);
     });
 
-    /* Collapse multiple sessions on one day into their mean. */
-    const byDay = Object.create(null);
-    out.forEach(function (p) {
-      (byDay[p.x] = byDay[p.x] || []).push(p.y);
-    });
-    return Object.keys(byDay).map(Number).sort(function (a, b) { return a - b; })
-      .map(function (x) {
-        const arr = byDay[x];
-        return { x: x, y: arr.reduce(function (a, b) { return a + b; }, 0) / arr.length };
+    return order.map(function (key) {
+      const g = groups[key];
+      const baseline = Object.create(null);
+      const byDay = Object.create(null);
+      const seen = Object.create(null);
+      g.list.forEach(function (s) {
+        const ratios = [];
+        (s.entries || []).forEach(function (en) {
+          const one = App.Ranks.bestE1RM(en.sets, App.Store.getExercise(en.exerciseId));
+          if (!one) return;
+          if (!baseline[en.exerciseId]) baseline[en.exerciseId] = one;
+          seen[en.exerciseId] = true;
+          ratios.push((one / baseline[en.exerciseId]) * 100);
+        });
+        if (!ratios.length) return;
+        const mean = ratios.reduce(function (a, b) { return a + b; }, 0) / ratios.length;
+        const x = new Date(s.date + 'T12:00:00').getTime();
+        (byDay[x] = byDay[x] || []).push(mean);
       });
+      const points = Object.keys(byDay).map(Number).sort(function (a, b) { return a - b; })
+        .map(function (x) {
+          const arr = byDay[x];
+          return { x: x, y: arr.reduce(function (a, b) { return a + b; }, 0) / arr.length };
+        });
+      return { id: g.id, name: g.name, sessions: g.list.length,
+        exercises: Object.keys(seen).length, points: points };
+    });
+  }
+
+  /**
+   * The mean of several curves that were not sampled on the same days. Every
+   * date any curve has a point on becomes a date on the mean; each curve
+   * contributes its value there, interpolated between its own neighbours,
+   * and only while the date lies inside that curve's own span — a workout
+   * that was not being run yet, or has been dropped, does not get a value
+   * invented for it.
+   */
+  function meanLine(lines) {
+    const xs = Object.create(null);
+    lines.forEach(function (l) { l.points.forEach(function (p) { xs[p.x] = true; }); });
+    return Object.keys(xs).map(Number).sort(function (a, b) { return a - b; })
+      .map(function (x) {
+        const vals = [];
+        lines.forEach(function (l) {
+          const p = l.points;
+          if (x < p[0].x || x > p[p.length - 1].x) return;
+          for (let i = 0; i < p.length; i++) {
+            if (p[i].x === x) { vals.push(p[i].y); return; }
+            if (p[i].x > x) {
+              const a = p[i - 1], b = p[i];
+              vals.push(a.y + ((b.y - a.y) * (x - a.x)) / (b.x - a.x));
+              return;
+            }
+          }
+        });
+        if (!vals.length) return null;
+        return { x: x, y: vals.reduce(function (a, b) { return a + b; }, 0) / vals.length };
+      }).filter(Boolean);
   }
 
   App.Pages = App.Pages || {};

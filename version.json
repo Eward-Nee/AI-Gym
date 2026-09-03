@@ -1,5 +1,5 @@
 {
-  "version": "0.6.4",
+  "version": "0.6.5",
   "name": "AI-Gym",
-  "notes": "The update check now runs every time the app is opened - on boot, on returning to the foreground, and on regaining a network - and opens the dialog itself. Later means a day, not forever. The daily keep-alive follows the same triggers, so a project cannot be missed because the app was offline at launch or never reloaded."
+  "notes": "The rest-timer sound is now a choice — chime, beep, bell, triple beep, buzz or silent — with its own loudness slider in the Control Panel, and a play button to hear it first. The progress report measures each workout on its own curve and averages those, with every workout shown underneath on one shared scale. The skyline and neon city are darker, every window glows onto its wall, no window sits on a building edge, and there is a moon over the dark city and a sun over the light one."
 }

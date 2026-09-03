@@ -100,11 +100,27 @@
     return v + ' seconds' + (v >= 60 ? ' (' + U.dur(v) + ')' : '') + '.';
   }
 
+  function soundHintFor(id) {
+    const k = App.Sound.KINDS.find(function (x) { return x.id === id; });
+    return k ? k.hint : '';
+  }
+
+  /** "60" -> "60% — plays when a rest runs out." */
+  function volumeHintFor(v) {
+    v = Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+    if (!v) return 'Muted — the timer will end silently.';
+    return v + '% — plays when a rest runs out.';
+  }
+
   function profileCard() {
     const s = App.Store.getSettings();
     const restSetHint = U.h('.hint', { text: secondsHint(s.restDefault) });
     const weeklyHint = U.h('.hint', { text: weeklySetsHint(s.weeklySets) });
     const restExHint = U.h('.hint', { text: secondsHint(s.restBetweenExercises) });
+    const sound = s.restSound || 'chime';
+    const volume = s.restVolume === undefined ? 60 : s.restVolume;
+    const soundHint = U.h('.hint', { text: soundHintFor(sound) });
+    const volumeHint = U.h('.hint', { text: volumeHintFor(volume) });
     return U.h('.card', [
       U.h('.card-head', [
         U.h('div', [
@@ -171,6 +187,52 @@
             U.h('span.u-sm.u-muted', 'sec')
           ]),
           restExHint
+        ])
+      ]),
+      /* THE TONE THAT ENDS A REST, AND HOW LOUD IT IS. The timer used to play
+         one fixed beep at one fixed level, which was too quiet on a gym floor
+         and too much in a quiet room. Both are now settings, and the play
+         button lets them be judged before a rest depends on them. */
+      U.h('.grid.grid-2', [
+        U.h('.field', [
+          U.h('label.label', 'Rest timer sound'),
+          U.h('.row', [
+            U.h('select.select', {
+              onchange: function () {
+                App.Store.saveSettings({ restSound: this.value });
+                soundHint.textContent = soundHintFor(this.value);
+                App.Sound.play(this.value);
+              }
+            }, App.Sound.KINDS.map(function (k) {
+              return U.h('option', { value: k.id, selected: sound === k.id }, k.name);
+            })),
+            U.h('button.btn.btn-sm', { type: 'button', 'aria-label': 'Play the rest sound',
+              html: U.icon('play') + '<span>Play</span>',
+              onclick: function () {
+                const s2 = App.Store.getSettings();
+                if (s2.restSound === 'off') { U.toast('Silent', 'Pick a sound to hear it.'); return; }
+                if (!App.Sound.play()) {
+                  U.toast('No sound', 'This device blocked audio. Tap again after ' +
+                    'unmuting.', 'bad');
+                }
+              } })
+          ]),
+          soundHint
+        ]),
+        U.h('.field', [
+          U.h('label.label', 'Loudness'),
+          U.h('.row', [
+            U.h('input.range', { type: 'range', min: '0', max: '100', step: '5',
+              value: volume, 'aria-label': 'Rest sound loudness',
+              oninput: function () { volumeHint.textContent = volumeHintFor(this.value); },
+              onchange: function () {
+                const v = Math.max(0, Math.min(100, Number(this.value) || 0));
+                App.Store.saveSettings({ restVolume: v });
+                volumeHint.textContent = volumeHintFor(v);
+                App.Sound.play(undefined, v);
+              } })
+          ]),
+          volumeHint
         ])
       ]),
       /* THE ONE NUMBER THE HEAT FIGURES ARE SCORED AGAINST.
