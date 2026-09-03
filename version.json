@@ -1,5 +1,5 @@
 {
-  "version": "0.6.6",
+  "version": "0.6.7",
   "name": "AI-Gym",
-  "notes": "The city, toned down: towers are solid rather than see-through, windows sit further apart and glow far less, the sky behind the skyline is close to black, and the diagonal dark bands across buildings are gone."
+  "notes": "The rest-timer tones are much louder: 100% is now full volume through a limiter, the notes use richer waveforms, every tone plays twice, and the phone vibrates with it."
 }
