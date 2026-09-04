@@ -455,10 +455,16 @@
    position and darkness, snapped so its windows fit: see the generator for
    why. Layers:
 
-     l1  far towers      l4  far windows
-     l2  mid towers      l5  mid windows
-     l3  near towers     l6  near windows (bigger glass)
+     l1  far towers      l2  far windows
+     l3  mid towers      l4  mid windows
+     l5  near towers     l6  near windows (bigger glass)
                          l7  horizon glow
+
+   EACH BAND'S WINDOWS SIT DIRECTLY ON ITS OWN TOWERS, and the next band's
+   towers are painted over both. The windows used to be three layers stacked
+   above all three tower layers, so a far tower's lit windows showed through
+   the near tower standing in front of it — which is not a lighting effect,
+   it is a building you can see through.
 
    EVERY BAND IS LIT. The far band used to be left dark on the grounds that it
    is haze; the result was a row of blank slabs behind a lit city, which reads
@@ -563,7 +569,7 @@
   background-position: 13.6% bottom, 69.3% bottom, 38.6% bottom, 6.1% bottom, 27.1% bottom, 43.6% bottom, 62.7% bottom, 0.1% bottom, 95.8% bottom, 75.3% bottom, 83.2% bottom, 22% bottom, 59.3% bottom, 88.5% bottom, 35% bottom, 54.9% bottom, 48.5% bottom, 84.6% bottom, 30.8% bottom, 78.8% bottom;
   background-repeat: no-repeat;
 }
-[data-bg='skyline'] .bg-l2 {
+[data-bg='skyline'] .bg-l3 {
   inset: 0;
   opacity: 1;
   background-image:
@@ -585,7 +591,7 @@
   background-position: 12.9% bottom, 29.6% bottom, 19.9% bottom, 50.4% bottom, 77.1% bottom, 88.5% bottom, 97.2% bottom, 63.2% bottom, 82.6% bottom, 56.2% bottom, 39.7% bottom, 70.2% bottom, 2.8% bottom, 28.5% bottom;
   background-repeat: no-repeat;
 }
-[data-bg='skyline'] .bg-l3 {
+[data-bg='skyline'] .bg-l5 {
   inset: 0;
   opacity: 1;
   background-image:
@@ -603,7 +609,7 @@
   background-position: 93.2% bottom, 65.6% bottom, 49.5% bottom, 1.6% bottom, 26.4% bottom, 40.3% bottom, 14.2% bottom, 81.1% bottom, 96.1% bottom, 69.2% bottom;
   background-repeat: no-repeat;
 }
-[data-bg='skyline'] .bg-l4 {
+[data-bg='skyline'] .bg-l2 {
   inset: 0;
   opacity: calc(var(--city-win-alpha) * 0.7);
   background-image: repeating-linear-gradient(to top, transparent 0 7px, color-mix(in srgb, var(--city-win) 8%, transparent) 8px, color-mix(in srgb, var(--city-win) 26%, transparent) 9px, color-mix(in srgb, var(--city-win) 72%, transparent) 10px 14px, color-mix(in srgb, var(--city-win) 26%, transparent) 15px, color-mix(in srgb, var(--city-win) 8%, transparent) 16px, transparent 17px 24px);
@@ -659,7 +665,7 @@
   mask-position: 13.6% bottom, 69.3% bottom, 38.6% bottom, 6.1% bottom, 27.1% bottom, 43.6% bottom, 62.7% bottom, 0.1% bottom, 95.8% bottom, 75.3% bottom, 83.2% bottom, 22% bottom, 59.3% bottom, 88.5% bottom, 35% bottom, 54.9% bottom, 48.5% bottom, 84.6% bottom, 30.8% bottom, 78.8% bottom;
   mask-repeat: no-repeat;
 }
-[data-bg='skyline'] .bg-l5 {
+[data-bg='skyline'] .bg-l4 {
   inset: 0;
   opacity: calc(var(--city-win-alpha) * 0.8);
   background-image: repeating-linear-gradient(to top, transparent 0 7px, color-mix(in srgb, var(--city-win) 8%, transparent) 8px, color-mix(in srgb, var(--city-win) 26%, transparent) 9px, color-mix(in srgb, var(--city-win) 72%, transparent) 10px 14px, color-mix(in srgb, var(--city-win) 26%, transparent) 15px, color-mix(in srgb, var(--city-win) 8%, transparent) 16px, transparent 17px 24px);
@@ -814,7 +820,7 @@
   background-position: 13.6% bottom, 69.3% bottom, 38.6% bottom, 6.1% bottom, 27.1% bottom, 43.6% bottom, 62.7% bottom, 0.1% bottom, 95.8% bottom, 75.3% bottom, 83.2% bottom, 22% bottom, 59.3% bottom, 88.5% bottom, 35% bottom, 54.9% bottom, 48.5% bottom, 84.6% bottom, 30.8% bottom, 78.8% bottom;
   background-repeat: no-repeat;
 }
-[data-bg='neon'] .bg-l2 {
+[data-bg='neon'] .bg-l3 {
   inset: 0 -22%;
   opacity: 1;
   animation: city-mid 47s linear infinite;
@@ -837,7 +843,7 @@
   background-position: 12.9% bottom, 29.6% bottom, 19.9% bottom, 50.4% bottom, 77.1% bottom, 88.5% bottom, 97.2% bottom, 63.2% bottom, 82.6% bottom, 56.2% bottom, 39.7% bottom, 70.2% bottom, 2.8% bottom, 28.5% bottom;
   background-repeat: no-repeat;
 }
-[data-bg='neon'] .bg-l3 {
+[data-bg='neon'] .bg-l5 {
   inset: 0 -22%;
   opacity: 1;
   animation: city-near 29s linear infinite;
@@ -856,7 +862,7 @@
   background-position: 93.2% bottom, 65.6% bottom, 49.5% bottom, 1.6% bottom, 26.4% bottom, 40.3% bottom, 14.2% bottom, 81.1% bottom, 96.1% bottom, 69.2% bottom;
   background-repeat: no-repeat;
 }
-[data-bg='neon'] .bg-l4 {
+[data-bg='neon'] .bg-l2 {
   inset: 0 -22%;
   opacity: calc(var(--city-win-alpha) * 0.7);
   animation: city-far 74s linear infinite;
@@ -913,7 +919,7 @@
   mask-position: 13.6% bottom, 69.3% bottom, 38.6% bottom, 6.1% bottom, 27.1% bottom, 43.6% bottom, 62.7% bottom, 0.1% bottom, 95.8% bottom, 75.3% bottom, 83.2% bottom, 22% bottom, 59.3% bottom, 88.5% bottom, 35% bottom, 54.9% bottom, 48.5% bottom, 84.6% bottom, 30.8% bottom, 78.8% bottom;
   mask-repeat: no-repeat;
 }
-[data-bg='neon'] .bg-l5 {
+[data-bg='neon'] .bg-l4 {
   inset: 0 -22%;
   opacity: calc(var(--city-win-alpha) * 0.85);
   animation: city-mid 47s linear infinite;
@@ -1130,13 +1136,13 @@
    off the buildings they belong to. */
 [data-bgmotion='low'][data-bg='neon']   .bg-l1,
 [data-bgmotion='low'][data-bg='neon']   .bg-l2,
-[data-bgmotion='low'][data-bg='neon']   .bg-l4,
-[data-bgmotion='low'][data-bg='neon']   .bg-l5 {
+[data-bgmotion='low'][data-bg='neon']   .bg-l3,
+[data-bgmotion='low'][data-bg='neon']   .bg-l4 {
   animation: none;
 }
 /* Nothing that has stopped moving should still be holding a compositor layer. */
 [data-bgmotion='low'] .bg-fx > i { will-change: auto; }
-[data-bgmotion='low'][data-bg='neon'] .bg-l3,
+[data-bgmotion='low'][data-bg='neon'] .bg-l5,
 [data-bgmotion='low'][data-bg='neon'] .bg-l6,
 [data-bgmotion='low'][data-bg='hologrid'] .bg-l3,
 [data-bgmotion='low'][data-bg='aurora'] .bg-l4,

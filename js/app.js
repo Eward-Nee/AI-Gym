@@ -14,7 +14,7 @@
     { id: 'settings',  title: 'Control Panel', sub: 'Account, sync, theme',   icon: 'settings' }
   ];
 
-  const VERSION = '0.7.2';
+  const VERSION = '0.7.3';
 
   /* Six static, six animated. All derive their colour from the active scheme
      and mode, so they never fight the theme. */

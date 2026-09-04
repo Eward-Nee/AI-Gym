@@ -234,10 +234,16 @@ const SKYLINE = `/* --- 9. Skyline: a sci-fi city under a moon or a sun (static)
    position and darkness, snapped so its windows fit: see the generator for
    why. Layers:
 
-     l1  far towers      l4  far windows
-     l2  mid towers      l5  mid windows
-     l3  near towers     l6  near windows (bigger glass)
+     l1  far towers      l2  far windows
+     l3  mid towers      l4  mid windows
+     l5  near towers     l6  near windows (bigger glass)
                          l7  horizon glow
+
+   EACH BAND'S WINDOWS SIT DIRECTLY ON ITS OWN TOWERS, and the next band's
+   towers are painted over both. The windows used to be three layers stacked
+   above all three tower layers, so a far tower's lit windows showed through
+   the near tower standing in front of it — which is not a lighting effect,
+   it is a building you can see through.
 
    EVERY BAND IS LIT. The far band used to be left dark on the grounds that it
    is haze; the result was a row of blank slabs behind a lit city, which reads
@@ -249,10 +255,10 @@ const SKYLINE = `/* --- 9. Skyline: a sci-fi city under a moon or a sun (static)
    -------------------------------------------------------------------------- */
 ` + LIGHTING +
   towerLayer("[data-bg='skyline'] .bg-l1", BANDS.far, ['inset: 0;', 'opacity: 1;']) +
-  towerLayer("[data-bg='skyline'] .bg-l2", BANDS.mid, ['inset: 0;', 'opacity: 1;']) +
-  towerLayer("[data-bg='skyline'] .bg-l3", BANDS.near, ['inset: 0;', 'opacity: 1;']) +
-  windowLayer("[data-bg='skyline'] .bg-l4", [BANDS.far], ['inset: 0;', 'opacity: calc(var(--city-win-alpha) * 0.7);']) +
-  windowLayer("[data-bg='skyline'] .bg-l5", [BANDS.mid], ['inset: 0;', 'opacity: calc(var(--city-win-alpha) * 0.8);']) +
+  towerLayer("[data-bg='skyline'] .bg-l3", BANDS.mid, ['inset: 0;', 'opacity: 1;']) +
+  towerLayer("[data-bg='skyline'] .bg-l5", BANDS.near, ['inset: 0;', 'opacity: 1;']) +
+  windowLayer("[data-bg='skyline'] .bg-l2", [BANDS.far], ['inset: 0;', 'opacity: calc(var(--city-win-alpha) * 0.7);']) +
+  windowLayer("[data-bg='skyline'] .bg-l4", [BANDS.mid], ['inset: 0;', 'opacity: calc(var(--city-win-alpha) * 0.8);']) +
   windowLayer("[data-bg='skyline'] .bg-l6", [BANDS.near], ['inset: 0;', 'opacity: var(--city-win-alpha);']) +
 `[data-bg='skyline'] .bg-l7 {
   opacity: var(--city-glow-alpha);
@@ -273,10 +279,10 @@ const NEON = `/* --- 11. Neon City: the same city, alive (animated) ------------
    -------------------------------------------------------------------------- */
 ` +
   towerLayer("[data-bg='neon'] .bg-l1", BANDS.far, ['inset: 0 -22%;', 'opacity: 1;', 'animation: city-far 74s linear infinite;']) +
-  towerLayer("[data-bg='neon'] .bg-l2", BANDS.mid, ['inset: 0 -22%;', 'opacity: 1;', 'animation: city-mid 47s linear infinite;']) +
-  towerLayer("[data-bg='neon'] .bg-l3", BANDS.near, ['inset: 0 -22%;', 'opacity: 1;', 'animation: city-near 29s linear infinite;']) +
-  windowLayer("[data-bg='neon'] .bg-l4", [BANDS.far], ['inset: 0 -22%;', 'opacity: calc(var(--city-win-alpha) * 0.7);', 'animation: city-far 74s linear infinite;']) +
-  windowLayer("[data-bg='neon'] .bg-l5", [BANDS.mid], ['inset: 0 -22%;', 'opacity: calc(var(--city-win-alpha) * 0.85);', 'animation: city-mid 47s linear infinite;']) +
+  towerLayer("[data-bg='neon'] .bg-l3", BANDS.mid, ['inset: 0 -22%;', 'opacity: 1;', 'animation: city-mid 47s linear infinite;']) +
+  towerLayer("[data-bg='neon'] .bg-l5", BANDS.near, ['inset: 0 -22%;', 'opacity: 1;', 'animation: city-near 29s linear infinite;']) +
+  windowLayer("[data-bg='neon'] .bg-l2", [BANDS.far], ['inset: 0 -22%;', 'opacity: calc(var(--city-win-alpha) * 0.7);', 'animation: city-far 74s linear infinite;']) +
+  windowLayer("[data-bg='neon'] .bg-l4", [BANDS.mid], ['inset: 0 -22%;', 'opacity: calc(var(--city-win-alpha) * 0.85);', 'animation: city-mid 47s linear infinite;']) +
   windowLayer("[data-bg='neon'] .bg-l6", [BANDS.near], ['inset: 0 -22%;', 'opacity: var(--city-win-alpha);', 'animation: city-near 29s linear infinite;']) +
 `[data-bg='neon'] .bg-l7 {
   opacity: var(--city-glow-alpha);
