@@ -15,6 +15,9 @@
   let mode = 'list';
   let currentId = null;
   const report = { range: '90', picks: [] };
+  /* Which program the session list is narrowed to, or null for every session.
+     Page state, not a setting: it is a way of looking, not a fact. */
+  let programFilter = null;
 
   function render(el, params) {
     root = el;
@@ -48,7 +51,57 @@
       })
     ]);
 
-    const workouts = App.Store.allWorkouts();
+    let workouts = App.Store.allWorkouts();
+    const programs = App.Store.allPrograms();
+    const chosen = programFilter && App.Store.getProgram(programFilter);
+    if (programFilter && !chosen) programFilter = null;
+
+    /* THE PROGRAM SELECTOR. With a program chosen, the list is that program's
+       sessions, grouped by phase, and nothing else — the twelve sessions a
+       generator writes would otherwise bury the three you built by hand. */
+    if (programs.length) {
+      root.appendChild(U.h('.card', { style: { padding: 'var(--sp-3) var(--sp-4)' } }, [
+        U.h('.row.row-wrap', [
+          U.h('span.u-xs.u-muted', 'Showing'),
+          U.h('.tag-row', [
+            U.h('button.chip.chip-btn' + (!chosen ? '.chip-accent' : ''), {
+              type: 'button', text: 'All sessions',
+              onclick: function () { programFilter = null; draw(); }
+            })
+          ].concat(programs.map(function (pg) {
+            return U.h('button.chip.chip-btn' + (chosen && chosen.id === pg.id ? '.chip-accent' : ''), {
+              type: 'button', text: pg.name,
+              onclick: function () { programFilter = pg.id; draw(); }
+            });
+          })))
+        ])
+      ]));
+    }
+
+    if (chosen) {
+      const live = App.Programs.activePhase(chosen);
+      (chosen.phases || []).forEach(function (ph, i) {
+        const ids = ph.workoutIds || [];
+        const list = ids.map(function (id) { return App.Store.getWorkout(id); }).filter(Boolean);
+        const on = live && live.index === i && !live.complete;
+        root.appendChild(U.h('.sec-head', { style: { marginTop: i ? '18px' : '4px' } }, [
+          U.h('h2', ph.name),
+          on ? U.h('span.chip.chip-accent', 'This phase') : null,
+          U.h('.spacer'),
+          U.h('span.u-xs.u-muted', list.length + ' session' + (list.length === 1 ? '' : 's'))
+        ]));
+        if (!list.length) {
+          root.appendChild(U.h('p.u-sm.u-muted', 'No sessions in this phase yet.'));
+          return;
+        }
+        const grid = U.h('.wo-list');
+        list.forEach(function (w) { grid.appendChild(workoutCard(w)); });
+        root.appendChild(grid);
+      });
+      root.appendChild(programsCard());
+      root.appendChild(progressReport());
+      return;
+    }
 
     if (!workouts.length) {
       root.appendChild(U.h('.card', [
@@ -120,13 +173,176 @@
           U.h('.card-sub', 'A rotation of phases, on a schedule you set.')
         ]),
         U.h('.spacer'),
+        U.h('button.btn.btn-sm', {
+          type: 'button', html: U.icon('plus') + '<span>New program</span>',
+          onclick: function () { customProgramDialog(null); }
+        }),
         U.h('button.btn.btn-primary.btn-sm', {
-          type: 'button', html: U.icon('plus') + '<span>Generate</span>',
+          type: 'button', html: U.icon('play') + '<span>Generate</span>',
           onclick: function () { generateDialog(); }
         })
       ]),
       body
     ]);
+  }
+
+  /* ---------------------------------------------------------------------------
+     A PROGRAM BUILT BY HAND
+
+     Phases you name, each holding sessions you already have. The same dialog
+     edits an existing program, generated or not — a generated program is only
+     a program somebody else wrote first.
+     ------------------------------------------------------------------------ */
+  function customProgramDialog(existing) {
+    const workouts = App.Store.allWorkouts();
+    const draft = existing ? JSON.parse(JSON.stringify(existing)) : {
+      name: 'My program', rotateEvery: 4, rotateUnit: 'weeks', repeat: true,
+      startDate: U.today(),
+      phases: [{ id: U.uid('ph'), name: 'Phase 1', blockId: 'hypertrophy', workoutIds: [] }]
+    };
+
+    const nameEl = U.h('input.input', { value: draft.name, placeholder: 'Program name',
+      oninput: function () { draft.name = this.value; } });
+    const everyEl = U.h('input.input.input-num', { type: 'number', min: '1', max: '52',
+      value: draft.rotateEvery || 4, inputmode: 'numeric',
+      onchange: function () { draft.rotateEvery = Math.max(1, Number(this.value) || 4); } });
+    const unitEl = U.h('select.select', { onchange: function () { draft.rotateUnit = this.value; } }, [
+      U.h('option', { value: 'days', selected: draft.rotateUnit === 'days' }, 'days'),
+      U.h('option', { value: 'weeks', selected: !draft.rotateUnit || draft.rotateUnit === 'weeks' }, 'weeks'),
+      U.h('option', { value: 'months', selected: draft.rotateUnit === 'months' }, 'months')
+    ]);
+    const startEl = U.h('input.input', { type: 'date', value: draft.startDate || U.today(),
+      onchange: function () { draft.startDate = this.value || U.today(); } });
+    const repeatEl = U.h('input', { type: 'checkbox', checked: draft.repeat !== false,
+      onchange: function () { draft.repeat = this.checked; } });
+
+    const phasesWrap = U.h('.stack');
+    function paintPhases() {
+      U.clear(phasesWrap);
+      draft.phases.forEach(function (ph, i) {
+        const chips = U.h('.tag-row', workouts.map(function (w) {
+          const on = (ph.workoutIds || []).indexOf(w.id) >= 0;
+          return U.h('button.chip.chip-btn' + (on ? '.chip-accent' : ''), {
+            type: 'button', text: w.name,
+            onclick: function () {
+              const ids = ph.workoutIds = ph.workoutIds || [];
+              const k = ids.indexOf(w.id);
+              if (k >= 0) ids.splice(k, 1); else ids.push(w.id);
+              this.classList.toggle('chip-accent', k < 0);
+            }
+          });
+        }));
+        phasesWrap.appendChild(U.h('.wo-block', [
+          U.h('.row', [
+            U.h('input.input.input-sm', { value: ph.name, placeholder: 'Phase name',
+              oninput: function () { ph.name = this.value; } }),
+            U.h('select.select.input-sm', { style: { width: 'auto' },
+              onchange: function () { ph.blockId = this.value; } },
+              Object.keys(App.Programs.BLOCKS).map(function (b) {
+                return U.h('option', { value: b, selected: ph.blockId === b },
+                  App.Programs.BLOCKS[b].name);
+              })),
+            U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+              type: 'button', html: U.icon('x'), 'aria-label': 'Remove phase',
+              onclick: function () { draft.phases.splice(i, 1); paintPhases(); }
+            })
+          ]),
+          U.h('.u-xs.u-muted', { style: { margin: '6px 0' } },
+            'Sessions in this phase — the block sets how they progress week to week.'),
+          workouts.length ? chips : U.h('p.u-sm.u-muted', 'No sessions to choose from yet.')
+        ]));
+      });
+    }
+    paintPhases();
+
+    U.modal({
+      title: existing ? 'Edit program' : 'New program',
+      wide: true,
+      body: function (b) {
+        b.appendChild(U.h('.stack', [
+          U.h('.grid.grid-2', [
+            U.h('.field', [U.h('label.label', 'Name'), nameEl]),
+            U.h('.field', [U.h('label.label', 'Started on'), startEl])
+          ]),
+          U.h('.field', [U.h('label.label', 'Move to the next phase every'),
+            U.h('.row', [everyEl, unitEl])]),
+          U.h('label.switch', { style: { alignItems: 'flex-start' } }, [
+            repeatEl, U.h('i.switch-track'),
+            U.h('div', [
+              U.h('div', { style: { fontWeight: '560' } }, 'Permanent'),
+              U.h('.u-xs.u-muted', 'Loops back to the first phase after the last. Off, ' +
+                'it runs the phases once, then finishes and writes its report.')
+            ])
+          ]),
+          U.h('.field', [U.h('label.label', 'Phases'), phasesWrap,
+            U.h('button.btn.btn-sm', { type: 'button', text: 'Add a phase',
+              style: { marginTop: '8px' },
+              onclick: function () {
+                draft.phases.push({ id: U.uid('ph'), name: 'Phase ' + (draft.phases.length + 1),
+                  blockId: 'hypertrophy', workoutIds: [] });
+                paintPhases();
+              } })])
+        ]));
+      },
+      actions: [
+        { label: 'Cancel' },
+        { label: existing ? 'Save' : 'Create', kind: 'primary', onClick: function (close) {
+          if (!draft.phases.length) {
+            U.toast('No phases', 'A program needs at least one phase.', 'bad');
+            return;
+          }
+          App.Store.saveProgram(draft).then(function (pg) {
+            close();
+            U.toast(existing ? 'Saved' : 'Program created', pg.name, 'good');
+          });
+        } }
+      ]
+    });
+  }
+
+  /* ---------------------------------------------------------------------------
+     THE REPORT — did you keep to it?
+     ------------------------------------------------------------------------ */
+  function reportDialog(pg) {
+    const r = App.Programs.report(pg);
+    U.modal({
+      title: pg.name + ' — report',
+      wide: true,
+      body: function (b) {
+        b.appendChild(U.h('.stack', [
+          U.h('.grid.grid-2', [
+            C.statTile('Kept to it', Math.round(r.adherence * 100) + '%', r.verdict),
+            C.statTile(r.complete ? 'Finished' : 'In progress',
+              r.rows.filter(function (x) { return x.started; }).length + ' / ' + r.rows.length,
+              'phases started')
+          ]),
+          U.h('.table-wrap', [U.h('table.tbl', [
+            U.h('thead', [U.h('tr', [
+              U.h('th', 'Phase'), U.h('th.num', 'Sessions'), U.h('th.num', 'Load'), U.h('th', 'Reading')
+            ])]),
+            U.h('tbody', r.rows.map(function (x) {
+              const pct = Math.round(x.adherence * 100);
+              return U.h('tr', [
+                U.h('td', [U.h('div', { style: { fontWeight: '560' }, text: x.name }),
+                  U.h('.u-xs.u-muted', { text: x.from + ' → ' + x.to })]),
+                U.h('td.num', { text: x.started
+                  ? x.done + ' of ' + x.expectedSoFar + (x.expectedSoFar !== x.expected ? ' so far' : '')
+                  : '—' }),
+                U.h('td.num', { text: x.gainPct === null ? '—'
+                  : (x.gainPct >= 0 ? '+' : '') + U.num(x.gainPct, 1) + '%' +
+                    (x.askedPct ? ' of +' + x.askedPct + '%' : '') }),
+                U.h('td', [U.h('span.badge' + (pct >= 90 ? '.badge-good' : pct < 50 && x.started ? '.badge-bad' : ''),
+                  { text: !x.started ? 'Not yet' : pct >= 90 ? 'On plan' : pct >= 60 ? 'Nearly' : 'Behind' })])
+              ]);
+            }))
+          ])]),
+          U.h('p.u-xs.u-muted', 'Sessions counts what was logged from this phase inside its own ' +
+            'dates. Load is how the estimated one-rep max moved across the phase, averaged ' +
+            'over the movements it saw more than once, against what the progression asked for.')
+        ]));
+      },
+      actions: [{ label: 'Close' }]
+    });
   }
 
   function programRow(pg) {
@@ -135,14 +351,15 @@
     const phases = pg.phases || [];
 
     const chips = U.h('.tag-row', phases.map(function (ph, i) {
-      const on = live && live.index === i;
+      const on = live && live.index === i && !live.complete;
       return U.h('span.chip' + (on ? '.chip-accent' : ''), {
-        text: ph.name + ' · ' + (ph.workoutIds || []).length + 'd'
+        text: ph.name + ' · ' + (ph.workoutIds || []).length + ' session' +
+          ((ph.workoutIds || []).length === 1 ? '' : 's')
       });
     }));
 
     const runRow = U.h('.tag-row');
-    if (live) {
+    if (live && !live.complete) {
       ((live.phase || {}).workoutIds || []).forEach(function (id) {
         const w = App.Store.getWorkout(id);
         if (!w) return;
@@ -153,27 +370,34 @@
       });
     }
 
+    let status;
+    if (!live) status = 'No phases';
+    else if (live.complete) status = 'Finished — ran once, ' + phases.length + ' phase' +
+      (phases.length === 1 ? '' : 's') + '. See the report.';
+    else status = live.phase.name + ' · week ' + (live.week + 1) + ' · day ' + live.dayOfPhase +
+      ' of ' + live.periodDays + ' · ' + live.daysLeft + ' left, then ' +
+      (live.next ? live.next.name : 'done') + (pg.repeat === false ? ' · runs once' : ' · permanent');
+
     return U.h('.wo-block', [
       U.h('.row.row-wrap', [
         U.h('div', { style: { minWidth: 0 } }, [
           U.h('div', { style: { fontWeight: '620' }, text: pg.name }),
-          U.h('.u-xs.u-muted', {
-            text: live
-              ? 'Week of ' + live.phase.name + ' · day ' + live.dayOfPhase + ' of ' +
-                live.periodDays + ' · ' + live.daysLeft + ' left, then ' + live.next.name
-              : 'No phases'
-          })
+          U.h('.u-xs.u-muted', { text: status })
         ]),
         U.h('.spacer'),
-        U.h('button.btn.btn-sm', { type: 'button', text: 'Schedule',
-          onclick: function () { scheduleDialog(pg); } }),
+        U.h('button.btn.btn-sm', { type: 'button', text: 'Show',
+          onclick: function () { programFilter = pg.id; draw(); window.scrollTo(0, 0); } }),
+        U.h('button.btn.btn-sm', { type: 'button', text: 'Report',
+          onclick: function () { reportDialog(pg); } }),
+        U.h('button.btn.btn-sm', { type: 'button', text: 'Edit',
+          onclick: function () { customProgramDialog(pg); } }),
         U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
           type: 'button', 'aria-label': 'Delete program', html: U.icon('trash'),
           onclick: function () { removeProgram(pg); }
         })
       ]),
       chips,
-      live && runRow.childNodes.length
+      runRow.childNodes.length
         ? U.h('div', [U.h('.label', { style: { marginTop: '10px' } }, 'This phase'), runRow])
         : null,
       pg.warnings && pg.warnings.length
@@ -242,16 +466,19 @@
   function generateDialog() {
     const P = App.Programs;
     const s = App.Store.getSettings();
-    const workouts = App.Store.allWorkouts().filter(function (w) {
-      return (w.items || []).length;
-    });
+    const programs = App.Store.allPrograms();
 
     const nameEl = U.h('input.input', { value: 'My program', placeholder: 'Program name' });
+    /* Based on a PROGRAM, not a session. A session is one day; the movements
+       and loads worth carrying forward are the whole rotation's. From scratch,
+       the seeds are everything the lifter has ever logged, which is exactly
+       the set of movements their weights are known for. */
     const baseEl = U.h('select.select', {},
-      [U.h('option', { value: '' }, 'Start from scratch')].concat(
-        workouts.map(function (w) {
-          return U.h('option', { value: w.id }, w.name);
+      [U.h('option', { value: '' }, 'From scratch — using everything you have logged')].concat(
+        programs.map(function (pg) {
+          return U.h('option', { value: pg.id }, pg.name);
         })));
+    const repeatEl = U.h('input', { type: 'checkbox', checked: false });
     const daysEl = U.h('select.select', {}, [2, 3, 4, 5, 6].map(function (d) {
       return U.h('option', { value: String(d), selected: d === 4 }, d + ' days a week');
     }));
@@ -331,8 +558,21 @@
           ]),
           U.h('.field', [U.h('label.label', 'Move to the next phase every'),
             U.h('.row', [everyEl, unitEl])]),
+          U.h('label.switch', { style: { alignItems: 'flex-start' } }, [
+            repeatEl, U.h('i.switch-track'),
+            U.h('div', [
+              U.h('div', { style: { fontWeight: '560' } }, 'Permanent'),
+              U.h('.u-xs.u-muted', 'Loops back to the first phase after the last. Off, it ' +
+                'runs the phases once, finishes, and writes a report on whether you kept to it.')
+            ])
+          ]),
           U.h('.field', [U.h('label.label', 'Phases'),
             U.h('.stack-sm', blockBoxes.map(function (x) { return x.el; }))]),
+          s.homeUnits && s.homeUnits.length ? U.h('.hint', 'Your home units from the Control Panel — ' +
+            s.homeUnits.map(function (id) {
+              const u = App.Programs.UNITS.find(function (x) { return x.id === id; });
+              return u ? u.name : id;
+            }).join(', ') + ' — add their stations to whatever you tick below.') : null,
           U.h('.field', [
             U.h('label.label', 'Equipment you can use'),
             presetRow,
@@ -358,7 +598,9 @@
           }
           const plan = App.Programs.generate({
             name: nameEl.value || 'My program',
-            base: baseEl.value ? App.Store.getWorkout(baseEl.value) : null,
+            base: baseEl.value ? App.Store.getProgram(baseEl.value) : null,
+            units: s.homeUnits || [],
+            repeat: repeatEl.checked,
             daysPerWeek: Number(daysEl.value) || 4,
             splitId: splitEl.value || null,
             kit: kit,
@@ -407,9 +649,13 @@
         b.appendChild(U.h('.stack', [
           U.h('p.u-sm.u-muted', App.Programs.SPLITS[plan.program.splitId].name + ' · ' +
             plan.program.daysPerWeek + ' days a week · one phase every ' +
-            plan.program.rotateEvery + ' ' + plan.program.rotateUnit + '. Weights are ' +
-            'worked out from your own logged best for each movement; anything you have ' +
-            'never done is left blank rather than guessed at.'),
+            plan.program.rotateEvery + ' ' + plan.program.rotateUnit +
+            (plan.program.repeat === false ? ' · runs once' : ' · permanent') +
+            '. Weights come from your own logged best for each movement; a movement ' +
+            'you have never done borrows from the closest one you have, scaled for how ' +
+            'it is loaded, and anything with no near relative in your log is left blank. ' +
+            'Each week into a phase the load steps up on the plan, and a hypertrophy ' +
+            'phase adds a set from its third week.'),
           plan.warnings.length ? U.h('.sci-note', [
             U.h('.sci-note-title', 'What your equipment could not cover'),
             U.h('p.u-sm.u-muted', { text: plan.warnings.join(' ') })
@@ -959,9 +1205,28 @@
     const previous = App.Store.allSessions().find(function (s) { return s.workoutId === w.id; });
     const previousHeat = previous ? App.Store.sessionsHeat([previous]) : null;
 
+    /* A session that belongs to a PROGRAM opens with the plan as this week of
+       the phase asks for it — the load stepped up, a set added — because that
+       schedule is the whole point of being in a program. A plan weight that is
+       still blank falls back to what was lifted last time, so a program written
+       before any history still opens with a number. */
+    const prog = App.Programs.progressionFor(w.id);
+
     function openingSets(it) {
       const prev = previous && (previous.entries || [])
         .find(function (e) { return e.exerciseId === it.exerciseId; });
+      if (prog) {
+        const ex = App.Store.getExercise(it.exerciseId);
+        const planned = App.Programs.progressSets(it, ex, prog);
+        return planned.map(function (s, i) {
+          const fallback = prev && prev.sets && prev.sets[Math.min(i, prev.sets.length - 1)];
+          return {
+            weight: s.weight > 0 ? s.weight : Number(fallback && fallback.weight) || 0,
+            reps: s.reps || Number(fallback && fallback.reps) || 0,
+            done: false
+          };
+        });
+      }
       const source = (prev && prev.sets && prev.sets.length) ? prev.sets : (it.sets || []);
       return source.map(function (s) {
         return { weight: Number(s.weight) || 0, reps: Number(s.reps) || 0, done: false };
@@ -977,7 +1242,9 @@
       })
     };
 
-    if (!resume && previous) {
+    if (!resume && prog) {
+      U.toast(prog.program.name, prog.label, 'good');
+    } else if (!resume && previous) {
       U.toast('Picked up from last time',
         'Sets, reps and weights are what you did on ' + U.fmtDate(previous.date) + '.');
     }
@@ -1450,6 +1717,7 @@
       U.h('.row.row-wrap', [
         U.h('.stat', [U.h('.stat-label', 'Elapsed'), timerEl]),
         restEl,
+        prog ? U.h('span.chip', { text: prog.label, title: prog.program.name }) : null,
         U.h('.spacer'),
         U.h('.field', { style: { width: '160px' } }, [
           U.h('label.label', 'Date'),

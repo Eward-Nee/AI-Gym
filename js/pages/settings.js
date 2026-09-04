@@ -16,8 +16,18 @@
     root = el;
     if (unbindSync) unbindSync();
     /* Sign-in, sign-out and auto-connect all resolve asynchronously. Without
-       this the panel keeps showing whatever was true when it first painted. */
+       this the panel keeps showing whatever was true when it first painted.
+
+       THE FOUR-SECOND JUMP TO THE CONTROL PANEL lived here. `root` is the
+       shell's one main element — every page renders into the same node — so
+       `root.isConnected` was true forever, and this listener outlived the
+       visit. Saving a workout queues a sync; the sync finishes a few seconds
+       later and emits; and this repainted the Control Panel into whatever
+       page was on screen, with the address bar still saying Workouts. The
+       listener now asks the shell which route is live and does nothing
+       unless it is this one. */
     unbindSync = App.Store.on('sync', function () {
+      if (App.Shell.route && App.Shell.route() !== 'settings') return;
       if (root && root.isConnected && !document.querySelector('.modal-root')) draw();
     });
     draw();
@@ -357,12 +367,61 @@
       });
     }));
 
+    /* --- home units --------------------------------------------------------
+       A home smith-machine unit is not "a machine and a cable". It is one
+       pulley, one leg developer and a bar on rails, and the generator has to
+       know which, or it prescribes a hack squat to somebody whose machine is
+       a bench. Each unit is described by its stations; ticking one adds those
+       stations' equipment, restricted to what the stations can actually do.
+       More than one can be ticked — a unit and a separate rack is common. */
+    const unitsOn = Object.create(null);
+    (s.homeUnits || []).forEach(function (id) { unitsOn[id] = true; });
+    const unitList = U.h('.stack-sm');
+    const unitHint = U.h('.hint');
+
+    function unitSummary() {
+      const st = App.Programs.unitsStations(Object.keys(unitsOn));
+      const names = Object.keys(st);
+      unitHint.textContent = names.length
+        ? 'Stations you can use: ' + names.map(function (k) {
+          return k.replace(/([A-Z])/g, ' $1').toLowerCase();
+        }).join(', ') + '.'
+        : 'None chosen. Tick the unit you own and the generator will only ask it ' +
+          'for what its stations can do.';
+    }
+
+    App.Programs.UNITS.forEach(function (u) {
+      const cb = U.h('input', { type: 'checkbox', checked: !!unitsOn[u.id],
+        onchange: function () {
+          if (this.checked) unitsOn[u.id] = true; else delete unitsOn[u.id];
+          App.Store.saveSettings({ homeUnits: Object.keys(unitsOn) });
+          unitSummary();
+        } });
+      unitList.appendChild(U.h('label.switch', { style: { alignItems: 'flex-start' } }, [
+        cb, U.h('i.switch-track'),
+        U.h('div', { style: { minWidth: 0 } }, [
+          U.h('div', { style: { fontWeight: '560' }, text: u.brand + ' ' + u.name }),
+          U.h('.u-xs.u-muted', { text:
+            (u.priceZar ? 'About R' + U.compact(u.priceZar) + ' · ' : '') +
+            (u.retailers || []).join(', ') +
+            (u.stations && u.stations.length ? ' · ' + u.stations.length + ' stations' : '') +
+            (u.confidence === 'low' ? ' · stations inferred from photos' : '') })
+        ])
+      ]));
+    });
+    unitSummary();
+
     return U.h('.card', [
       U.h('.card-head', [U.h('div', [
         U.h('h2', 'Equipment'),
         U.h('.card-sub', 'What the program generator may pick from.')
       ])]),
-      U.h('.field', [U.h('label.label', 'Start from'), presets]),
+      App.Programs.UNITS.length ? U.h('.field', [
+        U.h('label.label', 'Home units you own'),
+        unitList,
+        unitHint
+      ]) : null,
+      U.h('.field', { style: { marginTop: '16px' } }, [U.h('label.label', 'Start from'), presets]),
       U.h('.field', { style: { marginTop: '16px' } },
         [U.h('label.label', 'Available to you'), chips, countEl]),
       U.h('.sci-note', { style: { marginTop: '14px' } }, [

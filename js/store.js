@@ -55,6 +55,10 @@
     /* Bodyweight is 77 of the 468 movements, and plenty of people will not do
        any of them. Off here means the generator never picks one. */
     allowBodyweight: true,
+    /* Home multi-station units the lifter owns, by id from App.Programs.UNITS.
+       Their stations add to the kit — restricted to what those stations can
+       actually do. (`units` is taken: it is kg or lb.) */
+    homeUnits: [],
     /* A wallpaper of your own. `custom` is a picture, a gif or a video held in
        `meta` as a data URL; `css` is CSS you wrote yourself. Both are only
        used when `background` is set to the matching id, so switching back to a

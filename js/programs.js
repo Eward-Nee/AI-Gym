@@ -300,6 +300,83 @@
   /* A to-failure load, discounted for the reps you mean to leave. */
   const RIR_MULT = [1, 0.97, 0.94, 0.91, 0.88, 0.85];
 
+  /* ---------------------------------------------------------------------------
+     HOME UNITS AND THEIR STATIONS
+
+     "Machine" and "cable" are honest equipment ids in a commercial gym, where
+     the word covers thirty different machines. They are not honest for a home
+     smith-machine unit, which has ONE pulley, ONE leg developer and no hack
+     squat, and a generator that read "machine" off it would prescribe a
+     pendulum squat to someone whose machine is a bench with a bar on rails.
+
+     So a unit is described by its STATIONS, and a machine or cable exercise is
+     only allowed off a unit when one of its stations can actually perform it.
+     The regexes are over exercise ids — this library's ids are descriptive
+     enough for that to be the right key.
+     ------------------------------------------------------------------------ */
+
+  const STATION_EQUIP = {
+    smith: 'smith', freeBarbell: 'barbell', cable: 'cable', latPulldown: 'cable',
+    lowRow: 'cable', cableCrossover: 'cable', pecDeck: 'machine',
+    legDeveloper: 'machine', legPress: 'machine', preacherCurl: 'machine',
+    dipStation: 'bodyweight', pullupBar: 'bodyweight'
+  };
+
+  const STATION_MATCH = {
+    smith: /smith/,
+    latPulldown: /pulldown|pull-down|lat-pull/,
+    lowRow: /cable-row|seated-row|low-row|machine-row|cable-.*-row/,
+    /* One pulley does not make a chest press or a fly; those need the crossover
+       arms, which is a station of its own below. */
+    cable: /^(?!.*(chest-press|fly|crossover))(?=.*(cable|rope|pushdown|face-pull|pull-through|woodchop|pallof|straight-arm|triceps-extension))/,
+    cableCrossover: /crossover|cable-fly|cable-incline-fly|cable-chest/,
+    pecDeck: /pec-deck|machine-fly|reverse-fly/,
+    legDeveloper: /leg-extension|leg-curl/,
+    legPress: /leg-press/,
+    preacherCurl: /preacher/,
+    dipStation: /dip/,
+    pullupBar: /pull-up|chin-up|hanging|inverted-row/
+  };
+
+  /* The catalogue lives in js/data/units.js, loaded before this file. */
+  const UNITS = (App.SeedUnits || []).slice();
+
+  function unitById(id) {
+    return UNITS.find(function (u) { return u.id === id; }) || null;
+  }
+
+  /** The equipment ids a set of units contributes. */
+  function unitsEquipment(unitIds) {
+    const out = Object.create(null);
+    (unitIds || []).forEach(function (id) {
+      const u = unitById(id);
+      if (!u) return;
+      (u.stations || []).forEach(function (st) {
+        if (STATION_EQUIP[st]) out[STATION_EQUIP[st]] = true;
+      });
+    });
+    return out;
+  }
+
+  /** The union of stations across the chosen units. */
+  function unitsStations(unitIds) {
+    const out = Object.create(null);
+    (unitIds || []).forEach(function (id) {
+      const u = unitById(id);
+      if (u) (u.stations || []).forEach(function (st) { out[st] = true; });
+    });
+    return out;
+  }
+
+  /** Can one of these stations perform this exercise? */
+  function stationAllows(ex, stations) {
+    for (const st in stations) {
+      const re = STATION_MATCH[st];
+      if (re && re.test(ex.id)) return true;
+    }
+    return false;
+  }
+
   const ISOLATION = /isolation$/;
 
   /* ---------------------------------------------------------------------------
@@ -339,6 +416,10 @@
     if (!ex) return false;
     if (!opts.kit[ex.equipment]) return false;
     if (opts.excluded && opts.excluded[ex.id]) return false;
+    /* Machine, cable and smith work that is only available because of a home
+       unit has to be something that unit can actually do. */
+    if (opts.restrict && opts.restrict[ex.equipment] &&
+        !stationAllows(ex, opts.stations || {})) return false;
     return true;
   }
 
@@ -405,7 +486,9 @@
       kit: kit,
       excluded: opts.excluded || {},
       seeds: opts.seeds || [],
-      variety: opts.variety || 0
+      variety: opts.variety || 0,
+      stations: opts.stations || null,
+      restrict: opts.restrict || null
     };
   }
 
@@ -451,7 +534,7 @@
            nothing else fits — but pushed down far enough that the next choice
            on the shortlist wins when there is one. Without this, upper/lower
            produced two identical upper days. */
-        sc -= 0.8 * ((opts.phaseUsed && opts.phaseUsed[ex.id]) || 0);
+        sc -= 1.5 * ((opts.phaseUsed && opts.phaseUsed[ex.id]) || 0);
         const pi = (PREFERRED[ex.pattern] || []).indexOf(ex.id);
         if (pi >= 0) sc += 1 - Math.min(0.9, pi * 0.08);
         let sim = 0;
@@ -509,6 +592,48 @@
      the one thing a training app must not do.
      ------------------------------------------------------------------------ */
 
+  /* How a known load carries across to a different way of loading. A stand-in
+     for a barbell bench done with dumbbells is per hand and roughly 40% of
+     the bar; a cable stack reads low against free weight; a guided machine
+     reads about the same. These are starting points for a first session, and
+     the log corrects them from the second. */
+  const CLASS_FACTOR = {
+    'free>free': 1, 'free>guided': 1.05, 'free>cable': 0.7, 'free>elastic': 0,
+    'guided>free': 0.9, 'guided>guided': 1, 'guided>cable': 0.65,
+    'cable>free': 1.2, 'cable>guided': 1.3, 'cable>cable': 1
+  };
+
+  /**
+   * A reference 1RM for a movement the lifter has never logged, taken from
+   * the closest movement they HAVE logged — closest by the same scoring the
+   * substitution uses, so a dumbbell incline press borrows from the barbell
+   * incline before it borrows from anything else. Returns 0 when nothing is
+   * close enough to be an honest guess.
+   */
+  function inferOneRM(ex, seeds) {
+    let best = null, bs = 0;
+    (seeds || []).forEach(function (seed) {
+      if (!seed || seed.id === ex.id) return;
+      const ref = App.Store.referenceOneRM(seed.id);
+      if (!(ref > 0)) return;
+      const sc = substitutionScore(seed, ex, { kit: kitMap(null), excluded: {} });
+      if (sc > bs) { bs = sc; best = { seed: seed, ref: ref }; }
+    });
+    /* The same line the substitution itself draws. Below it the "closest" movement
+       is in a different pattern, and a press guessed from a different press was
+       coming out a third too heavy. Blank is better than that. */
+    if (!best || bs < 0.55) return 0;
+    if (LOAD_CLASS[ex.equipment] === 'bodyweight') return 0;
+    let f = CLASS_FACTOR[LOAD_CLASS[best.seed.equipment] + '>' + LOAD_CLASS[ex.equipment]];
+    if (f === undefined) f = 0.8;
+    /* A barbell load moved to a pair of dumbbells is per hand. */
+    if (best.seed.equipment !== 'dumbbell' && ex.equipment === 'dumbbell') f *= 0.42;
+    if (best.seed.equipment === 'dumbbell' && ex.equipment !== 'dumbbell') f *= 2.2;
+    /* A little conservative: the first session of a new movement is for
+       learning it, not for testing it. */
+    return best.ref * f * 0.92;
+  }
+
   function prescribe(ex, block, opts) {
     const iso = ISOLATION.test(ex.pattern || '');
     let sets = iso ? block.isoSets : block.sets;
@@ -523,7 +648,8 @@
     if (LOAD_CLASS[ex.equipment] === 'elastic' && reps < 8) reps = 12;
 
     let weight = 0;
-    const ref = App.Store.referenceOneRM ? App.Store.referenceOneRM(ex.id) : 0;
+    let ref = App.Store.referenceOneRM ? App.Store.referenceOneRM(ex.id) : 0;
+    if (!(ref > 0)) ref = inferOneRM(ex, opts.seeds);
     if (ref > 0) {
       const raw = App.Science.loadForReps(ref, reps, ex);
       const mult = RIR_MULT[Math.min(RIR_MULT.length - 1, Math.max(0, block.rir))];
@@ -555,7 +681,9 @@
    * Write a whole program.
    *
    * @param {Object} opts
-   *   base          a workout to seed the movement choices from, or null
+   *   base          a PROGRAM to seed movement choices and loads from, or null
+   *   units         ids of home units (see UNITS); their stations feed the kit
+   *   repeat        true for a permanent rotation, false to run once and report
    *   name          program name
    *   daysPerWeek   2..6
    *   splitId       optional, else chosen from daysPerWeek
@@ -575,12 +703,40 @@
       ? opts.blocks : ['hypertrophy', 'strength', 'deload'];
     const warnings = [];
 
+    /* Seeds: every movement in the base program, once. */
+    const seedIds = Object.create(null);
+    (((opts.base || {}).phases) || []).forEach(function (ph) {
+      (ph.workoutIds || []).forEach(function (wid) {
+        const w = App.Store.getWorkout(wid);
+        (w ? w.items : []).forEach(function (it) { seedIds[it.exerciseId] = true; });
+      });
+    });
+    /* And, failing a base, everything the lifter has ever logged — that is
+       what their weights are known for. */
+    if (!Object.keys(seedIds).length) {
+      App.Store.allSessions().forEach(function (s) {
+        (s.entries || []).forEach(function (en) { seedIds[en.exerciseId] = true; });
+      });
+    }
+
+    /* Home units add their stations' equipment to the kit — restricted to
+       what the stations can do, unless the same equipment was ticked as
+       generally available. */
+    const baseKit = kitMap(opts.kit);
+    const fromUnits = unitsEquipment(opts.units);
+    const restrict = Object.create(null);
+    for (const k in fromUnits) {
+      if (!baseKit[k]) { baseKit[k] = true; restrict[k] = true; }
+    }
+
     const pick = normalise({
-      kit: opts.kit,
+      kit: baseKit,
       excluded: opts.excluded,
       variety: opts.variety,
-      seeds: (((opts.base || {}).items) || []).map(function (it) {
-        return App.Store.getExercise(it.exerciseId);
+      stations: unitsStations(opts.units),
+      restrict: Object.keys(restrict).length ? restrict : null,
+      seeds: Object.keys(seedIds).map(function (id) {
+        return App.Store.getExercise(id);
       }).filter(Boolean)
     });
     pick.settings = opts.settings || (App.Store.getSettings ? App.Store.getSettings() : {});
@@ -674,7 +830,9 @@
         rotateUnit: opts.rotateUnit || 'weeks',
         startDate: opts.startDate || U.today(),
         kit: Object.keys(pick.kit),
+        units: opts.units || [],
         allowBodyweight: !!pick.kit.bodyweight,
+        repeat: opts.repeat !== false,
         phases: phases,
         generated: true
       },
@@ -706,15 +864,194 @@
     const now = new Date((dateISO || U.today()) + 'T12:00:00').getTime();
     const per = periodDays(program);
     const elapsed = Math.floor((now - start) / 86400000);
+    const total = per * phases.length;
+    /* A program that is not permanent runs its phases once and is then
+       finished — it does not wrap round to the first phase again. */
+    if (program.repeat === false && elapsed >= total) {
+      return {
+        complete: true, index: phases.length - 1, phase: phases[phases.length - 1],
+        dayOfPhase: per, daysLeft: 0, periodDays: per, week: Math.ceil(per / 7) - 1,
+        next: null, cycle: 0
+      };
+    }
     const idx = elapsed < 0 ? 0 : Math.floor(elapsed / per) % phases.length;
     const intoPeriod = elapsed < 0 ? 0 : elapsed % per;
     return {
+      complete: false,
       index: idx,
       phase: phases[idx],
       dayOfPhase: intoPeriod + 1,
       daysLeft: per - intoPeriod,
       periodDays: per,
+      week: Math.floor(intoPeriod / 7),
+      cycle: elapsed < 0 ? 0 : Math.floor(elapsed / total),
       next: phases[(idx + 1) % phases.length]
+    };
+  }
+
+  /* ---------------------------------------------------------------------------
+     PROGRESSION
+
+     A phase is not the same session for four weeks. Each week into it the
+     load goes up a step on anything that can be loaded, reps go up on
+     anything that cannot, and a hypertrophy block adds a set from its third
+     week. These are the ACSM's own numbers — 2-10% once the target reps are
+     being beaten — at the cautious end, because a program that asks for too
+     much in week three is one the lifter stops following in week three.
+     ------------------------------------------------------------------------ */
+
+  const PROGRESSION = {
+    hypertrophy: { weightPct: 2.5, repsEvery: 0, setFromWeek: 2 },
+    strength:    { weightPct: 2.5, repsEvery: 0, setFromWeek: 0 },
+    metabolite:  { weightPct: 0,   repsEvery: 1, setFromWeek: 0 },
+    deload:      { weightPct: 0,   repsEvery: 0, setFromWeek: 0 }
+  };
+
+  /** Which program and phase a workout belongs to, if any. */
+  function membership(workoutId) {
+    const programs = App.Store.allPrograms ? App.Store.allPrograms() : [];
+    for (let i = 0; i < programs.length; i++) {
+      const phases = programs[i].phases || [];
+      for (let j = 0; j < phases.length; j++) {
+        if ((phases[j].workoutIds || []).indexOf(workoutId) >= 0) {
+          return { program: programs[i], phaseIndex: j, phase: phases[j] };
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * What this week of the program asks for on top of the plan.
+   * @returns {Object|null} {program, phase, week, weightMul, extraReps, extraSets, label}
+   */
+  function progressionFor(workoutId, dateISO) {
+    const m = membership(workoutId);
+    if (!m) return null;
+    const live = activePhase(m.program, dateISO);
+    /* Running a workout from a phase that is not the live one — allowed, and
+       it simply gets the plan as written. */
+    const inLive = live && live.index === m.phaseIndex && !live.complete;
+    const week = inLive ? live.week : 0;
+    const rule = PROGRESSION[m.phase.blockId] || PROGRESSION.hypertrophy;
+    const weightMul = 1 + (rule.weightPct / 100) * week;
+    const extraReps = rule.repsEvery ? Math.floor(week / rule.repsEvery) : 0;
+    const extraSets = rule.setFromWeek && week >= rule.setFromWeek ? 1 : 0;
+    const bits = [];
+    if (week > 0 && rule.weightPct) bits.push('+' + Math.round((weightMul - 1) * 100) + '% load');
+    if (extraReps) bits.push('+' + extraReps + ' rep' + (extraReps === 1 ? '' : 's'));
+    if (extraSets) bits.push('+1 set');
+    return {
+      program: m.program, phase: m.phase, phaseIndex: m.phaseIndex, live: inLive,
+      week: week, weightMul: weightMul, extraReps: extraReps, extraSets: extraSets,
+      label: m.phase.name + ' · week ' + (week + 1) +
+        (bits.length ? ' · ' + bits.join(', ') : ' · as planned')
+    };
+  }
+
+  /** The plan's sets for one item, with this week's progression applied. */
+  function progressSets(item, ex, prog) {
+    const base = (item.sets || []).map(function (s) {
+      return { weight: Number(s.weight) || 0, reps: Number(s.reps) || 0 };
+    });
+    if (!prog || !base.length) return base;
+    const loadable = ex && LOADABLE[ex.equipment];
+    const out = base.map(function (s) {
+      const w = s.weight > 0 && loadable ? Math.round(s.weight * prog.weightMul * 2) / 2 : s.weight;
+      /* Not loadable: the load step becomes reps instead. */
+      const r = s.reps + prog.extraReps + (!loadable && prog.weightMul > 1
+        ? Math.round((prog.weightMul - 1) * 40) : 0);
+      return { weight: w, reps: r };
+    });
+    for (let i = 0; i < prog.extraSets; i++) out.push(Object.assign({}, out[out.length - 1]));
+    return out;
+  }
+
+  /* ---------------------------------------------------------------------------
+     THE REPORT
+
+     Did you keep to it? Two questions per phase, and no more, because a
+     program report that runs to a page is not read: how many of the planned
+     sessions happened, and did the load move the way the plan asked. Both are
+     read straight from the log against the phase's own window.
+     ------------------------------------------------------------------------ */
+
+  function report(program, dateISO) {
+    const phases = program.phases || [];
+    const per = periodDays(program);
+    const start = new Date((program.startDate || U.today()) + 'T12:00:00').getTime();
+    const now = new Date((dateISO || U.today()) + 'T12:00:00').getTime();
+    const live = activePhase(program, dateISO);
+    const total = per * phases.length;
+    const elapsed = Math.floor((now - start) / 86400000);
+    /* Report on the most recent cycle that has started. */
+    const cycle = program.repeat === false ? 0
+      : Math.max(0, Math.floor(Math.min(elapsed, total * 1000) / total));
+    const sessions = App.Store.allSessions();
+
+    const rows = phases.map(function (ph, i) {
+      const from = start + (cycle * total + i * per) * 86400000;
+      const to = from + per * 86400000;
+      const ids = ph.workoutIds || [];
+      const inWin = sessions.filter(function (s) {
+        const t = new Date(s.date + 'T12:00:00').getTime();
+        return ids.indexOf(s.workoutId) >= 0 && t >= from && t < to;
+      });
+      const daysRun = Math.max(0, Math.min(per, Math.floor((Math.min(now, to) - from) / 86400000) + 1));
+      const expected = ids.length * (per / 7);
+      const expectedSoFar = ids.length * (daysRun / 7);
+      const started = now >= from;
+
+      /* Load: first versus last e1RM per movement inside the window. */
+      const firstBy = Object.create(null), lastBy = Object.create(null);
+      inWin.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; })
+        .forEach(function (s) {
+          (s.entries || []).forEach(function (en) {
+            const one = App.Ranks.bestE1RM(en.sets, App.Store.getExercise(en.exerciseId));
+            if (!one) return;
+            if (!firstBy[en.exerciseId]) firstBy[en.exerciseId] = one;
+            lastBy[en.exerciseId] = one;
+          });
+        });
+      let gain = 0, n = 0;
+      for (const id in firstBy) {
+        if (firstBy[id] > 0 && lastBy[id]) { gain += (lastBy[id] / firstBy[id] - 1) * 100; n++; }
+      }
+      /* What the progression asked for over the phase. */
+      const rule = PROGRESSION[ph.blockId] || PROGRESSION.hypertrophy;
+      const asked = rule.weightPct * Math.max(0, Math.ceil(per / 7) - 1);
+
+      return {
+        name: ph.name, blockId: ph.blockId, started: started,
+        from: new Date(from).toISOString().slice(0, 10),
+        to: new Date(to - 1).toISOString().slice(0, 10),
+        done: inWin.length,
+        expected: Math.round(expected * 10) / 10,
+        expectedSoFar: Math.round(expectedSoFar * 10) / 10,
+        adherence: expectedSoFar > 0 ? Math.min(1, inWin.length / expectedSoFar) : 0,
+        gainPct: n ? gain / n : null,
+        askedPct: asked,
+        movements: n
+      };
+    });
+
+    const startedRows = rows.filter(function (r) { return r.started; });
+    const adherence = startedRows.length
+      ? startedRows.reduce(function (a, r) { return a + r.adherence; }, 0) / startedRows.length
+      : 0;
+    let verdict;
+    if (!startedRows.length) verdict = 'Not started yet.';
+    else if (adherence >= 0.9) verdict = 'You kept to it.';
+    else if (adherence >= 0.7) verdict = 'Mostly kept to it — a session or two short.';
+    else if (adherence >= 0.4) verdict = 'About half of the planned sessions happened.';
+    else verdict = 'The plan and the log went separate ways.';
+
+    return {
+      complete: !!(live && live.complete),
+      cycle: cycle,
+      adherence: adherence,
+      verdict: verdict,
+      rows: rows
     };
   }
 
@@ -734,6 +1071,16 @@
     muscleSim: muscleSim,
     generate: generate,
     activePhase: activePhase,
-    periodDays: periodDays
+    periodDays: periodDays,
+    membership: membership,
+    progressionFor: progressionFor,
+    progressSets: progressSets,
+    report: report,
+    inferOneRM: inferOneRM,
+    UNITS: UNITS,
+    STATION_EQUIP: STATION_EQUIP,
+    unitsEquipment: unitsEquipment,
+    unitsStations: unitsStations,
+    stationAllows: stationAllows
   };
 })(window.App = window.App || {});

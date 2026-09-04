@@ -14,7 +14,7 @@
     { id: 'settings',  title: 'Control Panel', sub: 'Account, sync, theme',   icon: 'settings' }
   ];
 
-  const VERSION = '0.7.0';
+  const VERSION = '0.7.1';
 
   /* Six static, six animated. All derive their colour from the active scheme
      and mode, so they never fight the theme. */
@@ -397,6 +397,10 @@
     VERSION: VERSION,
     navigate: navigate,
     render: render,
+    /* Which route is on screen right now. A page that keeps a listener alive
+       after the user has left it must check this before painting — see
+       settings.js for the bug that made this necessary. */
+    route: function () { return current; },
     applyTheme: applyTheme,
     resolveMotion: resolveMotion,
     updateSyncBadge: updateSyncBadge,

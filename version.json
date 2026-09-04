@@ -1,5 +1,5 @@
 {
-  "version": "0.7.0",
+  "version": "0.7.1",
   "name": "AI-Gym",
-  "notes": "Programs. Point the generator at a workout you already do, tell it your equipment and how many days a week you train, and it writes a whole rotation: which days train what, sets and reps that change with each phase, and stand-ins for the movements your kit cannot do. Bodyweight is a toggle, never forced. Also: every set counts in full, late or not; finishing a workout stays on Workouts and publishes to your project straight away; a tap on a bottom sheet no longer lands on the nav behind it; the exercise list scrolls without rebuilding itself; the city has lit windows on every building and dark walls between them; and you can use your own picture, gif, video or CSS as the wallpaper."
+  "notes": "Programs, second pass. Build one by hand from sessions you already have; generate one from another program or from scratch; pick a program and see only its sessions; each week of a phase steps the load, reps or sets up on the plan; weights for movements you have never done are borrowed from the closest one you have; a program can be permanent or run once and write a report on whether you kept to it; and home smith-machine units are chosen by model, so the generator only asks a unit for what its stations can do. Fixed: the jump to the Control Panel a few seconds after creating, deleting or generating — a stale listener was repainting it into whatever page was open. The city is now fully opaque."
 }

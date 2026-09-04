@@ -482,7 +482,7 @@
    lights a skyline is a floodlight. */
 :root {
   --city-ink: #161b27;
-  --city-ink-far: #4b5266;
+  --city-ink-far: #2b3140;
   --city-win: var(--c5);
   --city-win-alpha: 0.3;
   --city-glow-alpha: 0.08;
@@ -490,24 +490,24 @@
     radial-gradient(circle at 20% 11%, #fff9dc 0 26px, rgba(255, 236, 170, 0.75) 30px,
       rgba(255, 220, 120, 0.28) 72px, rgba(255, 210, 100, 0.08) 130px, transparent 190px),
     linear-gradient(to bottom, #c9dbf1, #edf2f8 72%);
-  --city-sky-alpha: 0.8;
-  --city-cast: radial-gradient(70% 55% at 20% 11%, rgba(255, 238, 190, 0.3), transparent 70%);
+  --city-sky-alpha: 1;
+  --city-cast: radial-gradient(48% 30% at 20% 11%, rgba(255, 238, 190, 0.3), transparent 70%);
 }
 [data-mode='dark'] {
   --city-ink: #05070d;
-  --city-ink-far: #10141f;
+  --city-ink-far: #0a0d16;
   --city-win-alpha: 0.5;
   --city-glow-alpha: 0.04;
   --city-sky:
     radial-gradient(circle at 77% 13%, rgba(216, 224, 238, 0.82) 0 13px, rgba(216, 224, 238, 0.22) 15px,
       rgba(190, 204, 232, 0.08) 34px, transparent 90px),
     linear-gradient(to bottom, #02030a, #060a15 55%, #0a0f1e);
-  --city-sky-alpha: 0.94;
-  --city-cast: radial-gradient(70% 55% at 77% 13%, rgba(200, 212, 240, 0.06), transparent 70%);
+  --city-sky-alpha: 1;
+  --city-cast: radial-gradient(48% 30% at 77% 13%, rgba(200, 212, 240, 0.07), transparent 70%);
 }
 [data-mode='amoled'] {
   --city-ink: #000000;
-  --city-ink-far: #0a0d16;
+  --city-ink-far: #050810;
   --city-win-alpha: 0.45;
   --city-glow-alpha: 0.03;
   --city-sky:
@@ -515,7 +515,7 @@
       rgba(180, 196, 226, 0.06) 34px, transparent 90px),
     linear-gradient(to bottom, #000000, #02040a 60%, #050813);
   --city-sky-alpha: 1;
-  --city-cast: radial-gradient(70% 55% at 77% 13%, rgba(200, 212, 240, 0.07), transparent 70%);
+  --city-cast: radial-gradient(48% 30% at 77% 13%, rgba(200, 212, 240, 0.05), transparent 70%);
 }
 [data-bg='skyline'] .bg-fx::before, [data-bg='neon'] .bg-fx::before,
 [data-bg='skyline'] .bg-fx::after,  [data-bg='neon'] .bg-fx::after {
