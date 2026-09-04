@@ -502,18 +502,21 @@
     const puos = App.Science.SESSION_PUOS;
 
     /* --- the headline ----------------------------------------------------- */
-    let inRange = 0, under = 0, lost = 0;
+    let inRange = 0, under = 0, total = 0;
     rows.forEach(function (r) {
       const v = App.Science.volumeVerdict(r.sets, target);
       if (v.key === 'in' || v.key === 'high') inRange++;
       else if (r.sets >= 1) under++;
-      lost += r.wasted;
+      total += r.sets;
     });
 
     root.appendChild(U.h('.grid.grid-4', [
       C.statTile('Muscles at target', inRange, 'of ' + rows.length),
       C.statTile('Under-trained', under, 'muscles'),
-      C.statTile('Sets lost to stacking', U.num(lost, 1), '/ week'),
+      /* Was "sets lost to stacking", back when sets late in a session were
+         paid less. Nothing is deducted any more, so the honest headline is
+         simply how much work went in. */
+      C.statTile('Hard sets counted', U.num(total, 1), '/ week'),
       C.statTile('Weeks counted', weeks, weeks === 1 ? 'week' : 'weeks')
     ]));
 
@@ -577,8 +580,9 @@
             ]),
             U.h('td.num', [
               U.h('div', { text: U.num(r.sets, 1) }),
-              r.wasted >= 0.3
-                ? U.h('.u-xs.u-muted', { text: U.num(r.raw, 1) + ' done' })
+              r.beyond >= 0.3
+                ? U.h('.u-xs.u-muted', { text: U.num(r.beyond, 1) + ' past ' +
+                    App.Science.SESSION_PUOS + '/day' })
                 : null
             ]),
             U.h('td.shrink', [

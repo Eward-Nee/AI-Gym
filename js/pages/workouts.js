@@ -83,7 +83,357 @@
       });
     }
 
+    root.appendChild(programsCard());
     root.appendChild(progressReport());
+  }
+
+  /* ===========================================================================
+     PROGRAMS
+
+     A workout is one session. A program is the rotation: phases that step
+     forward on a schedule, so "what am I doing this week" has an answer that
+     does not depend on anybody remembering where they were.
+     ======================================================================== */
+
+  function programsCard() {
+    const P = App.Programs;
+    const programs = App.Store.allPrograms();
+    const body = U.h('.stack');
+
+    programs.forEach(function (pg) { body.appendChild(programRow(pg)); });
+
+    if (!programs.length) {
+      body.appendChild(U.h('.empty', [
+        U.h('div', { html: U.icon('calendar') || U.icon('list') }),
+        U.h('.empty-title', 'No program yet'),
+        U.h('p', 'A program rotates between phases — a block of heavier, lower-rep ' +
+          'work, a block of more sets at moderate weight, a lighter week — and tells ' +
+          'you which one you are in today. Point it at a workout you already do and ' +
+          'it will write the rest.')
+      ]));
+    }
+
+    return U.h('.card', [
+      U.h('.card-head', [
+        U.h('div', [
+          U.h('h2', 'Programs'),
+          U.h('.card-sub', 'A rotation of phases, on a schedule you set.')
+        ]),
+        U.h('.spacer'),
+        U.h('button.btn.btn-primary.btn-sm', {
+          type: 'button', html: U.icon('plus') + '<span>Generate</span>',
+          onclick: function () { generateDialog(); }
+        })
+      ]),
+      body
+    ]);
+  }
+
+  function programRow(pg) {
+    const P = App.Programs;
+    const live = P.activePhase(pg);
+    const phases = pg.phases || [];
+
+    const chips = U.h('.tag-row', phases.map(function (ph, i) {
+      const on = live && live.index === i;
+      return U.h('span.chip' + (on ? '.chip-accent' : ''), {
+        text: ph.name + ' · ' + (ph.workoutIds || []).length + 'd'
+      });
+    }));
+
+    const runRow = U.h('.tag-row');
+    if (live) {
+      ((live.phase || {}).workoutIds || []).forEach(function (id) {
+        const w = App.Store.getWorkout(id);
+        if (!w) return;
+        runRow.appendChild(U.h('button.chip.chip-btn', {
+          type: 'button', text: w.name.split(' · ').pop(),
+          onclick: function () { App.Shell.navigate('workouts/run/' + w.id); }
+        }));
+      });
+    }
+
+    return U.h('.wo-block', [
+      U.h('.row.row-wrap', [
+        U.h('div', { style: { minWidth: 0 } }, [
+          U.h('div', { style: { fontWeight: '620' }, text: pg.name }),
+          U.h('.u-xs.u-muted', {
+            text: live
+              ? 'Week of ' + live.phase.name + ' · day ' + live.dayOfPhase + ' of ' +
+                live.periodDays + ' · ' + live.daysLeft + ' left, then ' + live.next.name
+              : 'No phases'
+          })
+        ]),
+        U.h('.spacer'),
+        U.h('button.btn.btn-sm', { type: 'button', text: 'Schedule',
+          onclick: function () { scheduleDialog(pg); } }),
+        U.h('button.btn.btn-ghost.btn-icon.btn-sm', {
+          type: 'button', 'aria-label': 'Delete program', html: U.icon('trash'),
+          onclick: function () { removeProgram(pg); }
+        })
+      ]),
+      chips,
+      live && runRow.childNodes.length
+        ? U.h('div', [U.h('.label', { style: { marginTop: '10px' } }, 'This phase'), runRow])
+        : null,
+      pg.warnings && pg.warnings.length
+        ? U.h('.sci-note', { style: { marginTop: '10px' } }, [
+          U.h('.sci-note-title', 'What your equipment could not cover'),
+          U.h('p.u-sm.u-muted', { text: pg.warnings.join(' ') })
+        ])
+        : null
+    ]);
+  }
+
+  function removeProgram(pg) {
+    U.confirm({
+      title: 'Delete "' + pg.name + '"?',
+      message: 'The workouts it generated are kept — only the rotation goes.',
+      confirmLabel: 'Delete the program', danger: true
+    }).then(function (ok) {
+      if (!ok) return;
+      App.Store.deleteProgram(pg.id).then(function () {
+        U.toast('Deleted', pg.name);
+      });
+    });
+  }
+
+  /** Change how often a program steps to its next phase. */
+  function scheduleDialog(pg) {
+    const every = U.h('input.input.input-num', {
+      type: 'number', min: '1', max: '52', value: pg.rotateEvery || 4, inputmode: 'numeric'
+    });
+    const unit = U.h('select.select', {}, [
+      U.h('option', { value: 'days', selected: pg.rotateUnit === 'days' }, 'days'),
+      U.h('option', { value: 'weeks', selected: pg.rotateUnit !== 'days' && pg.rotateUnit !== 'months' }, 'weeks'),
+      U.h('option', { value: 'months', selected: pg.rotateUnit === 'months' }, 'months')
+    ]);
+    const start = U.h('input.input', { type: 'date', value: pg.startDate || U.today() });
+
+    U.modal({
+      title: 'Rotation',
+      body: function (b) {
+        b.appendChild(U.h('.stack', [
+          U.h('p.u-sm.u-muted', 'Which phase is live is worked out from the start date ' +
+            'and this period, so missing a week costs a week of the phase and nothing ' +
+            'has to be repaired.'),
+          U.h('.field', [U.h('label.label', 'Move to the next phase every'),
+            U.h('.row', [every, unit])]),
+          U.h('.field', [U.h('label.label', 'Started on'), start])
+        ]));
+      },
+      actions: [
+        { label: 'Cancel' },
+        { label: 'Save', kind: 'primary', onClick: function (close) {
+          App.Store.saveProgram(Object.assign({}, pg, {
+            rotateEvery: Math.max(1, Number(every.value) || 4),
+            rotateUnit: unit.value,
+            startDate: start.value || U.today()
+          })).then(function () { close(); U.toast('Saved', pg.name, 'good'); });
+        } }
+      ]
+    });
+  }
+
+  /* ---------------------------------------------------------------------------
+     THE GENERATOR DIALOG
+     ------------------------------------------------------------------------ */
+
+  function generateDialog() {
+    const P = App.Programs;
+    const s = App.Store.getSettings();
+    const workouts = App.Store.allWorkouts().filter(function (w) {
+      return (w.items || []).length;
+    });
+
+    const nameEl = U.h('input.input', { value: 'My program', placeholder: 'Program name' });
+    const baseEl = U.h('select.select', {},
+      [U.h('option', { value: '' }, 'Start from scratch')].concat(
+        workouts.map(function (w) {
+          return U.h('option', { value: w.id }, w.name);
+        })));
+    const daysEl = U.h('select.select', {}, [2, 3, 4, 5, 6].map(function (d) {
+      return U.h('option', { value: String(d), selected: d === 4 }, d + ' days a week');
+    }));
+    const splitEl = U.h('select.select', {},
+      [U.h('option', { value: '' }, 'Choose for me')].concat(
+        Object.keys(P.SPLITS).map(function (k) {
+          return U.h('option', { value: k }, P.SPLITS[k].name);
+        })));
+    const everyEl = U.h('input.input.input-num', {
+      type: 'number', min: '1', max: '52', value: '4', inputmode: 'numeric' });
+    const unitEl = U.h('select.select', {}, [
+      U.h('option', { value: 'days' }, 'days'),
+      U.h('option', { value: 'weeks', selected: true }, 'weeks'),
+      U.h('option', { value: 'months' }, 'months')
+    ]);
+
+    const blockBoxes = ['hypertrophy', 'strength', 'metabolite', 'deload'].map(function (id) {
+      const on = id !== 'metabolite';
+      const cb = U.h('input', { type: 'checkbox', checked: on });
+      return { id: id, cb: cb, el: U.h('label.switch', { style: { alignItems: 'flex-start' } }, [
+        cb, U.h('i.switch-track'),
+        U.h('div', [
+          U.h('div', { style: { fontWeight: '560' }, text: P.BLOCKS[id].name }),
+          U.h('.u-xs.u-muted', { text: P.BLOCKS[id].hint })
+        ])]) };
+    });
+
+    const equipWrap = U.h('.tag-row');
+    const chosen = Object.create(null);
+    const startKit = (s.equipment && s.equipment.length)
+      ? s.equipment : P.KITS.commercial.equip;
+    startKit.forEach(function (k) { chosen[k] = true; });
+    if (s.allowBodyweight === false) delete chosen.bodyweight;
+
+    Object.keys(App.Equipment).forEach(function (k) {
+      const chip = U.h('button.chip.chip-btn' + (chosen[k] ? '.chip-accent' : ''), {
+        type: 'button', text: App.Equipment[k],
+        onclick: function () {
+          if (chosen[k]) delete chosen[k]; else chosen[k] = true;
+          this.classList.toggle('chip-accent', !!chosen[k]);
+        }
+      });
+      equipWrap.appendChild(chip);
+    });
+
+    const presetRow = U.h('.tag-row', Object.keys(P.KITS).map(function (kid) {
+      return U.h('button.chip.chip-btn', {
+        type: 'button', text: P.KITS[kid].name,
+        onclick: function () {
+          Object.keys(chosen).forEach(function (k) { delete chosen[k]; });
+          P.KITS[kid].equip.forEach(function (k) { chosen[k] = true; });
+          U.$('.chip-btn', equipWrap).forEach(function (c, i) {
+            const key = Object.keys(App.Equipment)[i];
+            c.classList.toggle('chip-accent', !!chosen[key]);
+          });
+        }
+      });
+    }));
+
+    U.modal({
+      title: 'Generate a program',
+      wide: true,
+      body: function (b) {
+        b.appendChild(U.h('.stack', [
+          U.h('p.u-sm.u-muted', 'Volume being equal, no split and no periodisation ' +
+            'model has been shown to out-grow another. What a rotation buys you is ' +
+            'variety, a reason to change the load, and a lighter week before you need ' +
+            'one — not a bigger number at the end.'),
+          U.h('.grid.grid-2', [
+            U.h('.field', [U.h('label.label', 'Name'), nameEl]),
+            U.h('.field', [U.h('label.label', 'Base it on'), baseEl,
+              U.h('.hint', 'Its movements are preferred wherever they fit.')])
+          ]),
+          U.h('.grid.grid-2', [
+            U.h('.field', [U.h('label.label', 'Training days'), daysEl]),
+            U.h('.field', [U.h('label.label', 'Split'), splitEl])
+          ]),
+          U.h('.field', [U.h('label.label', 'Move to the next phase every'),
+            U.h('.row', [everyEl, unitEl])]),
+          U.h('.field', [U.h('label.label', 'Phases'),
+            U.h('.stack-sm', blockBoxes.map(function (x) { return x.el; }))]),
+          U.h('.field', [
+            U.h('label.label', 'Equipment you can use'),
+            presetRow,
+            equipWrap,
+            U.h('.hint', 'Bodyweight is a chip like any other — turn it off and no ' +
+              'press-up or pull-up is ever picked for you.')
+          ])
+        ]));
+      },
+      actions: [
+        { label: 'Cancel' },
+        { label: 'Generate', kind: 'primary', onClick: function (close) {
+          const kit = Object.keys(chosen);
+          if (!kit.length) {
+            U.toast('No equipment', 'Pick at least one thing to train with.', 'bad');
+            return;
+          }
+          const blocks = blockBoxes.filter(function (x) { return x.cb.checked; })
+            .map(function (x) { return x.id; });
+          if (!blocks.length) {
+            U.toast('No phases', 'A program needs at least one phase.', 'bad');
+            return;
+          }
+          const plan = App.Programs.generate({
+            name: nameEl.value || 'My program',
+            base: baseEl.value ? App.Store.getWorkout(baseEl.value) : null,
+            daysPerWeek: Number(daysEl.value) || 4,
+            splitId: splitEl.value || null,
+            kit: kit,
+            blocks: blocks,
+            rotateEvery: Math.max(1, Number(everyEl.value) || 4),
+            rotateUnit: unitEl.value,
+            settings: s
+          });
+          plan.program.warnings = plan.warnings;
+          close();
+          previewDialog(plan, kit);
+        } }
+      ]
+    });
+  }
+
+  /** What it wrote, before anything is saved. */
+  function previewDialog(plan, kit) {
+    const byPhase = U.h('.stack');
+    plan.program.phases.forEach(function (ph) {
+      const days = U.h('.stack-sm');
+      ph.workoutKeys.forEach(function (key) {
+        const w = plan.workouts.find(function (x) { return x._key === key; });
+        if (!w) return;
+        days.appendChild(U.h('.wo-block', [
+          U.h('div', { style: { fontWeight: '560' }, text: w.name.split(' · ').pop() }),
+          U.h('.u-xs.u-muted', {
+            text: w.items.map(function (it) {
+              const ex = App.Store.getExercise(it.exerciseId);
+              return (ex ? ex.name : it.exerciseId) + ' ' + it.sets.length + '×' +
+                it.sets[0].reps;
+            }).join(' · ')
+          })
+        ]));
+      });
+      byPhase.appendChild(U.h('div', [
+        U.h('.label', { style: { marginTop: '10px' }, text: ph.name + ' — ' + ph.hint }),
+        days
+      ]));
+    });
+
+    U.modal({
+      title: plan.program.name,
+      wide: true,
+      body: function (b) {
+        b.appendChild(U.h('.stack', [
+          U.h('p.u-sm.u-muted', App.Programs.SPLITS[plan.program.splitId].name + ' · ' +
+            plan.program.daysPerWeek + ' days a week · one phase every ' +
+            plan.program.rotateEvery + ' ' + plan.program.rotateUnit + '. Weights are ' +
+            'worked out from your own logged best for each movement; anything you have ' +
+            'never done is left blank rather than guessed at.'),
+          plan.warnings.length ? U.h('.sci-note', [
+            U.h('.sci-note-title', 'What your equipment could not cover'),
+            U.h('p.u-sm.u-muted', { text: plan.warnings.join(' ') })
+          ]) : null,
+          byPhase
+        ]));
+      },
+      actions: [
+        { label: 'Discard' },
+        { label: 'Save the program', kind: 'primary', onClick: function (close) {
+          App.Store.saveGenerated(plan).then(function (pg) {
+            /* Remember the kit, so the next generate starts where this one did. */
+            App.Store.saveSettings({
+              equipment: kit,
+              allowBodyweight: kit.indexOf('bodyweight') >= 0
+            });
+            close();
+            U.toast('Program saved', pg.name + ' · ' + plan.workouts.length +
+              ' workouts written', 'good');
+            draw();
+          });
+        } }
+      ]
+    });
   }
 
   function workoutCard(w) {
@@ -193,22 +543,21 @@
      * More sets for one muscle than a single session can use.
      *
      * Past about eleven sets for one muscle in one day, another set stops
-     * producing a difference large enough for the research to detect — so the
-     * plan is asking for work it will not be paid for. The fix is not to do
-     * less; it is to do the same amount on two days, which is the only thing
-     * training a muscle more often reliably buys.
+     * producing a difference large enough for the research to detect. That is
+     * worth SAYING, and it is not worth deducting: every set logged is counted
+     * in full, and this note is advice about how to spend the next one.
      */
     function stackedNote(stacked) {
       if (!stacked || !stacked.length) return null;
       const top = stacked.slice(0, 3);
       return U.h('.sci-note', { style: { marginTop: '14px' } }, [
-        U.h('.sci-note-title', { text: 'More than one session can use' }),
+        U.h('.sci-note-title', { text: 'A lot for one day' }),
         U.h('p.u-sm.u-muted', { text: top.map(function (m) {
-          return m.name + ' (' + U.num(m.sets, 1) + ' sets, about ' +
-            U.num(m.lost, 1) + ' of them wasted)';
+          return m.name + ' (' + U.num(m.sets, 1) + ' sets)';
         }).join(', ') + '. Past roughly ' + App.Science.SESSION_PUOS +
-          ' sets for one muscle in a day another set buys nothing measurable. ' +
-          'Split them over two days and every one counts.' })
+          ' sets for one muscle in a day, the trials stop being able to show ' +
+          'that another one adds more — so the same work spread over two days ' +
+          'is likely to go further. Every set you log still counts in full.' })
       ]);
     }
 
@@ -751,11 +1100,38 @@
         let vol = 0;
         done.forEach(function (en) { vol += App.Ranks.volumeOf(en.sets); });
         U.toast('Session saved', U.compact(vol) + ' ' + units + ' of volume', 'good');
-        if (App.Sync.signedIn()) App.Sync.publishStats();
+        publishNow();
         return askAboutTemplate();
       }).then(function () {
-        App.Shell.navigate('report');
+        /* Back to the workout list, not the report. Finishing a session is
+           not a request to go and read analysis — the next thing a person
+           does at the end of a workout is put the phone away, and if they do
+           want the numbers the report is one tap away in the nav. */
+        App.Shell.navigate('workouts');
       });
+    }
+
+    /**
+     * Get the session off this device the moment it is finished.
+     *
+     * Two separate things, and both are wanted: the session ROW goes to your
+     * own project so the log survives the phone, and the public STATS row goes
+     * to the hub so a friend opening your card sees the workout you just did
+     * rather than the one before it. Waiting for the next scheduled push meant
+     * a friend could be looking at day-old numbers while you were still in the
+     * gym.
+     *
+     * Failures are deliberately quiet. The write is already queued in the
+     * outbox and the normal sync will carry it; a red toast because the gym
+     * wifi is bad would be alarming about nothing.
+     */
+    function publishNow() {
+      const s = App.Store.getSettings();
+      if (s.autoPublish === false) return;
+      try {
+        if (App.Sync.enabled()) App.Sync.schedulePush();
+        if (App.Sync.signedIn()) App.Sync.publishStats();
+      } catch (e) { /* the outbox still has it */ }
     }
 
     /**

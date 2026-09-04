@@ -44,6 +44,28 @@
       templates: []
     },
     autoSync: true,
+    /* Publish to the linked project the moment a session is saved, so a
+       friend looking at your card sees the workout you just finished rather
+       than the one before it. On by default: an account that is linked is
+       linked in order to be up to date. */
+    autoPublish: true,
+    /* What the program generator may reach for. An empty kit means "not asked
+       yet" and the generator falls back to a commercial gym. */
+    equipment: [],
+    /* Bodyweight is 77 of the 468 movements, and plenty of people will not do
+       any of them. Off here means the generator never picks one. */
+    allowBodyweight: true,
+    /* A wallpaper of your own. `custom` is a picture, a gif or a video held in
+       `meta` as a data URL; `css` is CSS you wrote yourself. Both are only
+       used when `background` is set to the matching id, so switching back to a
+       built-in never throws the custom one away.
+
+       The payload is NOT kept here: settings ride along in every export and
+       every sync row, and a 4MB video would go with them. It lives under its
+       own meta key and stays on the device. */
+    customFit: 'cover',      /* cover | contain | tile */
+    customDim: 40,           /* how far to fade it back, 0-90 */
+    customCss: '',
     firstRun: true
   };
 
@@ -52,6 +74,7 @@
     exercises: [],
     exerciseById: Object.create(null),
     workouts: [],
+    programs: [],
     sessions: [],
     friends: [],
     settings: Object.assign({}, DEFAULT_SETTINGS)
@@ -93,7 +116,8 @@
         App.DB.getAll('workouts'),
         App.DB.getAll('sessions'),
         App.DB.getAll('friends'),
-        App.DB.getMeta('settings', null)
+        App.DB.getMeta('settings', null),
+        App.DB.getAll('programs').catch(function () { return []; })
       ]);
     }).then(function (r) {
       state.exercises = r[0] || [];
@@ -101,6 +125,7 @@
       state.sessions = r[2] || [];
       state.friends = r[3] || [];
       state.settings = Object.assign({}, DEFAULT_SETTINGS, r[4] || {});
+      state.programs = r[5] || [];
 
       if (!state.exercises.length) return seedExercises();
       return topUpSeedExercises();
@@ -206,6 +231,25 @@
 
   function getSettings() { return state.settings; }
 
+  /* ---------------------------------------------------------------------------
+     THE CUSTOM WALLPAPER'S PAYLOAD
+
+     Deliberately outside `settings`: a picture is megabytes, settings are
+     copied into every export and pushed as a sync row, and nobody wants their
+     wallpaper in both. It stays on the device that chose it.
+     ------------------------------------------------------------------------ */
+
+  function getWallpaper() {
+    return App.DB.getMeta('wallpaper', null);
+  }
+
+  function setWallpaper(rec) {
+    return App.DB.setMeta('wallpaper', rec).then(function () {
+      emit('wallpaper', rec);
+      return rec;
+    });
+  }
+
   function saveSettings(patch) {
     Object.assign(state.settings, patch);
     return App.DB.setMeta('settings', state.settings).then(function () {
@@ -296,6 +340,86 @@
   function allWorkouts() { return state.workouts; }
   function getWorkout(id) {
     return state.workouts.find(function (w) { return w.id === id; }) || null;
+  }
+
+  /* ---------------------------------------------------------------------------
+     PROGRAMS
+
+     A program is a rotation of phases; each phase names the workouts it runs.
+     The workouts themselves are ordinary workouts and stay editable on their
+     own — a program owns the schedule, not the sessions.
+     ------------------------------------------------------------------------ */
+
+  function allPrograms() { return state.programs; }
+  function getProgram(id) {
+    return state.programs.find(function (p) { return p.id === id; }) || null;
+  }
+
+  function saveProgram(p) {
+    const now = new Date().toISOString();
+    const rec = Object.assign({
+      id: p.id || U.uid('pg'),
+      name: 'Untitled program',
+      phases: [],
+      rotateEvery: 4,
+      rotateUnit: 'weeks',
+      startDate: U.today(),
+      notes: '',
+      createdAt: now
+    }, p, { updatedAt: now });
+
+    const i = state.programs.findIndex(function (x) { return x.id === rec.id; });
+    if (i >= 0) state.programs[i] = rec; else state.programs.push(rec);
+
+    return App.DB.put('programs', rec).then(function () {
+      emit('programs');
+      emit('change');
+      return rec;
+    });
+  }
+
+  function deleteProgram(id, alsoWorkouts) {
+    const p = getProgram(id);
+    state.programs = state.programs.filter(function (x) { return x.id !== id; });
+    const jobs = [App.DB.remove('programs', id)];
+    if (alsoWorkouts && p) {
+      const ids = Object.create(null);
+      (p.phases || []).forEach(function (ph) {
+        (ph.workoutIds || []).forEach(function (w) { ids[w] = true; });
+      });
+      Object.keys(ids).forEach(function (w) { jobs.push(deleteWorkout(w)); });
+    }
+    return Promise.all(jobs).then(function () {
+      emit('programs');
+      emit('change');
+    });
+  }
+
+  /**
+   * Persist a generated plan: every workout it wrote, then the program that
+   * points at them. The generator hands back `_key`s rather than ids, because
+   * nothing existed to have an id until now.
+   */
+  function saveGenerated(plan) {
+    const byKey = Object.create(null);
+    return plan.workouts.reduce(function (chain, w) {
+      return chain.then(function () {
+        return saveWorkout({ name: w.name, notes: w.notes, items: w.items })
+          .then(function (rec) { byKey[w._key] = rec.id; });
+      });
+    }, Promise.resolve()).then(function () {
+      const prog = Object.assign({}, plan.program, {
+        phases: (plan.program.phases || []).map(function (ph) {
+          return {
+            id: ph.id, blockId: ph.blockId, name: ph.name, hint: ph.hint,
+            weeks: ph.weeks,
+            workoutIds: (ph.workoutKeys || []).map(function (k) { return byKey[k]; })
+              .filter(Boolean)
+          };
+        })
+      });
+      return saveProgram(prog);
+    });
   }
 
   /**
@@ -543,12 +667,12 @@
          three-to-fifteen band — a strength heuristic wearing a growth hat — is
          gone. Singles and thirty-rep sets still count for less.
 
-       * WHERE IT SAT IN THE SESSION. The eleventh set for one muscle in one
-         session is the point past which another one buys nothing detectable,
-         so late sets are discounted. This is the entire frequency model, and
-         it is deliberately indirect: see App.Science for why training a muscle
-         on more days is worth something without being worth anything in
-         itself.
+       * WHERE IT SAT IN THE SESSION — as a reading, never as a deduction.
+         EVERY SET COUNTS IN FULL, however late in the session it came and
+         however late it was ticked off. The eleventh set for one muscle in one
+         day is the point past which the trials can no longer show another one
+         doing more, and the app says so in words; it does not quietly pay you
+         less for it. See App.Science.sessionMarginal for why that changed.
 
      A set is scored against the lifter's OWN best, not against a world record.
      "Near failure" is a statement about this person on this movement, and the
@@ -825,11 +949,11 @@
    *
    * Everything is a WEEKLY RATE, for the same reason heat is: the range is a
    * filter on what to look at, not a claim about how long you trained. `sets`
-   * is what got credited, `raw` is what was performed, and `wasted` is the
+   * is what got credited, `raw` is what was performed, and `beyond` is the
    * difference the per-session ceiling took.
    *
    * @param {Array} sessions
-   * @returns {Array} [{id, name, group, sets, raw, wasted, sessions, perSession}]
+   * @returns {Array} [{id, name, group, sets, raw, beyond, sessions, perSession}]
    */
   function muscleVolume(sessions) {
     const acc = volumeFrom((sessions || []).map(function (s) {
@@ -847,7 +971,10 @@
         group: m ? m.group : 'other',
         sets: c.credited / weeks,
         raw: c.raw / weeks,
-        wasted: Math.max(0, (c.raw - c.credited) / weeks),
+        /* Sets beyond the point where a single day stops demonstrably paying
+           for them. Counted in full above; reported here so the advice has a
+           number behind it. */
+        beyond: Math.max(0, (c.raw - App.Science.SESSION_PUOS * (c.sessions || 0)) / weeks),
         sessions: c.sessions / weeks,
         perSession: c.sessions ? c.raw / c.sessions : 0
       });
@@ -982,10 +1109,10 @@
         id: id,
         name: m ? m.name : id,
         sets: acc[id].raw,
-        lost: acc[id].raw - acc[id].credited
+        beyond: acc[id].raw - App.Science.SESSION_PUOS
       });
     }
-    return out.sort(function (a, b) { return b.lost - a.lost; });
+    return out.sort(function (a, b) { return b.beyond - a.beyond; });
   }
 
   /** Push / pull / legs / core split by work share. */
@@ -1155,11 +1282,14 @@
     on: on, off: off, emit: emit,
 
     getSettings: getSettings, saveSettings: saveSettings,
+    getWallpaper: getWallpaper, setWallpaper: setWallpaper,
 
     allExercises: allExercises, getExercise: getExercise, exerciseMap: exerciseMap,
     saveExercise: saveExercise, deleteExercise: deleteExercise,
 
     allWorkouts: allWorkouts, getWorkout: getWorkout,
+    allPrograms: allPrograms, getProgram: getProgram, saveProgram: saveProgram,
+    deleteProgram: deleteProgram, saveGenerated: saveGenerated,
     saveWorkout: saveWorkout, deleteWorkout: deleteWorkout,
     reorderWorkouts: reorderWorkouts,
 

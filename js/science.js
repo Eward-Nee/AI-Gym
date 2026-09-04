@@ -356,50 +356,41 @@
   const SESSION_TOUCH = 0.5;
 
   /**
-   * What the n-th hard set for one muscle in ONE session is worth.
+   * EVERY SET COUNTS. What the n-th hard set for one muscle in ONE session is
+   * worth is what it always was: one set.
    *
-   * Full credit early, then a decline that has the eleventh set — the point of
-   * undetectable superiority — worth about a third of the first, with a floor
-   * rather than a zero, because "no longer detectably better" is not "worth
-   * nothing".
+   * This used to taper — full credit to six, then a decline to a quarter by
+   * the eleventh — on the reasoning that past that point the trials can no
+   * longer show another set doing more. The reasoning is sound and the
+   * arithmetic was still wrong to apply here, for a plain reason: a log is a
+   * record of what someone did, and a set that was performed was performed.
+   * Deducting from it turns the log into an opinion, and an eleventh set that
+   * silently became a third of a set makes the number on the screen something
+   * nobody can check against their own notebook.
    *
-   * This is the whole of the app's frequency model. Nothing rewards training a
-   * muscle on more days directly; a second day is simply a second session's
-   * worth of full-credit sets, which is exactly the mechanism the volume-
-   * equated frequency trials keep finding.
+   * The insight survives as ADVICE — see spreadVerdict below, and the note the
+   * workout builder shows while a plan is still being written, which is when
+   * moving half the work to another day is free.
    *
    * @param {number} n  1-based position within the session, may be fractional
    */
   function sessionMarginal(n) {
-    if (n <= 6) return 1;
-    return Math.max(0.25, 1 - 0.13 * (n - 6));
+    return n > 0 ? 1 : 0;
   }
 
-  /**
-   * The integral of the above: what `x` hard sets for one muscle in a single
-   * session are worth in total.
-   *
-   * Integrated rather than summed because a set's contribution is fractional —
-   * a bench press is one set for the chest and a third of one for the triceps
-   * — so the "n-th set" is rarely a whole number.
-   */
+  /** What `x` hard sets for one muscle in a single session are worth: `x`. */
   function sessionCredit(x) {
-    x = Math.max(0, Number(x) || 0);
-    if (x <= 6) return x;
-    /* Linear stretch from 6 up to where the floor bites, then flat rate. */
-    const knee = 6 + (1 - 0.25) / 0.13;            /* ~11.77 sets */
-    const hi = Math.min(x, knee);
-    let out = 6 + (hi - 6) - 0.13 * (hi - 6) * (hi - 6) / 2;
-    if (x > knee) out += (x - knee) * 0.25;
-    return out;
+    return Math.max(0, Number(x) || 0);
   }
 
   /**
    * Credit for adding `add` more fractional sets on top of `have` already
-   * done for that muscle in the same session.
+   * done for that muscle in the same session. Kept as a function, rather than
+   * inlined at its one call site, because it is the seam a future taper would
+   * go back through.
    */
   function marginalCredit(have, add) {
-    return sessionCredit(have + add) - sessionCredit(have);
+    return Math.max(0, Number(add) || 0);
   }
 
   /* ---------------------------------------------------------------------------
@@ -420,17 +411,17 @@
   }
 
   /**
-   * How the spread of that volume reads. The verdict is about SPREAD, not
-   * about a frequency target — the only thing that costs you is stacking more
-   * into one session than a session can use.
+   * How the spread of that volume reads. Every set counts towards the totals
+   * either way; this is a reading of where the NEXT set is best spent, not a
+   * deduction from the ones already done.
    */
   function spreadVerdict(setsPerSession) {
     if (!(setsPerSession > 0)) return { key: 'none', label: '—', tone: 'low' };
-    if (setsPerSession <= 6) return { key: 'clean', label: 'Every set counts', tone: 'good' };
+    if (setsPerSession <= 6) return { key: 'clean', label: 'Well spread', tone: 'good' };
     if (setsPerSession <= SESSION_PUOS) {
-      return { key: 'taper', label: 'Late sets discounted', tone: 'mid' };
+      return { key: 'taper', label: 'Heavy for one day', tone: 'mid' };
     }
-    return { key: 'stacked', label: 'Split it over more days', tone: 'low' };
+    return { key: 'stacked', label: 'Spreads better over more days', tone: 'low' };
   }
 
   App.Science = {

@@ -32,25 +32,46 @@
    * composition — an exercise's own muscle split — which sums and scales to
    * itself, because there the largest share genuinely is the reference.
    */
-  function heatStrip(muscles, opts) {
-    opts = opts || {};
-    const groups = opts.absolute
+  /* A strip's colours and tooltip depend only on the muscle map it is given,
+     and a picker row rebuilds one for every exercise that scrolls past. The
+     answer is cached against the map object itself, so it survives scrolling
+     and is thrown away with the exercise it belonged to. heatColor returns a
+     CSS variable, never a resolved colour, so a cached strip still follows the
+     scheme and the light/dark mode. */
+  const stripCache = [new WeakMap(), new WeakMap()];
+
+  function stripSpec(muscles, absolute) {
+    const cache = stripCache[absolute ? 1 : 0];
+    const hit = muscles && cache.get(muscles);
+    if (hit) return hit;
+
+    const groups = absolute
       ? App.Muscles.groupAverages(muscles || {})
       : App.Muscles.groupTotals(muscles || {});
     const order = ['chest', 'back', 'shoulders', 'arms', 'legs', 'core'];
     let max = 100;
-    if (!opts.absolute) {
+    if (!absolute) {
       max = 0;
       order.forEach(function (g) { max = Math.max(max, groups[g] || 0); });
     }
-    const wrap = U.h('.heat-strip', { title: order.map(function (g) {
-      return App.Muscles.GROUPS[g].name + ' ' + Math.round(groups[g] || 0) + '%';
-    }).join('  ·  ') });
-    order.forEach(function (g) {
-      const v = groups[g] || 0;
-      wrap.appendChild(U.h('i.heat-cell', {
-        style: { background: max ? App.Anatomy.heatColor(v / max) : 'var(--anat-idle)' }
-      }));
+    const spec = {
+      title: order.map(function (g) {
+        return App.Muscles.GROUPS[g].name + ' ' + Math.round(groups[g] || 0) + '%';
+      }).join('  ·  '),
+      colors: order.map(function (g) {
+        return max ? App.Anatomy.heatColor((groups[g] || 0) / max) : 'var(--anat-idle)';
+      })
+    };
+    if (muscles) cache.set(muscles, spec);
+    return spec;
+  }
+
+  function heatStrip(muscles, opts) {
+    opts = opts || {};
+    const spec = stripSpec(muscles, !!opts.absolute);
+    const wrap = U.h('.heat-strip', { title: spec.title });
+    spec.colors.forEach(function (c) {
+      wrap.appendChild(U.h('i.heat-cell', { style: { background: c } }));
     });
     return wrap;
   }
@@ -274,23 +295,43 @@
     const listEl = U.h('.list-scroll.ex-list');
     const countEl = U.h('.u-xs.u-muted');
 
+    /* The haystack each movement is searched against, and its group shares,
+       computed once per movement instead of once per keystroke. Both hang off
+       the exercise object, so editing one drops its own entry and nothing
+       else's. */
+    const searchCache = new WeakMap();
+
+    function haystack(ex) {
+      let v = searchCache.get(ex);
+      if (!v) {
+        v = {
+          text: (ex.name + ' ' + ex.equipment).toLowerCase(),
+          groups: App.Muscles.groupTotals(ex.muscles),
+          sortKey: ex.name.toLowerCase()
+        };
+        searchCache.set(ex, v);
+      }
+      return v;
+    }
+
     function matches(ex) {
-      if (query) {
-        const q = query.toLowerCase();
-        if (ex.name.toLowerCase().indexOf(q) < 0 &&
-            String(ex.equipment).toLowerCase().indexOf(q) < 0) return false;
-      }
+      const hs = haystack(ex);
+      if (query && hs.text.indexOf(query.toLowerCase()) < 0) return false;
       if (equip !== 'all' && ex.equipment !== equip) return false;
-      if (group !== 'all') {
-        const groups = App.Muscles.groupTotals(ex.muscles);
-        if (!groups[group] || groups[group] < 15) return false;
-      }
+      if (group !== 'all' && !(hs.groups[group] >= 15)) return false;
       return true;
     }
 
     function draw() {
+      /* localeCompare builds a collator on every single comparison, which on
+         468 movements is thousands of them per keystroke. One plain string
+         compare on a pre-lowercased key is the same order for this data and
+         costs nothing. */
       const all = App.Store.allExercises().filter(matches)
-        .sort(function (a, b) { return a.name.localeCompare(b.name); });
+        .sort(function (a, b) {
+          const x = haystack(a).sortKey, y = haystack(b).sortKey;
+          return x < y ? -1 : x > y ? 1 : 0;
+        });
       countEl.textContent = all.length + ' of ' + App.Store.allExercises().length;
 
       if (!all.length) {
@@ -413,11 +454,21 @@
     else if (App.Shell) App.Shell.navigate('exercises');
   }
 
+  /* Same reasoning as stripSpec: sorting a movement's muscle map to find its
+     prime mover is per-exercise work, not per-row work. */
+  const topMuscleCache = new WeakMap();
+
   function topMuscleLabel(ex) {
+    const hit = topMuscleCache.get(ex);
+    if (hit !== undefined) return hit;
     const keys = Object.keys(ex.muscles || {});
-    if (!keys.length) return '—';
-    keys.sort(function (a, b) { return ex.muscles[b] - ex.muscles[a]; });
-    return App.Muscles.label(keys[0]) + ' ' + Math.round(ex.muscles[keys[0]]) + '%';
+    let out = '—';
+    if (keys.length) {
+      keys.sort(function (a, b) { return ex.muscles[b] - ex.muscles[a]; });
+      out = App.Muscles.label(keys[0]) + ' ' + Math.round(ex.muscles[keys[0]]) + '%';
+    }
+    topMuscleCache.set(ex, out);
+    return out;
   }
 
   function exThumb(ex) {

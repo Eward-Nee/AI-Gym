@@ -1,5 +1,5 @@
 {
-  "version": "0.6.8",
+  "version": "0.7.0",
   "name": "AI-Gym",
-  "notes": "Rest timer fixes: finishing an exercise now rests you for the between-exercise time, not the between-set time, and ticking a forgotten or catch-up set from an exercise you have already moved past no longer resets or shortens whatever rest is actually running."
+  "notes": "Programs. Point the generator at a workout you already do, tell it your equipment and how many days a week you train, and it writes a whole rotation: which days train what, sets and reps that change with each phase, and stand-ins for the movements your kit cannot do. Bodyweight is a toggle, never forced. Also: every set counts in full, late or not; finishing a workout stays on Workouts and publishes to your project straight away; a tap on a bottom sheet no longer lands on the nav behind it; the exercise list scrolls without rebuilding itself; the city has lit windows on every building and dark walls between them; and you can use your own picture, gif, video or CSS as the wallpaper."
 }

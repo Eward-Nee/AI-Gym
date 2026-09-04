@@ -59,33 +59,39 @@ const NEAR = [
   [37, 62, 69.2, 32, 46]
 ];
 
-/* Buildings are darker than they were: half the scheme tint, mixed into ink
-   instead of into nothing. */
-const TINT = 0.5;
+/* Buildings are darker than they were: a third of the scheme tint, mixed into
+   ink instead of into nothing. The wall itself is now the DARK part of the
+   picture and the windows are the only light on it, which is what makes the
+   falloff below read as light thrown from the glass. */
+const TINT = 0.34;
 
 /* Column pitch, row pitch, and the column mask for each band. The mask's
-   first and last stops are the margins; the wall between them ramps up to the
-   window core and back down, which is the sideways half of the glow. */
+   first and last stops are the margins — which is what keeps a window off the
+   edge of a building — and the wall between them ramps up to the window core
+   and back down, which is the sideways half of the same falloff. */
 const BANDS = {
   far: {
     towers: FAR, col: 12, row: 24, ink: 'var(--city-ink-far)', bottom: 'var(--c3)', top: 'var(--c3)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 3px, rgba(0,0,0,0.18) 3px, #000 5px 7px, rgba(0,0,0,0.18) 9px, transparent 9px 12px)'
+    mask: 'repeating-linear-gradient(to right, transparent 0 2px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.30) 4px, #000 5px 7px, rgba(0,0,0,0.30) 8px, rgba(0,0,0,0.06) 9px, transparent 10px 12px)'
   },
   mid: {
     towers: MID, col: 18, row: 24, ink: 'var(--city-ink)', bottom: 'var(--c4)', top: 'var(--c4)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 4px, rgba(0,0,0,0.2) 4px, #000 7px 11px, rgba(0,0,0,0.2) 14px, transparent 14px 18px)'
+    mask: 'repeating-linear-gradient(to right, transparent 0 3px, rgba(0,0,0,0.06) 4px, rgba(0,0,0,0.32) 6px, #000 7px 11px, rgba(0,0,0,0.32) 12px, rgba(0,0,0,0.06) 14px, transparent 15px 18px)'
   },
   near: {
     towers: NEAR, col: 24, row: 30, ink: 'var(--city-ink)', bottom: 'var(--c4)', top: 'var(--c3)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 5px, rgba(0,0,0,0.2) 5px, #000 9px 15px, rgba(0,0,0,0.2) 19px, transparent 19px 24px)'
+    mask: 'repeating-linear-gradient(to right, transparent 0 4px, rgba(0,0,0,0.06) 5px, rgba(0,0,0,0.32) 8px, #000 9px 15px, rgba(0,0,0,0.32) 16px, rgba(0,0,0,0.06) 19px, transparent 20px 24px)'
   }
 };
 
-/* Rows: transparent gap, ramp, core, ramp, gap — the vertical half of the
-   glow. The core is the lit glass. */
+/* Rows: gap, a four-step ramp, the lit core, the ramp again, gap — the
+   vertical half of the glow. THE FURTHER FROM A WINDOW, THE DARKER: the ramp
+   runs 72% -> 26% -> 8% -> 2% -> nothing, so the wall immediately beside the
+   glass is lit, a step away is dim, and the middle of the wall between two
+   windows is the bare tower colour with no light on it at all. */
 const ROWS = {
-  24: 'repeating-linear-gradient(to top, transparent 0 6px, W10 6px, W40 9px, W95 10px 14px, W40 15px, W10 18px, transparent 18px 24px)',
-  30: 'repeating-linear-gradient(to top, transparent 0 7px, W10 7px, W40 11px, W95 12px 18px, W40 19px, W10 23px, transparent 23px 30px)'
+  24: 'repeating-linear-gradient(to top, transparent 0 4px, W02 5px, W10 7px, W40 9px, W95 10px 14px, W40 15px, W10 17px, W02 19px, transparent 20px 24px)',
+  30: 'repeating-linear-gradient(to top, transparent 0 5px, W02 6px, W10 8px, W40 11px, W95 12px 18px, W40 19px, W10 22px, W02 24px, transparent 25px 30px)'
 };
 
 function snap(v, unit) { return Math.max(unit, Math.round(v / unit) * unit); }
@@ -118,8 +124,9 @@ function towerLayer(sel, band, extra) {
 function rows(pitch) {
   return ROWS[pitch]
     .replace(/W95/g, 'color-mix(in srgb, var(--city-win) 72%, transparent)')
-    .replace(/W40/g, 'color-mix(in srgb, var(--city-win) 22%, transparent)')
-    .replace(/W10/g, 'color-mix(in srgb, var(--city-win) 5%, transparent)');
+    .replace(/W40/g, 'color-mix(in srgb, var(--city-win) 26%, transparent)')
+    .replace(/W10/g, 'color-mix(in srgb, var(--city-win) 8%, transparent)')
+    .replace(/W02/g, 'color-mix(in srgb, var(--city-win) 2%, transparent)');
 }
 
 function windowLayer(sel, bands, extra) {
@@ -224,9 +231,14 @@ const SKYLINE = `/* --- 9. Skyline: a sci-fi city under a moon or a sun (static)
    position and darkness, snapped so its windows fit: see the generator for
    why. Layers:
 
-     l1  far towers      l4  windows of the far and mid bands
-     l2  mid towers      l5  windows of the near band (bigger glass)
-     l3  near towers     l6  horizon glow
+     l1  far towers      l4  far windows
+     l2  mid towers      l5  mid windows
+     l3  near towers     l6  near windows (bigger glass)
+                         l7  horizon glow
+
+   EVERY BAND IS LIT. The far band used to be left dark on the grounds that it
+   is haze; the result was a row of blank slabs behind a lit city, which reads
+   as unfinished rather than as distant. It is lit at a lower opacity instead.
 
    The sky, and the moon or sun in it, are the host's ::before, painted under
    everything; the faint light they throw onto the city is its ::after, over
@@ -236,9 +248,10 @@ const SKYLINE = `/* --- 9. Skyline: a sci-fi city under a moon or a sun (static)
   towerLayer("[data-bg='skyline'] .bg-l1", BANDS.far, ['inset: 0;', 'opacity: 1;']) +
   towerLayer("[data-bg='skyline'] .bg-l2", BANDS.mid, ['inset: 0;', 'opacity: 1;']) +
   towerLayer("[data-bg='skyline'] .bg-l3", BANDS.near, ['inset: 0;', 'opacity: 1;']) +
-  windowLayer("[data-bg='skyline'] .bg-l4", [BANDS.far, BANDS.mid], ['inset: 0;', 'opacity: calc(var(--city-win-alpha) * 0.75);']) +
-  windowLayer("[data-bg='skyline'] .bg-l5", [BANDS.near], ['inset: 0;', 'opacity: var(--city-win-alpha);']) +
-`[data-bg='skyline'] .bg-l6 {
+  windowLayer("[data-bg='skyline'] .bg-l4", [BANDS.far], ['inset: 0;', 'opacity: calc(var(--city-win-alpha) * 0.5);']) +
+  windowLayer("[data-bg='skyline'] .bg-l5", [BANDS.mid], ['inset: 0;', 'opacity: calc(var(--city-win-alpha) * 0.8);']) +
+  windowLayer("[data-bg='skyline'] .bg-l6", [BANDS.near], ['inset: 0;', 'opacity: var(--city-win-alpha);']) +
+`[data-bg='skyline'] .bg-l7 {
   opacity: var(--city-glow-alpha);
   background: radial-gradient(94% 44% at 50% 82%, var(--c4), transparent 100%);
 }
@@ -252,16 +265,17 @@ const NEON = `/* --- 11. Neon City: the same city, alive (animated) ------------
    Three tower bands on a PARALLAX — the near block travels furthest per second
    and the far block barely moves, which is what turns a flat drift into depth.
    Each lit-window layer carries the same animation as the band it is masked
-   by, or the lights would slide off their own buildings. The far band is left
-   unlit: it is haze, and it has no layer to spare.
+   by, or the lights would slide off their own buildings — which is why every
+   band needs its own window layer, and why there are eight layer hosts.
    -------------------------------------------------------------------------- */
 ` +
   towerLayer("[data-bg='neon'] .bg-l1", BANDS.far, ['inset: 0 -22%;', 'opacity: 1;', 'animation: city-far 74s linear infinite;']) +
   towerLayer("[data-bg='neon'] .bg-l2", BANDS.mid, ['inset: 0 -22%;', 'opacity: 1;', 'animation: city-mid 47s linear infinite;']) +
   towerLayer("[data-bg='neon'] .bg-l3", BANDS.near, ['inset: 0 -22%;', 'opacity: 1;', 'animation: city-near 29s linear infinite;']) +
-  windowLayer("[data-bg='neon'] .bg-l4", [BANDS.mid], ['inset: 0 -22%;', 'opacity: calc(var(--city-win-alpha) * 0.85);', 'animation: city-mid 47s linear infinite;']) +
-  windowLayer("[data-bg='neon'] .bg-l5", [BANDS.near], ['inset: 0 -22%;', 'opacity: var(--city-win-alpha);', 'animation: city-near 29s linear infinite;']) +
-`[data-bg='neon'] .bg-l6 {
+  windowLayer("[data-bg='neon'] .bg-l4", [BANDS.far], ['inset: 0 -22%;', 'opacity: calc(var(--city-win-alpha) * 0.5);', 'animation: city-far 74s linear infinite;']) +
+  windowLayer("[data-bg='neon'] .bg-l5", [BANDS.mid], ['inset: 0 -22%;', 'opacity: calc(var(--city-win-alpha) * 0.85);', 'animation: city-mid 47s linear infinite;']) +
+  windowLayer("[data-bg='neon'] .bg-l6", [BANDS.near], ['inset: 0 -22%;', 'opacity: var(--city-win-alpha);', 'animation: city-near 29s linear infinite;']) +
+`[data-bg='neon'] .bg-l7 {
   opacity: var(--city-glow-alpha);
   background: radial-gradient(96% 46% at 50% 84%, var(--c4), transparent 100%);
 }

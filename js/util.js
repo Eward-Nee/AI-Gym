@@ -244,11 +244,36 @@
     const root = h('.modal-root', { role: 'dialog', 'aria-modal': 'true' });
     const body = h('.modal-body');
 
+    /* GHOST CLICKS, and why the dialog outlives its own animation.
+
+       A touch screen does not send a click. It sends touchstart/touchend and
+       then the browser SYNTHESISES mousedown, mouseup and click at the same
+       point — on an unhurried WebView as much as 300ms later. If the dialog
+       has been taken out of the document by then, that synthetic click is
+       hit-tested against whatever is now under the finger.
+
+       On a phone this dialog is a bottom sheet, and directly beneath its
+       footer sits the bottom nav. So a tap on the sheet's own "Add" button
+       closed the sheet and then pressed the nav item behind it — which is why
+       adding an exercise to a new workout landed on the Control Panel.
+
+       The fix is to keep the root — full-screen, transparent, still
+       hit-testable — until the synthetic click has come and gone, and to
+       swallow anything that lands on it while it is on its way out. */
+    let closing = false;
     function close() {
+      if (closing) return;
+      closing = true;
       root.classList.add('is-closing');
-      setTimeout(function () { root.remove(); }, 140);
       document.removeEventListener('keydown', onKey);
+      const touch = matchMedia('(hover: none)').matches;
+      setTimeout(function () { root.remove(); }, touch ? 420 : 150);
     }
+    root.addEventListener('click', function (e) {
+      if (!closing) return;
+      e.preventDefault();
+      e.stopPropagation();
+    }, true);
     function onKey(e) { if (e.key === 'Escape') close(); }
 
     const foot = h('.modal-foot');
@@ -546,7 +571,9 @@
         const fr = new FileReader();
         fr.onload = function () { resolve({ name: f.name, type: f.type, data: fr.result }); };
         fr.onerror = function () { reject(fr.error); };
-        if (/^image\//.test(f.type)) fr.readAsDataURL(f);
+        /* Anything the browser will play or paint has to survive as bytes.
+           Only genuinely textual files are read as text. */
+        if (/^(image|video|audio)\//.test(f.type)) fr.readAsDataURL(f);
         else fr.readAsText(f);
       };
       document.body.appendChild(input);
@@ -643,6 +670,15 @@
     scroller.appendChild(botPad);
 
     let first = -1, last = -1, pending = 0;
+    /* index -> the element already built for it.
+
+       Scrolling used to empty this container and rebuild every visible row on
+       each window change: a one-row scroll threw away twenty rows and built
+       twenty more, and each row costs a thumbnail, a muscle lookup and six
+       heat cells. That is what made a flick through 468 movements stutter.
+       Rows that are still on screen are now kept exactly as they are, so a
+       one-row scroll builds one row. */
+    let built = new Map();
 
     function paint() {
       const top = scroller.scrollTop;
@@ -651,8 +687,20 @@
       const b = Math.min(items.length, Math.ceil((top + height) / rowH) + overscan);
       if (a === first && b === last) return;
       first = a; last = b;
-      clear(rows);
-      for (let i = a; i < b; i++) rows.appendChild(build(items[i], i));
+
+      built.forEach(function (el, i) {
+        if (i < a || i >= b) { el.remove(); built.delete(i); }
+      });
+      for (let i = a; i < b; i++) {
+        if (built.has(i)) continue;
+        const el = build(items[i], i);
+        built.set(i, el);
+        /* Insert before the nearest later row that is already in place, so
+           the container stays in index order without a re-sort. */
+        let ref = null;
+        for (let j = i + 1; j < b; j++) { if (built.has(j)) { ref = built.get(j); break; } }
+        rows.insertBefore(el, ref);
+      }
       topPad.style.height = (a * rowH) + 'px';
       botPad.style.height = ((items.length - b) * rowH) + 'px';
     }
@@ -678,8 +726,14 @@
     if (opts.scrollTo != null) scrollToIndex(opts.scrollTo);
 
     return {
-      /* Force a repaint of the current window, e.g. after a row's data changed. */
-      refresh: function () { first = -1; last = -1; paint(); },
+      /* Force a repaint of the current window, e.g. after a row's data changed.
+         The cache goes with it — the rows are exactly what is stale. */
+      refresh: function () {
+        first = -1; last = -1;
+        built.forEach(function (el) { el.remove(); });
+        built = new Map();
+        paint();
+      },
       scrollToIndex: scrollToIndex
     };
   }

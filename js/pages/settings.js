@@ -30,6 +30,7 @@
       U.h('span.chip', { text: 'v' + App.VERSION })
     ]);
     root.appendChild(profileCard());
+    root.appendChild(equipmentCard());
     root.appendChild(exercisesCard());
     root.appendChild(appearanceCard());
     /* Account comes before the project section: linking a Supabase project
@@ -291,6 +292,89 @@
    * number follows. Per-hand is the default because it is what nearly everyone
    * does; an individual exercise can still disagree, from its own editor.
    */
+  /* ---------------------------------------------------------------------------
+     EQUIPMENT
+
+     What the program generator is allowed to reach for. It is a Control Panel
+     setting rather than a question inside the generator because the answer is
+     a fact about your life, not about one program — and because it is the
+     thing that decides whether a generated program is usable or a list of
+     movements you cannot perform.
+     ------------------------------------------------------------------------ */
+  function equipmentCard() {
+    const P = App.Programs;
+    const s = App.Store.getSettings();
+    const chosen = Object.create(null);
+    ((s.equipment && s.equipment.length) ? s.equipment : P.KITS.commercial.equip)
+      .forEach(function (k) { chosen[k] = true; });
+    if (s.allowBodyweight === false) delete chosen.bodyweight;
+
+    const countEl = U.h('.hint');
+    const chips = U.h('.tag-row');
+
+    function save() {
+      const list = Object.keys(chosen);
+      App.Store.saveSettings({
+        equipment: list,
+        allowBodyweight: !!chosen.bodyweight
+      });
+      countEl.textContent = describe(list);
+    }
+
+    function describe(list) {
+      const n = App.Store.allExercises().filter(function (ex) {
+        return list.indexOf(ex.equipment) >= 0;
+      }).length;
+      return n + ' of ' + App.Store.allExercises().length + ' movements are available ' +
+        'to you' + (chosen.bodyweight ? '.' : ', with bodyweight movements excluded.');
+    }
+
+    function paint() {
+      U.clear(chips);
+      Object.keys(App.Equipment).forEach(function (k) {
+        chips.appendChild(U.h('button.chip.chip-btn' + (chosen[k] ? '.chip-accent' : ''), {
+          type: 'button', text: App.Equipment[k],
+          onclick: function () {
+            if (chosen[k]) delete chosen[k]; else chosen[k] = true;
+            this.classList.toggle('chip-accent', !!chosen[k]);
+            save();
+          }
+        }));
+      });
+      countEl.textContent = describe(Object.keys(chosen));
+    }
+    paint();
+
+    const presets = U.h('.tag-row', Object.keys(P.KITS).map(function (kid) {
+      return U.h('button.chip.chip-btn', {
+        type: 'button', text: P.KITS[kid].name, title: P.KITS[kid].hint,
+        onclick: function () {
+          Object.keys(chosen).forEach(function (k) { delete chosen[k]; });
+          P.KITS[kid].equip.forEach(function (k) { chosen[k] = true; });
+          paint();
+          save();
+        }
+      });
+    }));
+
+    return U.h('.card', [
+      U.h('.card-head', [U.h('div', [
+        U.h('h2', 'Equipment'),
+        U.h('.card-sub', 'What the program generator may pick from.')
+      ])]),
+      U.h('.field', [U.h('label.label', 'Start from'), presets]),
+      U.h('.field', { style: { marginTop: '16px' } },
+        [U.h('label.label', 'Available to you'), chips, countEl]),
+      U.h('.sci-note', { style: { marginTop: '14px' } }, [
+        U.h('.sci-note-title', 'Turning bodyweight off is not a cosmetic filter'),
+        U.h('p.u-sm.u-muted', 'Bodyweight is 77 of the 468 movements here. Without it, ' +
+          'and without a cable, machine or band, there is no vertical pull in the ' +
+          'library you can do — rows and lat isolation are the nearest thing, and the ' +
+          'generator will say so rather than quietly leaving your lats out.')
+      ])
+    ]);
+  }
+
   function exercisesCard() {
     const s = App.Store.getSettings();
     const counts = App.Store.allExercises().reduce(function (a, ex) {
@@ -682,8 +766,16 @@
         type: 'button', dataset: { bg: b.id },
         'aria-label': b.name + (b.live ? ' (animated)' : ''),
         onclick: function () {
-          App.Store.saveSettings({ background: b.id });
-          U.$$('[data-bg]', bgGrid).forEach(function (n) {
+          const was = App.Store.getSettings().background;
+          const custom = function (id) { return id === 'custom' || id === 'css'; };
+          App.Store.saveSettings({ background: b.id }).then(function () {
+            /* The two custom wallpapers bring their own controls with them —
+               a file picker, or a CSS box. Moving in or out of one changes
+               what this card contains, so it has to be rebuilt rather than
+               just re-highlighted. */
+            if (custom(b.id) || custom(was)) draw();
+          });
+          U.$('[data-bg]', bgGrid).forEach(function (n) {
             n.classList.toggle('is-active', n.dataset.bg === b.id);
           });
         }
@@ -704,17 +796,199 @@
       ]),
       U.h('.field', [U.h('label.label', 'Mode'), modeGrid,
         U.h('.hint', 'AMOLED pushes the background to true black so unlit pixels stay off.')]),
+      syncAfterWorkoutField(),
       U.h('.field', { style: { marginTop: '20px' } },
         [U.h('label.label', 'Colour scheme'), schemeGrid]),
       U.h('.field', { style: { marginTop: '20px' } }, [
         U.h('label.label', 'Background'),
         bgGrid,
+        customWallpaper(),
         U.h('.hint', 'Six static and six animated, including a sci-fi skyline and a ' +
           'cyberpunk board. Every one is built from the colour scheme above, so it ' +
           'follows your scheme and your light / dark mode. Animated backgrounds hold ' +
           'still if your device asks for reduced motion.')
       ]),
       motionField()
+    ]);
+  }
+
+  /**
+   * Publish the moment a session is finished.
+   *
+   * On by default, and it lives beside the theme rather than buried in the
+   * project card because it is about what happens at the end of a workout,
+   * not about how syncing is configured. Off means the session waits for the
+   * next ordinary sync — it is never lost either way, since the write is
+   * queued in the outbox the instant it is saved.
+   */
+  function syncAfterWorkoutField() {
+    const s = App.Store.getSettings();
+    return U.h('.field', { style: { marginTop: '18px' } }, [
+      U.h('label.switch', { style: { alignItems: 'flex-start' } }, [
+        U.h('input', {
+          type: 'checkbox', checked: s.autoPublish !== false,
+          onchange: function () { App.Store.saveSettings({ autoPublish: this.checked }); }
+        }),
+        U.h('i.switch-track'),
+        U.h('div', [
+          U.h('div', { style: { fontWeight: '560' } }, 'Save and share as soon as a workout ends'),
+          U.h('.u-xs.u-muted', 'Pushes the session to your own project and refreshes ' +
+            'what friends see, the moment you tap Finish — rather than at the next ' +
+            'scheduled sync. Nothing is lost with this off; it just arrives later.')
+        ])
+      ])
+    ]);
+  }
+
+  /* ---------------------------------------------------------------------------
+     YOUR OWN WALLPAPER
+
+     Two of them. A picture, gif or video you supply, and CSS you write.
+
+     The media never leaves the device: it is held under its own key rather
+     than in settings, because settings are copied into every export and
+     pushed as a sync row, and a phone-camera video does not belong in either.
+
+     The CSS is scoped to the background host, which is fixed, behind
+     everything and `contain: strict`. The worst a mistake can do is make the
+     wallpaper ugly — it cannot reach the app's chrome and lock you out of the
+     control that would undo it.
+     ------------------------------------------------------------------------ */
+  function customWallpaper() {
+    const s = App.Store.getSettings();
+    const wrap = U.h('.stack', { style: { marginTop: '14px' } });
+
+    /* Only in the way when it is the one being used. */
+    if (s.background !== 'custom' && s.background !== 'css') return null;
+
+    if (s.background === 'custom') {
+      const status = U.h('.hint', 'Nothing chosen yet.');
+      App.Store.getWallpaper().then(function (rec) {
+        if (!rec || !rec.data) return;
+        status.textContent = (rec.name || 'Your wallpaper') + ' · ' +
+          (rec.type || 'image') + ' · ' + U.compact(Math.round(rec.data.length * 0.75)) + 'B';
+      });
+
+      const fit = U.h('select.select', {
+        onchange: function () { App.Store.saveSettings({ customFit: this.value })
+          .then(function () { App.Shell.applyTheme(App.Store.getSettings()); }); }
+      }, [
+        U.h('option', { value: 'cover', selected: s.customFit !== 'contain' && s.customFit !== 'tile' }, 'Fill the screen'),
+        U.h('option', { value: 'contain', selected: s.customFit === 'contain' }, 'Fit inside'),
+        U.h('option', { value: 'tile', selected: s.customFit === 'tile' }, 'Tile it')
+      ]);
+
+      wrap.appendChild(U.h('.row.row-wrap', [
+        U.h('button.btn.btn-sm', {
+          type: 'button', html: U.icon('plus') + '<span>Choose a picture, gif or video</span>',
+          onclick: function () {
+            U.readFile('image/*,video/*').then(function (f) {
+              /* A phone video is tens of megabytes and IndexedDB will take it
+                 and then make every page load pay for it. Refuse politely
+                 rather than wedging the app. */
+              if (f.data.length > 12 * 1024 * 1024) {
+                U.toast('Too big', 'Keep it under about 9MB — a longer video will ' +
+                  'make the app slow to open.', 'bad');
+                return;
+              }
+              App.Store.setWallpaper(f).then(function () {
+                status.textContent = f.name + ' · ' + (f.type || 'image');
+                App.Shell.applyTheme(App.Store.getSettings());
+                U.toast('Wallpaper set', f.name, 'good');
+              });
+            }).catch(function () { /* cancelled */ });
+          }
+        }),
+        U.h('button.btn.btn-sm', {
+          type: 'button', text: 'Remove',
+          onclick: function () {
+            App.Store.setWallpaper(null).then(function () {
+              status.textContent = 'Nothing chosen yet.';
+              App.Shell.applyTheme(App.Store.getSettings());
+            });
+          }
+        })
+      ]));
+      wrap.appendChild(status);
+      wrap.appendChild(U.h('.grid.grid-2', [
+        U.h('.field', [U.h('label.label', 'How it sits'), fit]),
+        dimField()
+      ]));
+      return wrap;
+    }
+
+    /* --- the CSS editor ------------------------------------------------- */
+    const ta = U.h('textarea.textarea.code', {
+      rows: '8', spellcheck: 'false',
+      value: s.customCss ||
+        'background:\n  radial-gradient(60% 50% at 20% 20%, var(--c4), transparent 70%),\n' +
+        '  radial-gradient(60% 50% at 80% 70%, var(--c3), transparent 70%);'
+    });
+    const err = U.h('.hint');
+
+    wrap.appendChild(U.h('.field', [
+      U.h('label.label', 'CSS for the background layer'),
+      ta,
+      U.h('.hint', 'Declarations only — no selector, no braces. The scheme colours ' +
+        'var(--c1) to var(--c5) are available, so what you write can still follow ' +
+        'your theme.'),
+      err
+    ]));
+    wrap.appendChild(U.h('.row.row-wrap', [
+      U.h('button.btn.btn-primary.btn-sm', {
+        type: 'button', text: 'Apply',
+        onclick: function () {
+          const css = String(ta.value || '');
+          /* One brace and the rule breaks out of its own block. Reject rather
+             than sanitise: half-escaped CSS is worse than a clear no. */
+          if (/[{}<]/.test(css)) {
+            err.textContent = 'Braces and angle brackets are not allowed — write the ' +
+              'declarations only.';
+            err.style.color = 'var(--bad)';
+            return;
+          }
+          err.textContent = '';
+          err.style.color = '';
+          App.Store.saveSettings({ customCss: css }).then(function () {
+            App.Shell.applyTheme(App.Store.getSettings());
+            U.toast('Applied', 'Your CSS is live.', 'good');
+          });
+        }
+      }),
+      U.h('button.btn.btn-sm', {
+        type: 'button', text: 'Reset',
+        onclick: function () {
+          ta.value = '';
+          App.Store.saveSettings({ customCss: '' }).then(function () {
+            App.Shell.applyTheme(App.Store.getSettings());
+          });
+        }
+      })
+    ]));
+    wrap.appendChild(dimField());
+    return wrap;
+  }
+
+  /** How far the wallpaper is faded back so text on top of it stays readable. */
+  function dimField() {
+    const s = App.Store.getSettings();
+    const v = s.customDim === undefined ? 40 : s.customDim;
+    const hint = U.h('.hint', { text: v + '% — the page colour over your wallpaper.' });
+    return U.h('.field', [
+      U.h('label.label', 'Fade it back'),
+      U.h('input.range', {
+        type: 'range', min: '0', max: '90', step: '5', value: v,
+        'aria-label': 'Wallpaper fade',
+        oninput: function () {
+          hint.textContent = this.value + '% — the page colour over your wallpaper.';
+          document.documentElement.style.setProperty('--custom-dim',
+            String(Number(this.value) / 100));
+        },
+        onchange: function () {
+          App.Store.saveSettings({ customDim: Number(this.value) || 0 });
+        }
+      }),
+      hint
     ]);
   }
 

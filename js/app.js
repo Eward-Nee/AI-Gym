@@ -14,7 +14,7 @@
     { id: 'settings',  title: 'Control Panel', sub: 'Account, sync, theme',   icon: 'settings' }
   ];
 
-  const VERSION = '0.6.8';
+  const VERSION = '0.7.0';
 
   /* Six static, six animated. All derive their colour from the active scheme
      and mode, so they never fight the theme. */
@@ -31,7 +31,9 @@
     { id: 'pulse',    name: 'Pulse',    live: true },
     { id: 'tide',     name: 'Tide',     live: true },
     { id: 'neon',     name: 'Neon City', live: true },
-    { id: 'hologrid', name: 'Hologrid', live: true }
+    { id: 'hologrid', name: 'Hologrid', live: true },
+    { id: 'custom', name: 'Your picture' },
+    { id: 'css', name: 'Your CSS' }
   ];
 
   const SCHEMES = [
@@ -80,12 +82,79 @@
     return 'full';
   }
 
+  /**
+   * Paint the two wallpapers that are not built in: a picture, gif or video of
+   * the user's own, and a stylesheet they wrote themselves.
+   *
+   * The media element is created only for `custom`, and torn down the moment
+   * the background changes — a paused 4K video held in a detached node still
+   * costs memory, and this app runs on phones.
+   */
+  /* Bumped on every call. The wallpaper is fetched asynchronously, so two
+     calls in quick succession — saving a setting emits a change, which paints
+     again — would both resolve and both insert. Only the newest token is
+     allowed to put anything on screen. */
+  let bgToken = 0;
+
+  function applyCustomBackground(settings) {
+    const host = U.$('.bg-fx');
+    if (!host) return;
+    const bg = settings.background;
+    const token = ++bgToken;
+
+    U.$$('.bg-custom', host).forEach(function (n) { n.remove(); });
+    const oldCss = document.getElementById('bgCustomCss');
+    if (oldCss) oldCss.remove();
+
+    if (bg === 'css') {
+      /* Scoped to the layer host by a wrapper rule, so the worst a mistake can
+         do is make the background ugly — it cannot reach the app's own chrome
+         and lock somebody out of the setting that would undo it. */
+      const style = document.createElement('style');
+      style.id = 'bgCustomCss';
+      style.textContent = '[data-bg="css"] .bg-fx {' + (settings.customCss || '') + '}';
+      document.head.appendChild(style);
+      return;
+    }
+
+    if (bg !== 'custom') return;
+
+    App.Store.getWallpaper().then(function (rec) {
+      if (token !== bgToken) return;
+      if (!rec || !rec.data) return;
+      if (App.Store.getSettings().background !== 'custom') return;
+      U.$$('.bg-custom', host).forEach(function (n) { n.remove(); });
+      const fit = settings.customFit || 'cover';
+      const el = rec.type && rec.type.indexOf('video') === 0
+        ? U.h('video.bg-custom', {
+          src: rec.data, autoplay: true, loop: true, muted: true,
+          playsinline: true, 'aria-hidden': 'true'
+        })
+        : U.h('img.bg-custom', { src: rec.data, alt: '', 'aria-hidden': 'true' });
+      el.style.objectFit = fit === 'tile' ? 'none' : fit;
+      if (fit === 'tile' && el.tagName === 'IMG') {
+        /* A tiled still is a background-image, not an <img> — an <img> can only
+           ever be one copy of itself. */
+        const tile = U.h('i.bg-custom');
+        tile.style.backgroundImage = 'url(' + JSON.stringify(rec.data) + ')';
+        tile.style.backgroundRepeat = 'repeat';
+        host.insertBefore(tile, host.firstChild);
+        return;
+      }
+      if (el.tagName === 'VIDEO') el.muted = true;
+      host.insertBefore(el, host.firstChild);
+    }).catch(function () { /* a wallpaper is decoration; never a failure */ });
+  }
+
   function applyTheme(settings) {
     const root = document.documentElement;
     root.setAttribute('data-mode', settings.mode || 'dark');
     root.setAttribute('data-scheme', settings.scheme || 'ember');
     root.setAttribute('data-bg', settings.background || 'plain');
     root.setAttribute('data-bgmotion', resolveMotion(settings.bgMotion));
+    root.style.setProperty('--custom-dim',
+      String(Math.max(0, Math.min(90, Number(settings.customDim) || 0)) / 100));
+    applyCustomBackground(settings);
 
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
@@ -162,15 +231,19 @@
      ------------------------------------------------------------------------ */
 
   /**
-   * Host for the decorative background. Six real elements rather than the two
-   * available pseudo-elements, so a background can move several layers
+   * Host for the decorative background. Eight real elements rather than the
+   * two available pseudo-elements, so a background can move several layers
    * independently and each one can be promoted to its own compositor layer.
    * Layers a background does not claim paint nothing and are never promoted.
+   *
+   * Eight rather than six because the city needs a lit-window layer per depth
+   * band — each has to travel with the towers it belongs to, or the lights
+   * slide off their own buildings — plus a horizon glow on top of that.
    */
   function buildBackground() {
     const fx = U.h('.bg-fx', { 'aria-hidden': 'true' }, [
-      U.h('i.bg-l1'), U.h('i.bg-l2'), U.h('i.bg-l3'),
-      U.h('i.bg-l4'), U.h('i.bg-l5'), U.h('i.bg-l6')
+      U.h('i.bg-l1'), U.h('i.bg-l2'), U.h('i.bg-l3'), U.h('i.bg-l4'),
+      U.h('i.bg-l5'), U.h('i.bg-l6'), U.h('i.bg-l7'), U.h('i.bg-l8')
     ]);
     document.body.appendChild(fx);
   }

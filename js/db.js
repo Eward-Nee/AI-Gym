@@ -10,13 +10,16 @@
   'use strict';
 
   const DB_NAME = 'ai-gym';
-  const DB_VERSION = 1;
+  /* Bumped to 2 for the `programs` store. onupgradeneeded creates only what
+     is missing, so an existing database gains the store and keeps its data. */
+  const DB_VERSION = 2;
 
   /* store name -> keyPath. `meta` is a plain key/value bag. */
   const STORES = {
     exercises: 'id',
     workouts: 'id',
     sessions: 'id',
+    programs: 'id',
     friends: 'id',
     meta: 'key',
     outbox: 'id'     /* pending writes queued while offline */
