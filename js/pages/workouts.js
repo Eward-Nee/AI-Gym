@@ -15,8 +15,11 @@
   let mode = 'list';
   let currentId = null;
   const report = { range: '90', picks: [] };
-  /* Which program the session list is narrowed to, or null for every session.
-     Page state, not a setting: it is a way of looking, not a fact. */
+  /* Which program the list is narrowed to. null means "not chosen yet", and
+     resolves to the first program — a program is what you are following, so
+     it is what the list opens on. 'all' is every workout, and it is the last
+     chip, not the first: it is the escape hatch, not the default. Page state,
+     not a setting: it is a way of looking, not a fact. */
   let programFilter = null;
 
   function render(el, params) {
@@ -53,8 +56,12 @@
 
     let workouts = App.Store.allWorkouts();
     const programs = App.Store.allPrograms();
-    const chosen = programFilter && App.Store.getProgram(programFilter);
-    if (programFilter && !chosen) programFilter = null;
+    /* A deleted program, or none chosen yet: open on the first program. With
+       no programs at all there is nothing to narrow to. */
+    if (programFilter !== 'all' && !(programFilter && App.Store.getProgram(programFilter))) {
+      programFilter = programs.length ? programs[0].id : 'all';
+    }
+    const chosen = programFilter !== 'all' ? App.Store.getProgram(programFilter) : null;
 
     /* THE PROGRAM SELECTOR. With a program chosen, the list is that program's
        sessions, grouped by phase, and nothing else — the twelve sessions a
@@ -63,17 +70,17 @@
       root.appendChild(U.h('.card', { style: { padding: 'var(--sp-3) var(--sp-4)' } }, [
         U.h('.row.row-wrap', [
           U.h('span.u-xs.u-muted', 'Showing'),
-          U.h('.tag-row', [
-            U.h('button.chip.chip-btn' + (!chosen ? '.chip-accent' : ''), {
-              type: 'button', text: 'All sessions',
-              onclick: function () { programFilter = null; draw(); }
-            })
-          ].concat(programs.map(function (pg) {
+          U.h('.tag-row', programs.map(function (pg) {
             return U.h('button.chip.chip-btn' + (chosen && chosen.id === pg.id ? '.chip-accent' : ''), {
               type: 'button', text: pg.name,
               onclick: function () { programFilter = pg.id; draw(); }
             });
-          })))
+          }).concat([
+            U.h('button.chip.chip-btn' + (!chosen ? '.chip-accent' : ''), {
+              type: 'button', text: 'All workouts',
+              onclick: function () { programFilter = 'all'; draw(); }
+            })
+          ]))
         ])
       ]));
     }

@@ -1,5 +1,5 @@
 {
-  "version": "0.7.1",
+  "version": "0.7.2",
   "name": "AI-Gym",
-  "notes": "Programs, second pass. Build one by hand from sessions you already have; generate one from another program or from scratch; pick a program and see only its sessions; each week of a phase steps the load, reps or sets up on the plan; weights for movements you have never done are borrowed from the closest one you have; a program can be permanent or run once and write a report on whether you kept to it; and home smith-machine units are chosen by model, so the generator only asks a unit for what its stations can do. Fixed: the jump to the Control Panel a few seconds after creating, deleting or generating — a stale listener was repainting it into whatever page was open. The city is now fully opaque."
+  "notes": "The Workouts list opens on your first program, not on every workout; All workouts is the last chip. The city: the far row of towers was the same colour as the sky behind it and read as ghosts, though it measured opaque — it now has a solid colour of its own, its windows are brighter, and the glow stops at the glass. The cards stay glass."
 }

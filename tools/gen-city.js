@@ -72,15 +72,15 @@ const TINT = 0.34;
 const BANDS = {
   far: {
     towers: FAR, col: 12, row: 24, ink: 'var(--city-ink-far)', bottom: 'var(--c3)', top: 'var(--c3)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 2px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.30) 4px, #000 5px 7px, rgba(0,0,0,0.30) 8px, rgba(0,0,0,0.06) 9px, transparent 10px 12px)'
+    mask: 'repeating-linear-gradient(to right, transparent 0 2px, transparent 3px, rgba(0,0,0,0.30) 4px, #000 5px 7px, rgba(0,0,0,0.30) 8px, transparent 9px, transparent 10px 12px)'
   },
   mid: {
     towers: MID, col: 18, row: 24, ink: 'var(--city-ink)', bottom: 'var(--c4)', top: 'var(--c4)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 3px, rgba(0,0,0,0.06) 4px, rgba(0,0,0,0.32) 6px, #000 7px 11px, rgba(0,0,0,0.32) 12px, rgba(0,0,0,0.06) 14px, transparent 15px 18px)'
+    mask: 'repeating-linear-gradient(to right, transparent 0 3px, transparent 4px, rgba(0,0,0,0.32) 6px, #000 7px 11px, rgba(0,0,0,0.32) 12px, transparent 14px, transparent 15px 18px)'
   },
   near: {
     towers: NEAR, col: 24, row: 30, ink: 'var(--city-ink)', bottom: 'var(--c4)', top: 'var(--c3)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 4px, rgba(0,0,0,0.06) 5px, rgba(0,0,0,0.32) 8px, #000 9px 15px, rgba(0,0,0,0.32) 16px, rgba(0,0,0,0.06) 19px, transparent 20px 24px)'
+    mask: 'repeating-linear-gradient(to right, transparent 0 4px, transparent 5px, rgba(0,0,0,0.32) 8px, #000 9px 15px, rgba(0,0,0,0.32) 16px, transparent 19px, transparent 20px 24px)'
   }
 };
 
@@ -90,8 +90,8 @@ const BANDS = {
    glass is lit, a step away is dim, and the middle of the wall between two
    windows is the bare tower colour with no light on it at all. */
 const ROWS = {
-  24: 'repeating-linear-gradient(to top, transparent 0 4px, W02 5px, W10 7px, W40 9px, W95 10px 14px, W40 15px, W10 17px, W02 19px, transparent 20px 24px)',
-  30: 'repeating-linear-gradient(to top, transparent 0 5px, W02 6px, W10 8px, W40 11px, W95 12px 18px, W40 19px, W10 22px, W02 24px, transparent 25px 30px)'
+  24: 'repeating-linear-gradient(to top, transparent 0 7px, W10 8px, W40 9px, W95 10px 14px, W40 15px, W10 16px, transparent 17px 24px)',
+  30: 'repeating-linear-gradient(to top, transparent 0 9px, W10 10px, W40 11px, W95 12px 18px, W40 19px, W10 20px, transparent 21px 30px)'
 };
 
 function snap(v, unit) { return Math.max(unit, Math.round(v / unit) * unit); }
@@ -162,7 +162,10 @@ const LIGHTING = `/* CITY LIGHTING — shared by Skyline and Neon.
    --city-ink is what the towers are made of: the scheme colour is mixed INTO
    it, not into nothing, so a building is a dark thing with a tint rather than
    a tinted haze. Towers are opaque; the far band reads as far because it is
-   made of --city-ink-far, a hazier ink, not because it is see-through. It is also what the picker swatches use, so it lives on the
+   made of --city-ink-far, a hazier ink, not because it is see-through.
+   That ink has to sit clearly APART from the sky: when it matched the
+   horizon the far row read as ghosts — solid, but indistinguishable from
+   what was behind it, which is the same thing to the eye. It is also what the picker swatches use, so it lives on the
    mode, not on the background.
 
    The sky is the host's ::before, under every layer, and carries the moon
@@ -171,7 +174,7 @@ const LIGHTING = `/* CITY LIGHTING — shared by Skyline and Neon.
    lights a skyline is a floodlight. */
 :root {
   --city-ink: #161b27;
-  --city-ink-far: #2b3140;
+  --city-ink-far: #3a4256;
   --city-win: var(--c5);
   --city-win-alpha: 0.3;
   --city-glow-alpha: 0.08;
@@ -184,7 +187,7 @@ const LIGHTING = `/* CITY LIGHTING — shared by Skyline and Neon.
 }
 [data-mode='dark'] {
   --city-ink: #05070d;
-  --city-ink-far: #0a0d16;
+  --city-ink-far: #171c2b;
   --city-win-alpha: 0.5;
   --city-glow-alpha: 0.04;
   --city-sky:
@@ -196,7 +199,7 @@ const LIGHTING = `/* CITY LIGHTING — shared by Skyline and Neon.
 }
 [data-mode='amoled'] {
   --city-ink: #000000;
-  --city-ink-far: #050810;
+  --city-ink-far: #121626;
   --city-win-alpha: 0.45;
   --city-glow-alpha: 0.03;
   --city-sky:
@@ -248,7 +251,7 @@ const SKYLINE = `/* --- 9. Skyline: a sci-fi city under a moon or a sun (static)
   towerLayer("[data-bg='skyline'] .bg-l1", BANDS.far, ['inset: 0;', 'opacity: 1;']) +
   towerLayer("[data-bg='skyline'] .bg-l2", BANDS.mid, ['inset: 0;', 'opacity: 1;']) +
   towerLayer("[data-bg='skyline'] .bg-l3", BANDS.near, ['inset: 0;', 'opacity: 1;']) +
-  windowLayer("[data-bg='skyline'] .bg-l4", [BANDS.far], ['inset: 0;', 'opacity: calc(var(--city-win-alpha) * 0.5);']) +
+  windowLayer("[data-bg='skyline'] .bg-l4", [BANDS.far], ['inset: 0;', 'opacity: calc(var(--city-win-alpha) * 0.7);']) +
   windowLayer("[data-bg='skyline'] .bg-l5", [BANDS.mid], ['inset: 0;', 'opacity: calc(var(--city-win-alpha) * 0.8);']) +
   windowLayer("[data-bg='skyline'] .bg-l6", [BANDS.near], ['inset: 0;', 'opacity: var(--city-win-alpha);']) +
 `[data-bg='skyline'] .bg-l7 {
@@ -272,7 +275,7 @@ const NEON = `/* --- 11. Neon City: the same city, alive (animated) ------------
   towerLayer("[data-bg='neon'] .bg-l1", BANDS.far, ['inset: 0 -22%;', 'opacity: 1;', 'animation: city-far 74s linear infinite;']) +
   towerLayer("[data-bg='neon'] .bg-l2", BANDS.mid, ['inset: 0 -22%;', 'opacity: 1;', 'animation: city-mid 47s linear infinite;']) +
   towerLayer("[data-bg='neon'] .bg-l3", BANDS.near, ['inset: 0 -22%;', 'opacity: 1;', 'animation: city-near 29s linear infinite;']) +
-  windowLayer("[data-bg='neon'] .bg-l4", [BANDS.far], ['inset: 0 -22%;', 'opacity: calc(var(--city-win-alpha) * 0.5);', 'animation: city-far 74s linear infinite;']) +
+  windowLayer("[data-bg='neon'] .bg-l4", [BANDS.far], ['inset: 0 -22%;', 'opacity: calc(var(--city-win-alpha) * 0.7);', 'animation: city-far 74s linear infinite;']) +
   windowLayer("[data-bg='neon'] .bg-l5", [BANDS.mid], ['inset: 0 -22%;', 'opacity: calc(var(--city-win-alpha) * 0.85);', 'animation: city-mid 47s linear infinite;']) +
   windowLayer("[data-bg='neon'] .bg-l6", [BANDS.near], ['inset: 0 -22%;', 'opacity: var(--city-win-alpha);', 'animation: city-near 29s linear infinite;']) +
 `[data-bg='neon'] .bg-l7 {
