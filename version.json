@@ -1,5 +1,5 @@
 {
-  "version": "0.7.4",
+  "version": "0.7.5",
   "name": "AI-Gym",
-  "notes": "The city: walls are nearly as dark as the night sky and each window throws a smooth pool of light onto them — bright beside the glass, dim a step away, almost nothing between floors."
+  "notes": "The city: every tower has three to six windows across, however small it is drawn — far towers have shorter floors and narrower windows instead of one window per row — and each tower has a roof: set-back, sloped, gabled, a mast, a dome, or flat."
 }

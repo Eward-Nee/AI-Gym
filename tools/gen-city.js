@@ -65,65 +65,40 @@ const NEAR = [
    falloff below read as light thrown from the glass. */
 const TINT = 0.25;
 
-/* Column pitch, row pitch, and the column mask for each band. The mask's
-   first and last stops are the margins — which is what keeps a window off the
-   edge of a building — and the wall between them ramps up to the window core
-   and back down, which is the sideways half of the same falloff. */
+/* Per band: the floor pitch (rows of windows), the lit core within a floor,
+   the ink, the tints, and HOW MANY WINDOWS A ROW HOLDS. Farther is smaller: a
+   far tower is drawn small, so its floors are shorter and its windows
+   narrower — but it still has a row of them, three to six across, however
+   tiny. One window per row read as a stripe, not as a building. */
 const BANDS = {
-  far: {
-    towers: FAR, col: 12, row: 24, ink: 'var(--city-ink-far)', bottom: 'var(--c3)', top: 'var(--c3)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px)'
-  },
-  mid: {
-    towers: MID, col: 18, row: 24, ink: 'var(--city-ink)', bottom: 'var(--c4)', top: 'var(--c4)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px)'
-  },
-  near: {
-    towers: NEAR, col: 24, row: 30, ink: 'var(--city-ink)', bottom: 'var(--c4)', top: 'var(--c3)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px)'
-  }
+  far:  { towers: FAR,  row: 12, core: [5, 8],   ink: 'var(--city-ink-far)', bottom: 'var(--c3)', top: 'var(--c3)', scale: 1.4, windows: [3, 5] },
+  mid:  { towers: MID,  row: 18, core: [7, 12],  ink: 'var(--city-ink)',     bottom: 'var(--c4)', top: 'var(--c4)', scale: 1.0, windows: [3, 6] },
+  near: { towers: NEAR, row: 26, core: [10, 17], ink: 'var(--city-ink)',     bottom: 'var(--c4)', top: 'var(--c3)', scale: 1.0, windows: [4, 6] }
 };
 
 /* Rows: a continuous ramp from the lit core down to a 4% floor and back —
-   the vertical half of the glow. THE FURTHER FROM A WINDOW, THE DARKER: the
-   wall right beside the glass is lit, a step away is dim, and the middle of
-   the wall between two floors is nearly the bare tower colour, which is
-   itself nearly the night sky. There is no fully dark stop on purpose: real
-   light does not end, it fades, and a hard edge read as a stripe. */
-const ROWS = {
-  24: 'repeating-linear-gradient(to top, W04 0px, W08 4px, W18 7px, W40 9px, W95 10px 14px, W40 15px, W18 17px, W08 20px, W04 24px)',
-  30: 'repeating-linear-gradient(to top, W04 0px, W08 5px, W18 9px, W40 11px, W95 12px 18px, W40 19px, W18 21px, W08 25px, W04 30px)'
-};
-
-function snap(v, unit) { return Math.max(unit, Math.round(v / unit) * unit); }
-
-function towers(band) {
-  return band.towers.map(function (t) {
-    return { w: snap(t[0], band.col), h: snap(t[1], band.row), x: t[2],
-      lo: Math.round(t[3] * TINT), hi: Math.round(t[4] * TINT) };
-  });
+   the vertical half of the glow, built from the band's pitch and core. THE
+   FURTHER FROM A WINDOW, THE DARKER, and there is no fully dark stop on
+   purpose: real light fades rather than ending, and a hard edge read as a
+   stripe. */
+function rowGradient(row, core) {
+  const a = core[0], b = core[1];
+  const stops = [
+    'W04 0px',
+    'W08 ' + Math.round(a * 0.4) + 'px',
+    'W18 ' + Math.round(a * 0.7) + 'px',
+    'W40 ' + (a - 1) + 'px',
+    'W95 ' + a + 'px ' + b + 'px',
+    'W40 ' + (b + 1) + 'px',
+    'W18 ' + Math.round(b + (row - b) * 0.3) + 'px',
+    'W08 ' + Math.round(b + (row - b) * 0.65) + 'px',
+    'W04 ' + row + 'px'
+  ];
+  return 'repeating-linear-gradient(to top, ' + stops.join(', ') + ')';
 }
 
-function mix(color, pct, ink) {
-  return 'color-mix(in srgb, ' + color + ' ' + pct + '%, ' + ink + ')';
-}
-
-function towerLayer(sel, band, extra) {
-  const ts = towers(band);
-  const imgs = ts.map(function (t) {
-    return '    linear-gradient(to top, ' + mix(band.bottom, t.lo, band.ink) + ', ' + mix(band.top, t.hi, band.ink) + ')';
-  });
-  return sel + ' {\n' +
-    (extra || []).map(function (l) { return '  ' + l + '\n'; }).join('') +
-    '  background-image:\n' + imgs.join(',\n') + ';\n' +
-    '  background-size: ' + ts.map(function (t) { return t.w + 'px ' + t.h + 'px'; }).join(', ') + ';\n' +
-    '  background-position: ' + ts.map(function (t) { return t.x + '% bottom'; }).join(', ') + ';\n' +
-    '  background-repeat: no-repeat;\n' +
-    '}\n';
-}
-
-function rows(pitch) {
-  return ROWS[pitch]
+function rows(band) {
+  return rowGradient(band.row, band.core)
     .replace(/W95/g, 'color-mix(in srgb, var(--city-win) 82%, transparent)')
     .replace(/W40/g, 'color-mix(in srgb, var(--city-win) 38%, transparent)')
     .replace(/W18/g, 'color-mix(in srgb, var(--city-win) 18%, transparent)')
@@ -131,19 +106,132 @@ function rows(pitch) {
     .replace(/W04/g, 'color-mix(in srgb, var(--city-win) 4%, transparent)');
 }
 
-function windowLayer(sel, bands, extra) {
-  const pitch = bands[0].row;
-  const all = [];
-  bands.forEach(function (b) {
-    towers(b).forEach(function (t) { all.push({ t: t, mask: b.mask }); });
+/* A small deterministic generator, so the skyline is the same on every run
+   and every device. */
+function rng(seed) {
+  let s = (seed >>> 0) || 1;
+  return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+
+/* ROOFS. A city of flat rectangles is a bar chart. Each tower draws one of
+   these on top of its body, in the body's own top colour: a set-back upper
+   storey, a single slope, a gable, an antenna mast, a dome. Flat stays in
+   the set because most real roofs are. */
+const ROOFS = ['flat', 'step', 'slant', 'peak', 'antenna', 'dome', 'flat', 'step'];
+
+function snap(v, unit) { return Math.max(unit, Math.round(v / unit) * unit); }
+
+function towers(band) {
+  const r = rng(band.row * 7919 + band.towers.length * 131);
+  return band.towers.map(function (t) {
+    const w = Math.max(6, Math.round(t[0] * band.scale));
+    const h = snap(Math.round(t[1]), band.row);
+    const n = band.windows[0] + Math.floor(r() * (band.windows[1] - band.windows[0] + 1));
+    const roof = ROOFS[Math.floor(r() * ROOFS.length)];
+    return {
+      w: w, h: h, x: t[2],
+      lo: Math.round(t[3] * TINT), hi: Math.round(t[4] * TINT),
+      n: n, roof: roof, rh: 4 + Math.round(r() * 10)
+    };
   });
-  const masks = all.map(function (e) { return '    ' + e.mask; }).join(',\n');
-  const sizes = all.map(function (e) { return e.t.w + 'px ' + e.t.h + 'px'; }).join(', ');
-  const pos = all.map(function (e) { return e.t.x + '% bottom'; }).join(', ');
+}
+
+function mix(color, pct, ink) {
+  return 'color-mix(in srgb, ' + color + ' ' + pct + '%, ' + ink + ')';
+}
+
+/* Where a box of width bw goes so that it sits `offset` px in from the
+   tower's own left edge. Percentage positioning aligns the box's own p% to
+   the container's p%, so a narrower box lands p% of the width difference
+   further left than the tower did; the calc puts that back. */
+function posFor(t, bw, offset, y) {
+  const p = t.x / 100;
+  const dx = offset - p * (t.w - bw);
+  return 'calc(' + t.x + '% ' + (dx >= 0 ? '+ ' : '- ') + Math.abs(dx).toFixed(2) + 'px) ' + y;
+}
+
+/** [{img, size, pos}] for the roof, drawn in the tower's top colour. */
+function roofImages(t, color) {
+  const w = t.w, rh = t.rh;
+  /* The box's bottom sits on the roof line: a length in background-position
+     is an offset from the (container - image) point, so 100% - h puts the
+     image's bottom edge h px above the ground. */
+  const y = 'calc(100% - ' + t.h + 'px)';
+  const solid = 'linear-gradient(' + color + ', ' + color + ')';
+  switch (t.roof) {
+    case 'step': {
+      const bw = Math.max(3, Math.round(w * 0.5));
+      return [{ img: solid, size: bw + 'px ' + rh + 'px', pos: posFor(t, bw, (w - bw) / 2, y) }];
+    }
+    case 'slant':
+      return [{ img: 'linear-gradient(to top left, ' + color + ' 50%, transparent 50.5%)',
+        size: w + 'px ' + rh + 'px', pos: posFor(t, w, 0, y) }];
+    case 'peak': {
+      const hw = w / 2;
+      return [
+        { img: 'linear-gradient(to top left, ' + color + ' 50%, transparent 50.5%)',
+          size: hw.toFixed(2) + 'px ' + rh + 'px', pos: posFor(t, hw, 0, y) },
+        { img: 'linear-gradient(to top right, ' + color + ' 50%, transparent 50.5%)',
+          size: hw.toFixed(2) + 'px ' + rh + 'px', pos: posFor(t, hw, hw, y) }
+      ];
+    }
+    case 'antenna': {
+      const bw = Math.max(1, Math.round(w * 0.08));
+      return [{ img: solid, size: bw + 'px ' + (rh + 10) + 'px', pos: posFor(t, bw, (w - bw) / 2, y) }];
+    }
+    case 'dome':
+      return [{ img: 'radial-gradient(ellipse ' + (w / 2).toFixed(2) + 'px ' + rh + 'px at 50% 100%, ' +
+        color + ' 98%, transparent 100%)', size: w + 'px ' + rh + 'px', pos: posFor(t, w, 0, y) }];
+    default:
+      return [];
+  }
+}
+
+function towerLayer(sel, band, extra) {
+  const ts = towers(band);
+  const imgs = [], sizes = [], poss = [];
+  ts.forEach(function (t) {
+    const top = mix(band.top, t.hi, band.ink);
+    roofImages(t, top).forEach(function (r) {
+      imgs.push('    ' + r.img); sizes.push(r.size); poss.push(r.pos);
+    });
+    imgs.push('    linear-gradient(to top, ' + mix(band.bottom, t.lo, band.ink) + ', ' + top + ')');
+    sizes.push(t.w + 'px ' + t.h + 'px');
+    poss.push(t.x + '% bottom');
+  });
   return sel + ' {\n' +
     (extra || []).map(function (l) { return '  ' + l + '\n'; }).join('') +
-    '  background-image: ' + rows(pitch) + ';\n' +
-    '  background-size: 100% ' + pitch + 'px;\n' +
+    '  background-image:\n' + imgs.join(',\n') + ';\n' +
+    '  background-size: ' + sizes.join(', ') + ';\n' +
+    '  background-position: ' + poss.join(', ') + ';\n' +
+    '  background-repeat: no-repeat;\n' +
+    '}\n';
+}
+
+/* Column mask for one tower: n windows across its own width. The pitch is
+   width / n, so the last window ends in a margin just as the first begins
+   with one, whatever the width; and the very edge of the wall stays dark,
+   because a window on the edge of a building is a window in mid-air. */
+function columnMask(t) {
+  const p = t.w / t.n;
+  const f = function (k) { return (p * k).toFixed(2) + 'px'; };
+  return 'repeating-linear-gradient(to right, transparent 0 ' + f(0.05) +
+    ', rgba(0,0,0,0.12) ' + f(0.12) + ', rgba(0,0,0,0.45) ' + f(0.28) +
+    ', #000 ' + f(0.36) + ' ' + f(0.64) + ', rgba(0,0,0,0.45) ' + f(0.72) +
+    ', rgba(0,0,0,0.12) ' + f(0.88) + ', transparent ' + f(0.95) + ' ' + f(1) + ')';
+}
+
+function windowLayer(sel, bands, extra) {
+  const band = bands[0];
+  const ts = [];
+  bands.forEach(function (b) { towers(b).forEach(function (t) { ts.push(t); }); });
+  const masks = ts.map(function (t) { return '    ' + columnMask(t); }).join(',\n');
+  const sizes = ts.map(function (t) { return t.w + 'px ' + t.h + 'px'; }).join(', ');
+  const pos = ts.map(function (t) { return t.x + '% bottom'; }).join(', ');
+  return sel + ' {\n' +
+    (extra || []).map(function (l) { return '  ' + l + '\n'; }).join('') +
+    '  background-image: ' + rows(band) + ';\n' +
+    '  background-size: 100% ' + band.row + 'px;\n' +
     '  background-position: 0 bottom;\n' +
     '  background-repeat: repeat;\n' +
     '  -webkit-mask-image:\n' + masks + ';\n' +

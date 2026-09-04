@@ -545,203 +545,246 @@
   inset: 0;
   opacity: 1;
   background-image:
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 7%, var(--city-ink-far)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 7%, var(--city-ink-far))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)) 50%, transparent 50.5%),
+    linear-gradient(to top right, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 4%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 5%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 8%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 6%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 3%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 6%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 5%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 3%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 5%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 9%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 9%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 9%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 3%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 5%, var(--city-ink-far))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 4%, var(--city-ink-far)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 3%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 4%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 8%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 8%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 8%, var(--city-ink-far)) 50%, transparent 50.5%),
+    linear-gradient(to top right, color-mix(in srgb, var(--c3) 8%, var(--city-ink-far)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 4%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 8%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 7%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 7%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 7%, var(--city-ink-far))),
+    radial-gradient(ellipse 7.50px 12px at 50% 100%, color-mix(in srgb, var(--c3) 8%, var(--city-ink-far)) 98%, transparent 100%),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 9%, var(--city-ink-far)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 9%, var(--city-ink-far))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)) 50%, transparent 50.5%),
+    linear-gradient(to top right, color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 3%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 6%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 7%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 7%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 7%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 6%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 4%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 6%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 9%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 9%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 9%, var(--city-ink-far)));
-  background-size: 12px 240px, 12px 312px, 12px 216px, 12px 144px, 12px 264px, 12px 216px, 12px 168px, 12px 144px, 12px 168px, 12px 216px, 12px 240px, 12px 192px, 12px 264px, 12px 264px, 12px 168px, 12px 168px, 12px 312px, 12px 312px, 12px 192px, 12px 288px;
-  background-position: 13.6% bottom, 69.3% bottom, 38.6% bottom, 6.1% bottom, 27.1% bottom, 43.6% bottom, 62.7% bottom, 0.1% bottom, 95.8% bottom, 75.3% bottom, 83.2% bottom, 22% bottom, 59.3% bottom, 88.5% bottom, 35% bottom, 54.9% bottom, 48.5% bottom, 84.6% bottom, 30.8% bottom, 78.8% bottom;
+  background-size: 18px 6px, 18px 240px, 8.50px 5px, 8.50px 5px, 17px 324px, 9px 9px, 18px 204px, 7px 7px, 14px 132px, 5px 11px, 10px 264px, 10px 10px, 20px 216px, 11px 168px, 17px 9px, 17px 156px, 7px 5px, 14px 156px, 7px 8px, 13px 228px, 8.50px 13px, 8.50px 13px, 17px 240px, 11px 192px, 7px 9px, 13px 252px, 2px 19px, 20px 252px, 15px 12px, 15px 168px, 11px 5px, 11px 168px, 5.50px 12px, 5.50px 12px, 11px 300px, 10px 12px, 20px 300px, 7px 9px, 13px 192px, 9px 6px, 17px 288px;
+  background-position: calc(13.6% + 0.00px) calc(100% - 240px), 13.6% bottom, calc(69.3% - 5.89px) calc(100% - 324px), calc(69.3% + 2.61px) calc(100% - 324px), 69.3% bottom, calc(38.6% + 1.03px) calc(100% - 204px), 38.6% bottom, calc(6.1% + 3.07px) calc(100% - 132px), 6.1% bottom, calc(27.1% + 1.15px) calc(100% - 264px), 27.1% bottom, calc(43.6% + 0.64px) calc(100% - 216px), 43.6% bottom, 62.7% bottom, calc(0.1% + 0.00px) calc(100% - 156px), 0.1% bottom, calc(95.8% - 3.21px) calc(100% - 156px), 95.8% bottom, calc(75.3% - 1.52px) calc(100% - 228px), 75.3% bottom, calc(83.2% - 7.07px) calc(100% - 240px), calc(83.2% + 1.43px) calc(100% - 240px), 83.2% bottom, 22% bottom, calc(59.3% - 0.56px) calc(100% - 252px), 59.3% bottom, calc(88.5% - 6.93px) calc(100% - 252px), 88.5% bottom, calc(35% + 0.00px) calc(100% - 168px), 35% bottom, calc(54.9% + 0.00px) calc(100% - 168px), 54.9% bottom, calc(48.5% - 2.67px) calc(100% - 300px), calc(48.5% + 2.83px) calc(100% - 300px), 48.5% bottom, calc(84.6% - 3.46px) calc(100% - 300px), 84.6% bottom, calc(30.8% + 1.15px) calc(100% - 192px), 30.8% bottom, calc(78.8% - 2.30px) calc(100% - 288px), 78.8% bottom;
   background-repeat: no-repeat;
 }
 [data-bg='skyline'] .bg-l3 {
   inset: 0;
   opacity: 1;
   background-image:
+    radial-gradient(ellipse 17.50px 7px at 50% 100%, color-mix(in srgb, var(--c4) 10%, var(--city-ink)) 98%, transparent 100%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 7%, var(--city-ink)), color-mix(in srgb, var(--c4) 10%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 6%, var(--city-ink)), color-mix(in srgb, var(--c4) 8%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c4) 11%, var(--city-ink)), color-mix(in srgb, var(--c4) 11%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 8%, var(--city-ink)), color-mix(in srgb, var(--c4) 11%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c4) 9%, var(--city-ink)), color-mix(in srgb, var(--c4) 9%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 6%, var(--city-ink)), color-mix(in srgb, var(--c4) 9%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c4) 11%, var(--city-ink)), color-mix(in srgb, var(--c4) 11%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 7%, var(--city-ink)), color-mix(in srgb, var(--c4) 11%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c4) 12%, var(--city-ink)), color-mix(in srgb, var(--c4) 12%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 9%, var(--city-ink)), color-mix(in srgb, var(--c4) 12%, var(--city-ink))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c4) 12%, var(--city-ink)) 50%, transparent 50.5%),
+    linear-gradient(to top right, color-mix(in srgb, var(--c4) 12%, var(--city-ink)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 6%, var(--city-ink)), color-mix(in srgb, var(--c4) 12%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c4) 8%, var(--city-ink)), color-mix(in srgb, var(--c4) 8%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 6%, var(--city-ink)), color-mix(in srgb, var(--c4) 8%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c4) 11%, var(--city-ink)), color-mix(in srgb, var(--c4) 11%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 8%, var(--city-ink)), color-mix(in srgb, var(--c4) 11%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 9%, var(--city-ink)), color-mix(in srgb, var(--c4) 13%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c4) 13%, var(--city-ink)), color-mix(in srgb, var(--c4) 13%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 9%, var(--city-ink)), color-mix(in srgb, var(--c4) 13%, var(--city-ink))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c4) 8%, var(--city-ink)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 5%, var(--city-ink)), color-mix(in srgb, var(--c4) 8%, var(--city-ink))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c4) 11%, var(--city-ink)) 50%, transparent 50.5%),
+    linear-gradient(to top right, color-mix(in srgb, var(--c4) 11%, var(--city-ink)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 8%, var(--city-ink)), color-mix(in srgb, var(--c4) 11%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 7%, var(--city-ink)), color-mix(in srgb, var(--c4) 10%, var(--city-ink)));
-  background-size: 36px 120px, 36px 144px, 36px 192px, 18px 216px, 18px 168px, 36px 192px, 18px 144px, 36px 168px, 18px 216px, 36px 240px, 36px 144px, 18px 120px, 18px 168px, 18px 192px;
-  background-position: 12.9% bottom, 29.6% bottom, 19.9% bottom, 50.4% bottom, 77.1% bottom, 88.5% bottom, 97.2% bottom, 63.2% bottom, 82.6% bottom, 56.2% bottom, 39.7% bottom, 70.2% bottom, 2.8% bottom, 28.5% bottom;
+  background-size: 35px 7px, 35px 126px, 27px 144px, 15px 12px, 30px 180px, 10px 6px, 20px 234px, 2px 23px, 20px 162px, 3px 23px, 33px 180px, 10.00px 13px, 10.00px 13px, 20px 126px, 16px 8px, 32px 162px, 10px 8px, 19px 234px, 35px 234px, 17px 10px, 33px 162px, 19px 8px, 19px 126px, 11.00px 5px, 11.00px 5px, 22px 180px, 21px 180px;
+  background-position: calc(12.9% + 0.00px) calc(100% - 126px), 12.9% bottom, 29.6% bottom, calc(19.9% + 4.52px) calc(100% - 180px), 19.9% bottom, calc(50.4% - 0.04px) calc(100% - 234px), 50.4% bottom, calc(77.1% - 4.88px) calc(100% - 162px), 77.1% bottom, calc(88.5% - 11.55px) calc(100% - 180px), 88.5% bottom, calc(97.2% - 9.72px) calc(100% - 126px), calc(97.2% + 0.28px) calc(100% - 126px), 97.2% bottom, calc(63.2% - 2.11px) calc(100% - 162px), 63.2% bottom, calc(82.6% - 2.93px) calc(100% - 234px), 82.6% bottom, 56.2% bottom, calc(39.7% + 1.65px) calc(100% - 162px), 39.7% bottom, calc(70.2% + 0.00px) calc(100% - 126px), 70.2% bottom, calc(2.8% - 0.31px) calc(100% - 180px), calc(2.8% + 10.69px) calc(100% - 180px), 2.8% bottom, 28.5% bottom;
   background-repeat: no-repeat;
 }
 [data-bg='skyline'] .bg-l5 {
   inset: 0;
   opacity: 1;
   background-image:
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 14%, var(--city-ink)) 50%, transparent 50.5%),
+    linear-gradient(to top right, color-mix(in srgb, var(--c3) 14%, var(--city-ink)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 10%, var(--city-ink)), color-mix(in srgb, var(--c3) 14%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 7%, var(--city-ink)), color-mix(in srgb, var(--c3) 12%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c3) 14%, var(--city-ink)), color-mix(in srgb, var(--c3) 14%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 8%, var(--city-ink)), color-mix(in srgb, var(--c3) 14%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c3) 13%, var(--city-ink)), color-mix(in srgb, var(--c3) 13%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 9%, var(--city-ink)), color-mix(in srgb, var(--c3) 13%, var(--city-ink))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 12%, var(--city-ink)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 10%, var(--city-ink)), color-mix(in srgb, var(--c3) 12%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 13%, var(--city-ink)), color-mix(in srgb, var(--c3) 19%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c3) 18%, var(--city-ink)), color-mix(in srgb, var(--c3) 18%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 12%, var(--city-ink)), color-mix(in srgb, var(--c3) 18%, var(--city-ink))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 14%, var(--city-ink)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 10%, var(--city-ink)), color-mix(in srgb, var(--c3) 14%, var(--city-ink))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 12%, var(--city-ink)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 8%, var(--city-ink)), color-mix(in srgb, var(--c3) 12%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c3) 12%, var(--city-ink)), color-mix(in srgb, var(--c3) 12%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 8%, var(--city-ink)), color-mix(in srgb, var(--c3) 12%, var(--city-ink)));
-  background-size: 48px 90px, 48px 90px, 48px 90px, 48px 120px, 48px 120px, 48px 90px, 24px 60px, 72px 60px, 48px 60px, 48px 60px;
-  background-position: 93.2% bottom, 65.6% bottom, 49.5% bottom, 1.6% bottom, 26.4% bottom, 40.3% bottom, 14.2% bottom, 81.1% bottom, 96.1% bottom, 69.2% bottom;
+  background-size: 28.00px 5px, 28.00px 5px, 56px 78px, 40px 78px, 26px 7px, 51px 104px, 4px 20px, 47px 104px, 40px 6px, 40px 130px, 38px 104px, 16px 9px, 32px 78px, 61px 11px, 61px 52px, 48px 13px, 48px 52px, 19px 11px, 37px 52px;
+  background-position: calc(93.2% - 26.10px) calc(100% - 78px), calc(93.2% + 1.90px) calc(100% - 78px), 93.2% bottom, 65.6% bottom, calc(49.5% + 0.13px) calc(100% - 104px), 49.5% bottom, calc(1.6% + 20.81px) calc(100% - 104px), 1.6% bottom, calc(26.4% + 0.00px) calc(100% - 130px), 26.4% bottom, 40.3% bottom, calc(14.2% + 5.73px) calc(100% - 78px), 14.2% bottom, calc(81.1% + 0.00px) calc(100% - 52px), 81.1% bottom, calc(96.1% + 0.00px) calc(100% - 52px), 96.1% bottom, calc(69.2% - 3.46px) calc(100% - 52px), 69.2% bottom;
   background-repeat: no-repeat;
 }
 [data-bg='skyline'] .bg-l2 {
   inset: 0;
   opacity: calc(var(--city-win-alpha) * 0.7);
-  background-image: repeating-linear-gradient(to top, color-mix(in srgb, var(--city-win) 4%, transparent) 0px, color-mix(in srgb, var(--city-win) 8%, transparent) 4px, color-mix(in srgb, var(--city-win) 18%, transparent) 7px, color-mix(in srgb, var(--city-win) 38%, transparent) 9px, color-mix(in srgb, var(--city-win) 82%, transparent) 10px 14px, color-mix(in srgb, var(--city-win) 38%, transparent) 15px, color-mix(in srgb, var(--city-win) 18%, transparent) 17px, color-mix(in srgb, var(--city-win) 8%, transparent) 20px, color-mix(in srgb, var(--city-win) 4%, transparent) 24px);
-  background-size: 100% 24px;
+  background-image: repeating-linear-gradient(to top, color-mix(in srgb, var(--city-win) 4%, transparent) 0px, color-mix(in srgb, var(--city-win) 8%, transparent) 2px, color-mix(in srgb, var(--city-win) 18%, transparent) 4px, color-mix(in srgb, var(--city-win) 38%, transparent) 4px, color-mix(in srgb, var(--city-win) 82%, transparent) 5px 8px, color-mix(in srgb, var(--city-win) 38%, transparent) 9px, color-mix(in srgb, var(--city-win) 18%, transparent) 9px, color-mix(in srgb, var(--city-win) 8%, transparent) 11px, color-mix(in srgb, var(--city-win) 4%, transparent) 12px);
+  background-size: 100% 12px;
   background-position: 0 bottom;
   background-repeat: repeat;
   -webkit-mask-image:
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px);
-  -webkit-mask-size: 12px 240px, 12px 312px, 12px 216px, 12px 144px, 12px 264px, 12px 216px, 12px 168px, 12px 144px, 12px 168px, 12px 216px, 12px 240px, 12px 192px, 12px 264px, 12px 264px, 12px 168px, 12px 168px, 12px 312px, 12px 312px, 12px 192px, 12px 288px;
+    repeating-linear-gradient(to right, transparent 0 0.30px, rgba(0,0,0,0.12) 0.72px, rgba(0,0,0,0.45) 1.68px, #000 2.16px 3.84px, rgba(0,0,0,0.45) 4.32px, rgba(0,0,0,0.12) 5.28px, transparent 5.70px 6.00px),
+    repeating-linear-gradient(to right, transparent 0 0.28px, rgba(0,0,0,0.12) 0.68px, rgba(0,0,0,0.45) 1.59px, #000 2.04px 3.63px, rgba(0,0,0,0.45) 4.08px, rgba(0,0,0,0.12) 4.99px, transparent 5.38px 5.67px),
+    repeating-linear-gradient(to right, transparent 0 0.30px, rgba(0,0,0,0.12) 0.72px, rgba(0,0,0,0.45) 1.68px, #000 2.16px 3.84px, rgba(0,0,0,0.45) 4.32px, rgba(0,0,0,0.12) 5.28px, transparent 5.70px 6.00px),
+    repeating-linear-gradient(to right, transparent 0 0.23px, rgba(0,0,0,0.12) 0.56px, rgba(0,0,0,0.45) 1.31px, #000 1.68px 2.99px, rgba(0,0,0,0.45) 3.36px, rgba(0,0,0,0.12) 4.11px, transparent 4.43px 4.67px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.20px, rgba(0,0,0,0.12) 0.48px, rgba(0,0,0,0.45) 1.12px, #000 1.44px 2.56px, rgba(0,0,0,0.45) 2.88px, rgba(0,0,0,0.12) 3.52px, transparent 3.80px 4.00px),
+    repeating-linear-gradient(to right, transparent 0 0.14px, rgba(0,0,0,0.12) 0.33px, rgba(0,0,0,0.45) 0.77px, #000 0.99px 1.76px, rgba(0,0,0,0.45) 1.98px, rgba(0,0,0,0.12) 2.42px, transparent 2.61px 2.75px),
+    repeating-linear-gradient(to right, transparent 0 0.21px, rgba(0,0,0,0.12) 0.51px, rgba(0,0,0,0.45) 1.19px, #000 1.53px 2.72px, rgba(0,0,0,0.45) 3.06px, rgba(0,0,0,0.12) 3.74px, transparent 4.04px 4.25px),
+    repeating-linear-gradient(to right, transparent 0 0.18px, rgba(0,0,0,0.12) 0.42px, rgba(0,0,0,0.45) 0.98px, #000 1.26px 2.24px, rgba(0,0,0,0.45) 2.52px, rgba(0,0,0,0.12) 3.08px, transparent 3.32px 3.50px),
+    repeating-linear-gradient(to right, transparent 0 0.13px, rgba(0,0,0,0.12) 0.31px, rgba(0,0,0,0.45) 0.73px, #000 0.94px 1.66px, rgba(0,0,0,0.45) 1.87px, rgba(0,0,0,0.12) 2.29px, transparent 2.47px 2.60px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.41px, rgba(0,0,0,0.45) 0.95px, #000 1.22px 2.18px, rgba(0,0,0,0.45) 2.45px, rgba(0,0,0,0.12) 2.99px, transparent 3.23px 3.40px),
+    repeating-linear-gradient(to right, transparent 0 0.14px, rgba(0,0,0,0.12) 0.33px, rgba(0,0,0,0.45) 0.77px, #000 0.99px 1.76px, rgba(0,0,0,0.45) 1.98px, rgba(0,0,0,0.12) 2.42px, transparent 2.61px 2.75px),
+    repeating-linear-gradient(to right, transparent 0 0.16px, rgba(0,0,0,0.12) 0.39px, rgba(0,0,0,0.45) 0.91px, #000 1.17px 2.08px, rgba(0,0,0,0.45) 2.34px, rgba(0,0,0,0.12) 2.86px, transparent 3.09px 3.25px),
+    repeating-linear-gradient(to right, transparent 0 0.20px, rgba(0,0,0,0.12) 0.48px, rgba(0,0,0,0.45) 1.12px, #000 1.44px 2.56px, rgba(0,0,0,0.45) 2.88px, rgba(0,0,0,0.12) 3.52px, transparent 3.80px 4.00px),
+    repeating-linear-gradient(to right, transparent 0 0.15px, rgba(0,0,0,0.12) 0.36px, rgba(0,0,0,0.45) 0.84px, #000 1.08px 1.92px, rgba(0,0,0,0.45) 2.16px, rgba(0,0,0,0.12) 2.64px, transparent 2.85px 3.00px),
+    repeating-linear-gradient(to right, transparent 0 0.18px, rgba(0,0,0,0.12) 0.44px, rgba(0,0,0,0.45) 1.03px, #000 1.32px 2.35px, rgba(0,0,0,0.45) 2.64px, rgba(0,0,0,0.12) 3.23px, transparent 3.48px 3.67px),
+    repeating-linear-gradient(to right, transparent 0 0.14px, rgba(0,0,0,0.12) 0.33px, rgba(0,0,0,0.45) 0.77px, #000 0.99px 1.76px, rgba(0,0,0,0.45) 1.98px, rgba(0,0,0,0.12) 2.42px, transparent 2.61px 2.75px),
+    repeating-linear-gradient(to right, transparent 0 0.25px, rgba(0,0,0,0.12) 0.60px, rgba(0,0,0,0.45) 1.40px, #000 1.80px 3.20px, rgba(0,0,0,0.45) 3.60px, rgba(0,0,0,0.12) 4.40px, transparent 4.75px 5.00px),
+    repeating-linear-gradient(to right, transparent 0 0.13px, rgba(0,0,0,0.12) 0.31px, rgba(0,0,0,0.45) 0.73px, #000 0.94px 1.66px, rgba(0,0,0,0.45) 1.87px, rgba(0,0,0,0.12) 2.29px, transparent 2.47px 2.60px),
+    repeating-linear-gradient(to right, transparent 0 0.28px, rgba(0,0,0,0.12) 0.68px, rgba(0,0,0,0.45) 1.59px, #000 2.04px 3.63px, rgba(0,0,0,0.45) 4.08px, rgba(0,0,0,0.12) 4.99px, transparent 5.38px 5.67px);
+  -webkit-mask-size: 18px 240px, 17px 324px, 18px 204px, 14px 132px, 10px 264px, 20px 216px, 11px 168px, 17px 156px, 14px 156px, 13px 228px, 17px 240px, 11px 192px, 13px 252px, 20px 252px, 15px 168px, 11px 168px, 11px 300px, 20px 300px, 13px 192px, 17px 288px;
   -webkit-mask-position: 13.6% bottom, 69.3% bottom, 38.6% bottom, 6.1% bottom, 27.1% bottom, 43.6% bottom, 62.7% bottom, 0.1% bottom, 95.8% bottom, 75.3% bottom, 83.2% bottom, 22% bottom, 59.3% bottom, 88.5% bottom, 35% bottom, 54.9% bottom, 48.5% bottom, 84.6% bottom, 30.8% bottom, 78.8% bottom;
   -webkit-mask-repeat: no-repeat;
   mask-image:
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px);
-  mask-size: 12px 240px, 12px 312px, 12px 216px, 12px 144px, 12px 264px, 12px 216px, 12px 168px, 12px 144px, 12px 168px, 12px 216px, 12px 240px, 12px 192px, 12px 264px, 12px 264px, 12px 168px, 12px 168px, 12px 312px, 12px 312px, 12px 192px, 12px 288px;
+    repeating-linear-gradient(to right, transparent 0 0.30px, rgba(0,0,0,0.12) 0.72px, rgba(0,0,0,0.45) 1.68px, #000 2.16px 3.84px, rgba(0,0,0,0.45) 4.32px, rgba(0,0,0,0.12) 5.28px, transparent 5.70px 6.00px),
+    repeating-linear-gradient(to right, transparent 0 0.28px, rgba(0,0,0,0.12) 0.68px, rgba(0,0,0,0.45) 1.59px, #000 2.04px 3.63px, rgba(0,0,0,0.45) 4.08px, rgba(0,0,0,0.12) 4.99px, transparent 5.38px 5.67px),
+    repeating-linear-gradient(to right, transparent 0 0.30px, rgba(0,0,0,0.12) 0.72px, rgba(0,0,0,0.45) 1.68px, #000 2.16px 3.84px, rgba(0,0,0,0.45) 4.32px, rgba(0,0,0,0.12) 5.28px, transparent 5.70px 6.00px),
+    repeating-linear-gradient(to right, transparent 0 0.23px, rgba(0,0,0,0.12) 0.56px, rgba(0,0,0,0.45) 1.31px, #000 1.68px 2.99px, rgba(0,0,0,0.45) 3.36px, rgba(0,0,0,0.12) 4.11px, transparent 4.43px 4.67px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.20px, rgba(0,0,0,0.12) 0.48px, rgba(0,0,0,0.45) 1.12px, #000 1.44px 2.56px, rgba(0,0,0,0.45) 2.88px, rgba(0,0,0,0.12) 3.52px, transparent 3.80px 4.00px),
+    repeating-linear-gradient(to right, transparent 0 0.14px, rgba(0,0,0,0.12) 0.33px, rgba(0,0,0,0.45) 0.77px, #000 0.99px 1.76px, rgba(0,0,0,0.45) 1.98px, rgba(0,0,0,0.12) 2.42px, transparent 2.61px 2.75px),
+    repeating-linear-gradient(to right, transparent 0 0.21px, rgba(0,0,0,0.12) 0.51px, rgba(0,0,0,0.45) 1.19px, #000 1.53px 2.72px, rgba(0,0,0,0.45) 3.06px, rgba(0,0,0,0.12) 3.74px, transparent 4.04px 4.25px),
+    repeating-linear-gradient(to right, transparent 0 0.18px, rgba(0,0,0,0.12) 0.42px, rgba(0,0,0,0.45) 0.98px, #000 1.26px 2.24px, rgba(0,0,0,0.45) 2.52px, rgba(0,0,0,0.12) 3.08px, transparent 3.32px 3.50px),
+    repeating-linear-gradient(to right, transparent 0 0.13px, rgba(0,0,0,0.12) 0.31px, rgba(0,0,0,0.45) 0.73px, #000 0.94px 1.66px, rgba(0,0,0,0.45) 1.87px, rgba(0,0,0,0.12) 2.29px, transparent 2.47px 2.60px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.41px, rgba(0,0,0,0.45) 0.95px, #000 1.22px 2.18px, rgba(0,0,0,0.45) 2.45px, rgba(0,0,0,0.12) 2.99px, transparent 3.23px 3.40px),
+    repeating-linear-gradient(to right, transparent 0 0.14px, rgba(0,0,0,0.12) 0.33px, rgba(0,0,0,0.45) 0.77px, #000 0.99px 1.76px, rgba(0,0,0,0.45) 1.98px, rgba(0,0,0,0.12) 2.42px, transparent 2.61px 2.75px),
+    repeating-linear-gradient(to right, transparent 0 0.16px, rgba(0,0,0,0.12) 0.39px, rgba(0,0,0,0.45) 0.91px, #000 1.17px 2.08px, rgba(0,0,0,0.45) 2.34px, rgba(0,0,0,0.12) 2.86px, transparent 3.09px 3.25px),
+    repeating-linear-gradient(to right, transparent 0 0.20px, rgba(0,0,0,0.12) 0.48px, rgba(0,0,0,0.45) 1.12px, #000 1.44px 2.56px, rgba(0,0,0,0.45) 2.88px, rgba(0,0,0,0.12) 3.52px, transparent 3.80px 4.00px),
+    repeating-linear-gradient(to right, transparent 0 0.15px, rgba(0,0,0,0.12) 0.36px, rgba(0,0,0,0.45) 0.84px, #000 1.08px 1.92px, rgba(0,0,0,0.45) 2.16px, rgba(0,0,0,0.12) 2.64px, transparent 2.85px 3.00px),
+    repeating-linear-gradient(to right, transparent 0 0.18px, rgba(0,0,0,0.12) 0.44px, rgba(0,0,0,0.45) 1.03px, #000 1.32px 2.35px, rgba(0,0,0,0.45) 2.64px, rgba(0,0,0,0.12) 3.23px, transparent 3.48px 3.67px),
+    repeating-linear-gradient(to right, transparent 0 0.14px, rgba(0,0,0,0.12) 0.33px, rgba(0,0,0,0.45) 0.77px, #000 0.99px 1.76px, rgba(0,0,0,0.45) 1.98px, rgba(0,0,0,0.12) 2.42px, transparent 2.61px 2.75px),
+    repeating-linear-gradient(to right, transparent 0 0.25px, rgba(0,0,0,0.12) 0.60px, rgba(0,0,0,0.45) 1.40px, #000 1.80px 3.20px, rgba(0,0,0,0.45) 3.60px, rgba(0,0,0,0.12) 4.40px, transparent 4.75px 5.00px),
+    repeating-linear-gradient(to right, transparent 0 0.13px, rgba(0,0,0,0.12) 0.31px, rgba(0,0,0,0.45) 0.73px, #000 0.94px 1.66px, rgba(0,0,0,0.45) 1.87px, rgba(0,0,0,0.12) 2.29px, transparent 2.47px 2.60px),
+    repeating-linear-gradient(to right, transparent 0 0.28px, rgba(0,0,0,0.12) 0.68px, rgba(0,0,0,0.45) 1.59px, #000 2.04px 3.63px, rgba(0,0,0,0.45) 4.08px, rgba(0,0,0,0.12) 4.99px, transparent 5.38px 5.67px);
+  mask-size: 18px 240px, 17px 324px, 18px 204px, 14px 132px, 10px 264px, 20px 216px, 11px 168px, 17px 156px, 14px 156px, 13px 228px, 17px 240px, 11px 192px, 13px 252px, 20px 252px, 15px 168px, 11px 168px, 11px 300px, 20px 300px, 13px 192px, 17px 288px;
   mask-position: 13.6% bottom, 69.3% bottom, 38.6% bottom, 6.1% bottom, 27.1% bottom, 43.6% bottom, 62.7% bottom, 0.1% bottom, 95.8% bottom, 75.3% bottom, 83.2% bottom, 22% bottom, 59.3% bottom, 88.5% bottom, 35% bottom, 54.9% bottom, 48.5% bottom, 84.6% bottom, 30.8% bottom, 78.8% bottom;
   mask-repeat: no-repeat;
 }
 [data-bg='skyline'] .bg-l4 {
   inset: 0;
   opacity: calc(var(--city-win-alpha) * 0.8);
-  background-image: repeating-linear-gradient(to top, color-mix(in srgb, var(--city-win) 4%, transparent) 0px, color-mix(in srgb, var(--city-win) 8%, transparent) 4px, color-mix(in srgb, var(--city-win) 18%, transparent) 7px, color-mix(in srgb, var(--city-win) 38%, transparent) 9px, color-mix(in srgb, var(--city-win) 82%, transparent) 10px 14px, color-mix(in srgb, var(--city-win) 38%, transparent) 15px, color-mix(in srgb, var(--city-win) 18%, transparent) 17px, color-mix(in srgb, var(--city-win) 8%, transparent) 20px, color-mix(in srgb, var(--city-win) 4%, transparent) 24px);
-  background-size: 100% 24px;
+  background-image: repeating-linear-gradient(to top, color-mix(in srgb, var(--city-win) 4%, transparent) 0px, color-mix(in srgb, var(--city-win) 8%, transparent) 3px, color-mix(in srgb, var(--city-win) 18%, transparent) 5px, color-mix(in srgb, var(--city-win) 38%, transparent) 6px, color-mix(in srgb, var(--city-win) 82%, transparent) 7px 12px, color-mix(in srgb, var(--city-win) 38%, transparent) 13px, color-mix(in srgb, var(--city-win) 18%, transparent) 14px, color-mix(in srgb, var(--city-win) 8%, transparent) 16px, color-mix(in srgb, var(--city-win) 4%, transparent) 18px);
+  background-size: 100% 18px;
   background-position: 0 bottom;
   background-repeat: repeat;
   -webkit-mask-image:
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px);
-  -webkit-mask-size: 36px 120px, 36px 144px, 36px 192px, 18px 216px, 18px 168px, 36px 192px, 18px 144px, 36px 168px, 18px 216px, 36px 240px, 36px 144px, 18px 120px, 18px 168px, 18px 192px;
+    repeating-linear-gradient(to right, transparent 0 0.58px, rgba(0,0,0,0.12) 1.40px, rgba(0,0,0,0.45) 3.27px, #000 4.20px 7.47px, rgba(0,0,0,0.45) 8.40px, rgba(0,0,0,0.12) 10.27px, transparent 11.08px 11.67px),
+    repeating-linear-gradient(to right, transparent 0 0.23px, rgba(0,0,0,0.12) 0.54px, rgba(0,0,0,0.45) 1.26px, #000 1.62px 2.88px, rgba(0,0,0,0.45) 3.24px, rgba(0,0,0,0.12) 3.96px, transparent 4.27px 4.50px),
+    repeating-linear-gradient(to right, transparent 0 0.30px, rgba(0,0,0,0.12) 0.72px, rgba(0,0,0,0.45) 1.68px, #000 2.16px 3.84px, rgba(0,0,0,0.45) 4.32px, rgba(0,0,0,0.12) 5.28px, transparent 5.70px 6.00px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.41px, rgba(0,0,0,0.12) 0.99px, rgba(0,0,0,0.45) 2.31px, #000 2.97px 5.28px, rgba(0,0,0,0.45) 5.94px, rgba(0,0,0,0.12) 7.26px, transparent 7.84px 8.25px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.32px, rgba(0,0,0,0.12) 0.77px, rgba(0,0,0,0.45) 1.79px, #000 2.30px 4.10px, rgba(0,0,0,0.45) 4.61px, rgba(0,0,0,0.12) 5.63px, transparent 6.08px 6.40px),
+    repeating-linear-gradient(to right, transparent 0 0.24px, rgba(0,0,0,0.12) 0.57px, rgba(0,0,0,0.45) 1.33px, #000 1.71px 3.04px, rgba(0,0,0,0.45) 3.42px, rgba(0,0,0,0.12) 4.18px, transparent 4.51px 4.75px),
+    repeating-linear-gradient(to right, transparent 0 0.29px, rgba(0,0,0,0.12) 0.70px, rgba(0,0,0,0.45) 1.63px, #000 2.10px 3.73px, rgba(0,0,0,0.45) 4.20px, rgba(0,0,0,0.12) 5.13px, transparent 5.54px 5.83px),
+    repeating-linear-gradient(to right, transparent 0 0.55px, rgba(0,0,0,0.12) 1.32px, rgba(0,0,0,0.45) 3.08px, #000 3.96px 7.04px, rgba(0,0,0,0.45) 7.92px, rgba(0,0,0,0.12) 9.68px, transparent 10.45px 11.00px),
+    repeating-linear-gradient(to right, transparent 0 0.16px, rgba(0,0,0,0.12) 0.38px, rgba(0,0,0,0.45) 0.89px, #000 1.14px 2.03px, rgba(0,0,0,0.45) 2.28px, rgba(0,0,0,0.12) 2.79px, transparent 3.01px 3.17px),
+    repeating-linear-gradient(to right, transparent 0 0.28px, rgba(0,0,0,0.12) 0.66px, rgba(0,0,0,0.45) 1.54px, #000 1.98px 3.52px, rgba(0,0,0,0.45) 3.96px, rgba(0,0,0,0.12) 4.84px, transparent 5.22px 5.50px),
+    repeating-linear-gradient(to right, transparent 0 0.35px, rgba(0,0,0,0.12) 0.84px, rgba(0,0,0,0.45) 1.96px, #000 2.52px 4.48px, rgba(0,0,0,0.45) 5.04px, rgba(0,0,0,0.12) 6.16px, transparent 6.65px 7.00px);
+  -webkit-mask-size: 35px 126px, 27px 144px, 30px 180px, 20px 234px, 20px 162px, 33px 180px, 20px 126px, 32px 162px, 19px 234px, 35px 234px, 33px 162px, 19px 126px, 22px 180px, 21px 180px;
   -webkit-mask-position: 12.9% bottom, 29.6% bottom, 19.9% bottom, 50.4% bottom, 77.1% bottom, 88.5% bottom, 97.2% bottom, 63.2% bottom, 82.6% bottom, 56.2% bottom, 39.7% bottom, 70.2% bottom, 2.8% bottom, 28.5% bottom;
   -webkit-mask-repeat: no-repeat;
   mask-image:
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px);
-  mask-size: 36px 120px, 36px 144px, 36px 192px, 18px 216px, 18px 168px, 36px 192px, 18px 144px, 36px 168px, 18px 216px, 36px 240px, 36px 144px, 18px 120px, 18px 168px, 18px 192px;
+    repeating-linear-gradient(to right, transparent 0 0.58px, rgba(0,0,0,0.12) 1.40px, rgba(0,0,0,0.45) 3.27px, #000 4.20px 7.47px, rgba(0,0,0,0.45) 8.40px, rgba(0,0,0,0.12) 10.27px, transparent 11.08px 11.67px),
+    repeating-linear-gradient(to right, transparent 0 0.23px, rgba(0,0,0,0.12) 0.54px, rgba(0,0,0,0.45) 1.26px, #000 1.62px 2.88px, rgba(0,0,0,0.45) 3.24px, rgba(0,0,0,0.12) 3.96px, transparent 4.27px 4.50px),
+    repeating-linear-gradient(to right, transparent 0 0.30px, rgba(0,0,0,0.12) 0.72px, rgba(0,0,0,0.45) 1.68px, #000 2.16px 3.84px, rgba(0,0,0,0.45) 4.32px, rgba(0,0,0,0.12) 5.28px, transparent 5.70px 6.00px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.41px, rgba(0,0,0,0.12) 0.99px, rgba(0,0,0,0.45) 2.31px, #000 2.97px 5.28px, rgba(0,0,0,0.45) 5.94px, rgba(0,0,0,0.12) 7.26px, transparent 7.84px 8.25px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.32px, rgba(0,0,0,0.12) 0.77px, rgba(0,0,0,0.45) 1.79px, #000 2.30px 4.10px, rgba(0,0,0,0.45) 4.61px, rgba(0,0,0,0.12) 5.63px, transparent 6.08px 6.40px),
+    repeating-linear-gradient(to right, transparent 0 0.24px, rgba(0,0,0,0.12) 0.57px, rgba(0,0,0,0.45) 1.33px, #000 1.71px 3.04px, rgba(0,0,0,0.45) 3.42px, rgba(0,0,0,0.12) 4.18px, transparent 4.51px 4.75px),
+    repeating-linear-gradient(to right, transparent 0 0.29px, rgba(0,0,0,0.12) 0.70px, rgba(0,0,0,0.45) 1.63px, #000 2.10px 3.73px, rgba(0,0,0,0.45) 4.20px, rgba(0,0,0,0.12) 5.13px, transparent 5.54px 5.83px),
+    repeating-linear-gradient(to right, transparent 0 0.55px, rgba(0,0,0,0.12) 1.32px, rgba(0,0,0,0.45) 3.08px, #000 3.96px 7.04px, rgba(0,0,0,0.45) 7.92px, rgba(0,0,0,0.12) 9.68px, transparent 10.45px 11.00px),
+    repeating-linear-gradient(to right, transparent 0 0.16px, rgba(0,0,0,0.12) 0.38px, rgba(0,0,0,0.45) 0.89px, #000 1.14px 2.03px, rgba(0,0,0,0.45) 2.28px, rgba(0,0,0,0.12) 2.79px, transparent 3.01px 3.17px),
+    repeating-linear-gradient(to right, transparent 0 0.28px, rgba(0,0,0,0.12) 0.66px, rgba(0,0,0,0.45) 1.54px, #000 1.98px 3.52px, rgba(0,0,0,0.45) 3.96px, rgba(0,0,0,0.12) 4.84px, transparent 5.22px 5.50px),
+    repeating-linear-gradient(to right, transparent 0 0.35px, rgba(0,0,0,0.12) 0.84px, rgba(0,0,0,0.45) 1.96px, #000 2.52px 4.48px, rgba(0,0,0,0.45) 5.04px, rgba(0,0,0,0.12) 6.16px, transparent 6.65px 7.00px);
+  mask-size: 35px 126px, 27px 144px, 30px 180px, 20px 234px, 20px 162px, 33px 180px, 20px 126px, 32px 162px, 19px 234px, 35px 234px, 33px 162px, 19px 126px, 22px 180px, 21px 180px;
   mask-position: 12.9% bottom, 29.6% bottom, 19.9% bottom, 50.4% bottom, 77.1% bottom, 88.5% bottom, 97.2% bottom, 63.2% bottom, 82.6% bottom, 56.2% bottom, 39.7% bottom, 70.2% bottom, 2.8% bottom, 28.5% bottom;
   mask-repeat: no-repeat;
 }
 [data-bg='skyline'] .bg-l6 {
   inset: 0;
   opacity: var(--city-win-alpha);
-  background-image: repeating-linear-gradient(to top, color-mix(in srgb, var(--city-win) 4%, transparent) 0px, color-mix(in srgb, var(--city-win) 8%, transparent) 5px, color-mix(in srgb, var(--city-win) 18%, transparent) 9px, color-mix(in srgb, var(--city-win) 38%, transparent) 11px, color-mix(in srgb, var(--city-win) 82%, transparent) 12px 18px, color-mix(in srgb, var(--city-win) 38%, transparent) 19px, color-mix(in srgb, var(--city-win) 18%, transparent) 21px, color-mix(in srgb, var(--city-win) 8%, transparent) 25px, color-mix(in srgb, var(--city-win) 4%, transparent) 30px);
-  background-size: 100% 30px;
+  background-image: repeating-linear-gradient(to top, color-mix(in srgb, var(--city-win) 4%, transparent) 0px, color-mix(in srgb, var(--city-win) 8%, transparent) 4px, color-mix(in srgb, var(--city-win) 18%, transparent) 7px, color-mix(in srgb, var(--city-win) 38%, transparent) 9px, color-mix(in srgb, var(--city-win) 82%, transparent) 10px 17px, color-mix(in srgb, var(--city-win) 38%, transparent) 18px, color-mix(in srgb, var(--city-win) 18%, transparent) 20px, color-mix(in srgb, var(--city-win) 8%, transparent) 23px, color-mix(in srgb, var(--city-win) 4%, transparent) 26px);
+  background-size: 100% 26px;
   background-position: 0 bottom;
   background-repeat: repeat;
   -webkit-mask-image:
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px);
-  -webkit-mask-size: 48px 90px, 48px 90px, 48px 90px, 48px 120px, 48px 120px, 48px 90px, 24px 60px, 72px 60px, 48px 60px, 48px 60px;
+    repeating-linear-gradient(to right, transparent 0 0.56px, rgba(0,0,0,0.12) 1.34px, rgba(0,0,0,0.45) 3.14px, #000 4.03px 7.17px, rgba(0,0,0,0.45) 8.06px, rgba(0,0,0,0.12) 9.86px, transparent 10.64px 11.20px),
+    repeating-linear-gradient(to right, transparent 0 0.40px, rgba(0,0,0,0.12) 0.96px, rgba(0,0,0,0.45) 2.24px, #000 2.88px 5.12px, rgba(0,0,0,0.45) 5.76px, rgba(0,0,0,0.12) 7.04px, transparent 7.60px 8.00px),
+    repeating-linear-gradient(to right, transparent 0 0.43px, rgba(0,0,0,0.12) 1.02px, rgba(0,0,0,0.45) 2.38px, #000 3.06px 5.44px, rgba(0,0,0,0.45) 6.12px, rgba(0,0,0,0.12) 7.48px, transparent 8.07px 8.50px),
+    repeating-linear-gradient(to right, transparent 0 0.59px, rgba(0,0,0,0.12) 1.41px, rgba(0,0,0,0.45) 3.29px, #000 4.23px 7.52px, rgba(0,0,0,0.45) 8.46px, rgba(0,0,0,0.12) 10.34px, transparent 11.16px 11.75px),
+    repeating-linear-gradient(to right, transparent 0 0.50px, rgba(0,0,0,0.12) 1.20px, rgba(0,0,0,0.45) 2.80px, #000 3.60px 6.40px, rgba(0,0,0,0.45) 7.20px, rgba(0,0,0,0.12) 8.80px, transparent 9.50px 10.00px),
+    repeating-linear-gradient(to right, transparent 0 0.48px, rgba(0,0,0,0.12) 1.14px, rgba(0,0,0,0.45) 2.66px, #000 3.42px 6.08px, rgba(0,0,0,0.45) 6.84px, rgba(0,0,0,0.12) 8.36px, transparent 9.03px 9.50px),
+    repeating-linear-gradient(to right, transparent 0 0.40px, rgba(0,0,0,0.12) 0.96px, rgba(0,0,0,0.45) 2.24px, #000 2.88px 5.12px, rgba(0,0,0,0.45) 5.76px, rgba(0,0,0,0.12) 7.04px, transparent 7.60px 8.00px),
+    repeating-linear-gradient(to right, transparent 0 0.51px, rgba(0,0,0,0.12) 1.22px, rgba(0,0,0,0.45) 2.85px, #000 3.66px 6.51px, rgba(0,0,0,0.45) 7.32px, rgba(0,0,0,0.12) 8.95px, transparent 9.66px 10.17px),
+    repeating-linear-gradient(to right, transparent 0 0.60px, rgba(0,0,0,0.12) 1.44px, rgba(0,0,0,0.45) 3.36px, #000 4.32px 7.68px, rgba(0,0,0,0.45) 8.64px, rgba(0,0,0,0.12) 10.56px, transparent 11.40px 12.00px),
+    repeating-linear-gradient(to right, transparent 0 0.37px, rgba(0,0,0,0.12) 0.89px, rgba(0,0,0,0.45) 2.07px, #000 2.66px 4.74px, rgba(0,0,0,0.45) 5.33px, rgba(0,0,0,0.12) 6.51px, transparent 7.03px 7.40px);
+  -webkit-mask-size: 56px 78px, 40px 78px, 51px 104px, 47px 104px, 40px 130px, 38px 104px, 32px 78px, 61px 52px, 48px 52px, 37px 52px;
   -webkit-mask-position: 93.2% bottom, 65.6% bottom, 49.5% bottom, 1.6% bottom, 26.4% bottom, 40.3% bottom, 14.2% bottom, 81.1% bottom, 96.1% bottom, 69.2% bottom;
   -webkit-mask-repeat: no-repeat;
   mask-image:
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px);
-  mask-size: 48px 90px, 48px 90px, 48px 90px, 48px 120px, 48px 120px, 48px 90px, 24px 60px, 72px 60px, 48px 60px, 48px 60px;
+    repeating-linear-gradient(to right, transparent 0 0.56px, rgba(0,0,0,0.12) 1.34px, rgba(0,0,0,0.45) 3.14px, #000 4.03px 7.17px, rgba(0,0,0,0.45) 8.06px, rgba(0,0,0,0.12) 9.86px, transparent 10.64px 11.20px),
+    repeating-linear-gradient(to right, transparent 0 0.40px, rgba(0,0,0,0.12) 0.96px, rgba(0,0,0,0.45) 2.24px, #000 2.88px 5.12px, rgba(0,0,0,0.45) 5.76px, rgba(0,0,0,0.12) 7.04px, transparent 7.60px 8.00px),
+    repeating-linear-gradient(to right, transparent 0 0.43px, rgba(0,0,0,0.12) 1.02px, rgba(0,0,0,0.45) 2.38px, #000 3.06px 5.44px, rgba(0,0,0,0.45) 6.12px, rgba(0,0,0,0.12) 7.48px, transparent 8.07px 8.50px),
+    repeating-linear-gradient(to right, transparent 0 0.59px, rgba(0,0,0,0.12) 1.41px, rgba(0,0,0,0.45) 3.29px, #000 4.23px 7.52px, rgba(0,0,0,0.45) 8.46px, rgba(0,0,0,0.12) 10.34px, transparent 11.16px 11.75px),
+    repeating-linear-gradient(to right, transparent 0 0.50px, rgba(0,0,0,0.12) 1.20px, rgba(0,0,0,0.45) 2.80px, #000 3.60px 6.40px, rgba(0,0,0,0.45) 7.20px, rgba(0,0,0,0.12) 8.80px, transparent 9.50px 10.00px),
+    repeating-linear-gradient(to right, transparent 0 0.48px, rgba(0,0,0,0.12) 1.14px, rgba(0,0,0,0.45) 2.66px, #000 3.42px 6.08px, rgba(0,0,0,0.45) 6.84px, rgba(0,0,0,0.12) 8.36px, transparent 9.03px 9.50px),
+    repeating-linear-gradient(to right, transparent 0 0.40px, rgba(0,0,0,0.12) 0.96px, rgba(0,0,0,0.45) 2.24px, #000 2.88px 5.12px, rgba(0,0,0,0.45) 5.76px, rgba(0,0,0,0.12) 7.04px, transparent 7.60px 8.00px),
+    repeating-linear-gradient(to right, transparent 0 0.51px, rgba(0,0,0,0.12) 1.22px, rgba(0,0,0,0.45) 2.85px, #000 3.66px 6.51px, rgba(0,0,0,0.45) 7.32px, rgba(0,0,0,0.12) 8.95px, transparent 9.66px 10.17px),
+    repeating-linear-gradient(to right, transparent 0 0.60px, rgba(0,0,0,0.12) 1.44px, rgba(0,0,0,0.45) 3.36px, #000 4.32px 7.68px, rgba(0,0,0,0.45) 8.64px, rgba(0,0,0,0.12) 10.56px, transparent 11.40px 12.00px),
+    repeating-linear-gradient(to right, transparent 0 0.37px, rgba(0,0,0,0.12) 0.89px, rgba(0,0,0,0.45) 2.07px, #000 2.66px 4.74px, rgba(0,0,0,0.45) 5.33px, rgba(0,0,0,0.12) 6.51px, transparent 7.03px 7.40px);
+  mask-size: 56px 78px, 40px 78px, 51px 104px, 47px 104px, 40px 130px, 38px 104px, 32px 78px, 61px 52px, 48px 52px, 37px 52px;
   mask-position: 93.2% bottom, 65.6% bottom, 49.5% bottom, 1.6% bottom, 26.4% bottom, 40.3% bottom, 14.2% bottom, 81.1% bottom, 96.1% bottom, 69.2% bottom;
   mask-repeat: no-repeat;
 }
@@ -796,28 +839,49 @@
   opacity: 1;
   animation: city-far 74s linear infinite;
   background-image:
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 7%, var(--city-ink-far)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 7%, var(--city-ink-far))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)) 50%, transparent 50.5%),
+    linear-gradient(to top right, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 4%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 5%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 8%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 6%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 3%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 6%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 5%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 3%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 5%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 9%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 9%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 9%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 3%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 5%, var(--city-ink-far))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 4%, var(--city-ink-far)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 3%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 4%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 8%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 8%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 8%, var(--city-ink-far)) 50%, transparent 50.5%),
+    linear-gradient(to top right, color-mix(in srgb, var(--c3) 8%, var(--city-ink-far)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 4%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 8%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 7%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 7%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 7%, var(--city-ink-far))),
+    radial-gradient(ellipse 7.50px 12px at 50% 100%, color-mix(in srgb, var(--c3) 8%, var(--city-ink-far)) 98%, transparent 100%),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 8%, var(--city-ink-far))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 9%, var(--city-ink-far)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 9%, var(--city-ink-far))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)) 50%, transparent 50.5%),
+    linear-gradient(to top right, color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 3%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 6%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 7%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 7%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 7%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 6%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 6%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 4%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 6%, var(--city-ink-far))),
+    linear-gradient(color-mix(in srgb, var(--c3) 9%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 9%, var(--city-ink-far))),
     linear-gradient(to top, color-mix(in srgb, var(--c3) 5%, var(--city-ink-far)), color-mix(in srgb, var(--c3) 9%, var(--city-ink-far)));
-  background-size: 12px 240px, 12px 312px, 12px 216px, 12px 144px, 12px 264px, 12px 216px, 12px 168px, 12px 144px, 12px 168px, 12px 216px, 12px 240px, 12px 192px, 12px 264px, 12px 264px, 12px 168px, 12px 168px, 12px 312px, 12px 312px, 12px 192px, 12px 288px;
-  background-position: 13.6% bottom, 69.3% bottom, 38.6% bottom, 6.1% bottom, 27.1% bottom, 43.6% bottom, 62.7% bottom, 0.1% bottom, 95.8% bottom, 75.3% bottom, 83.2% bottom, 22% bottom, 59.3% bottom, 88.5% bottom, 35% bottom, 54.9% bottom, 48.5% bottom, 84.6% bottom, 30.8% bottom, 78.8% bottom;
+  background-size: 18px 6px, 18px 240px, 8.50px 5px, 8.50px 5px, 17px 324px, 9px 9px, 18px 204px, 7px 7px, 14px 132px, 5px 11px, 10px 264px, 10px 10px, 20px 216px, 11px 168px, 17px 9px, 17px 156px, 7px 5px, 14px 156px, 7px 8px, 13px 228px, 8.50px 13px, 8.50px 13px, 17px 240px, 11px 192px, 7px 9px, 13px 252px, 2px 19px, 20px 252px, 15px 12px, 15px 168px, 11px 5px, 11px 168px, 5.50px 12px, 5.50px 12px, 11px 300px, 10px 12px, 20px 300px, 7px 9px, 13px 192px, 9px 6px, 17px 288px;
+  background-position: calc(13.6% + 0.00px) calc(100% - 240px), 13.6% bottom, calc(69.3% - 5.89px) calc(100% - 324px), calc(69.3% + 2.61px) calc(100% - 324px), 69.3% bottom, calc(38.6% + 1.03px) calc(100% - 204px), 38.6% bottom, calc(6.1% + 3.07px) calc(100% - 132px), 6.1% bottom, calc(27.1% + 1.15px) calc(100% - 264px), 27.1% bottom, calc(43.6% + 0.64px) calc(100% - 216px), 43.6% bottom, 62.7% bottom, calc(0.1% + 0.00px) calc(100% - 156px), 0.1% bottom, calc(95.8% - 3.21px) calc(100% - 156px), 95.8% bottom, calc(75.3% - 1.52px) calc(100% - 228px), 75.3% bottom, calc(83.2% - 7.07px) calc(100% - 240px), calc(83.2% + 1.43px) calc(100% - 240px), 83.2% bottom, 22% bottom, calc(59.3% - 0.56px) calc(100% - 252px), 59.3% bottom, calc(88.5% - 6.93px) calc(100% - 252px), 88.5% bottom, calc(35% + 0.00px) calc(100% - 168px), 35% bottom, calc(54.9% + 0.00px) calc(100% - 168px), 54.9% bottom, calc(48.5% - 2.67px) calc(100% - 300px), calc(48.5% + 2.83px) calc(100% - 300px), 48.5% bottom, calc(84.6% - 3.46px) calc(100% - 300px), 84.6% bottom, calc(30.8% + 1.15px) calc(100% - 192px), 30.8% bottom, calc(78.8% - 2.30px) calc(100% - 288px), 78.8% bottom;
   background-repeat: no-repeat;
 }
 [data-bg='neon'] .bg-l3 {
@@ -825,22 +889,35 @@
   opacity: 1;
   animation: city-mid 47s linear infinite;
   background-image:
+    radial-gradient(ellipse 17.50px 7px at 50% 100%, color-mix(in srgb, var(--c4) 10%, var(--city-ink)) 98%, transparent 100%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 7%, var(--city-ink)), color-mix(in srgb, var(--c4) 10%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 6%, var(--city-ink)), color-mix(in srgb, var(--c4) 8%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c4) 11%, var(--city-ink)), color-mix(in srgb, var(--c4) 11%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 8%, var(--city-ink)), color-mix(in srgb, var(--c4) 11%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c4) 9%, var(--city-ink)), color-mix(in srgb, var(--c4) 9%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 6%, var(--city-ink)), color-mix(in srgb, var(--c4) 9%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c4) 11%, var(--city-ink)), color-mix(in srgb, var(--c4) 11%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 7%, var(--city-ink)), color-mix(in srgb, var(--c4) 11%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c4) 12%, var(--city-ink)), color-mix(in srgb, var(--c4) 12%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 9%, var(--city-ink)), color-mix(in srgb, var(--c4) 12%, var(--city-ink))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c4) 12%, var(--city-ink)) 50%, transparent 50.5%),
+    linear-gradient(to top right, color-mix(in srgb, var(--c4) 12%, var(--city-ink)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 6%, var(--city-ink)), color-mix(in srgb, var(--c4) 12%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c4) 8%, var(--city-ink)), color-mix(in srgb, var(--c4) 8%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 6%, var(--city-ink)), color-mix(in srgb, var(--c4) 8%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c4) 11%, var(--city-ink)), color-mix(in srgb, var(--c4) 11%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 8%, var(--city-ink)), color-mix(in srgb, var(--c4) 11%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 9%, var(--city-ink)), color-mix(in srgb, var(--c4) 13%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c4) 13%, var(--city-ink)), color-mix(in srgb, var(--c4) 13%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 9%, var(--city-ink)), color-mix(in srgb, var(--c4) 13%, var(--city-ink))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c4) 8%, var(--city-ink)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 5%, var(--city-ink)), color-mix(in srgb, var(--c4) 8%, var(--city-ink))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c4) 11%, var(--city-ink)) 50%, transparent 50.5%),
+    linear-gradient(to top right, color-mix(in srgb, var(--c4) 11%, var(--city-ink)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 8%, var(--city-ink)), color-mix(in srgb, var(--c4) 11%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 7%, var(--city-ink)), color-mix(in srgb, var(--c4) 10%, var(--city-ink)));
-  background-size: 36px 120px, 36px 144px, 36px 192px, 18px 216px, 18px 168px, 36px 192px, 18px 144px, 36px 168px, 18px 216px, 36px 240px, 36px 144px, 18px 120px, 18px 168px, 18px 192px;
-  background-position: 12.9% bottom, 29.6% bottom, 19.9% bottom, 50.4% bottom, 77.1% bottom, 88.5% bottom, 97.2% bottom, 63.2% bottom, 82.6% bottom, 56.2% bottom, 39.7% bottom, 70.2% bottom, 2.8% bottom, 28.5% bottom;
+  background-size: 35px 7px, 35px 126px, 27px 144px, 15px 12px, 30px 180px, 10px 6px, 20px 234px, 2px 23px, 20px 162px, 3px 23px, 33px 180px, 10.00px 13px, 10.00px 13px, 20px 126px, 16px 8px, 32px 162px, 10px 8px, 19px 234px, 35px 234px, 17px 10px, 33px 162px, 19px 8px, 19px 126px, 11.00px 5px, 11.00px 5px, 22px 180px, 21px 180px;
+  background-position: calc(12.9% + 0.00px) calc(100% - 126px), 12.9% bottom, 29.6% bottom, calc(19.9% + 4.52px) calc(100% - 180px), 19.9% bottom, calc(50.4% - 0.04px) calc(100% - 234px), 50.4% bottom, calc(77.1% - 4.88px) calc(100% - 162px), 77.1% bottom, calc(88.5% - 11.55px) calc(100% - 180px), 88.5% bottom, calc(97.2% - 9.72px) calc(100% - 126px), calc(97.2% + 0.28px) calc(100% - 126px), 97.2% bottom, calc(63.2% - 2.11px) calc(100% - 162px), 63.2% bottom, calc(82.6% - 2.93px) calc(100% - 234px), 82.6% bottom, 56.2% bottom, calc(39.7% + 1.65px) calc(100% - 162px), 39.7% bottom, calc(70.2% + 0.00px) calc(100% - 126px), 70.2% bottom, calc(2.8% - 0.31px) calc(100% - 180px), calc(2.8% + 10.69px) calc(100% - 180px), 2.8% bottom, 28.5% bottom;
   background-repeat: no-repeat;
 }
 [data-bg='neon'] .bg-l5 {
@@ -848,74 +925,83 @@
   opacity: 1;
   animation: city-near 29s linear infinite;
   background-image:
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 14%, var(--city-ink)) 50%, transparent 50.5%),
+    linear-gradient(to top right, color-mix(in srgb, var(--c3) 14%, var(--city-ink)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 10%, var(--city-ink)), color-mix(in srgb, var(--c3) 14%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 7%, var(--city-ink)), color-mix(in srgb, var(--c3) 12%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c3) 14%, var(--city-ink)), color-mix(in srgb, var(--c3) 14%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 8%, var(--city-ink)), color-mix(in srgb, var(--c3) 14%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c3) 13%, var(--city-ink)), color-mix(in srgb, var(--c3) 13%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 9%, var(--city-ink)), color-mix(in srgb, var(--c3) 13%, var(--city-ink))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 12%, var(--city-ink)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 10%, var(--city-ink)), color-mix(in srgb, var(--c3) 12%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 13%, var(--city-ink)), color-mix(in srgb, var(--c3) 19%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c3) 18%, var(--city-ink)), color-mix(in srgb, var(--c3) 18%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 12%, var(--city-ink)), color-mix(in srgb, var(--c3) 18%, var(--city-ink))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 14%, var(--city-ink)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 10%, var(--city-ink)), color-mix(in srgb, var(--c3) 14%, var(--city-ink))),
+    linear-gradient(to top left, color-mix(in srgb, var(--c3) 12%, var(--city-ink)) 50%, transparent 50.5%),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 8%, var(--city-ink)), color-mix(in srgb, var(--c3) 12%, var(--city-ink))),
+    linear-gradient(color-mix(in srgb, var(--c3) 12%, var(--city-ink)), color-mix(in srgb, var(--c3) 12%, var(--city-ink))),
     linear-gradient(to top, color-mix(in srgb, var(--c4) 8%, var(--city-ink)), color-mix(in srgb, var(--c3) 12%, var(--city-ink)));
-  background-size: 48px 90px, 48px 90px, 48px 90px, 48px 120px, 48px 120px, 48px 90px, 24px 60px, 72px 60px, 48px 60px, 48px 60px;
-  background-position: 93.2% bottom, 65.6% bottom, 49.5% bottom, 1.6% bottom, 26.4% bottom, 40.3% bottom, 14.2% bottom, 81.1% bottom, 96.1% bottom, 69.2% bottom;
+  background-size: 28.00px 5px, 28.00px 5px, 56px 78px, 40px 78px, 26px 7px, 51px 104px, 4px 20px, 47px 104px, 40px 6px, 40px 130px, 38px 104px, 16px 9px, 32px 78px, 61px 11px, 61px 52px, 48px 13px, 48px 52px, 19px 11px, 37px 52px;
+  background-position: calc(93.2% - 26.10px) calc(100% - 78px), calc(93.2% + 1.90px) calc(100% - 78px), 93.2% bottom, 65.6% bottom, calc(49.5% + 0.13px) calc(100% - 104px), 49.5% bottom, calc(1.6% + 20.81px) calc(100% - 104px), 1.6% bottom, calc(26.4% + 0.00px) calc(100% - 130px), 26.4% bottom, 40.3% bottom, calc(14.2% + 5.73px) calc(100% - 78px), 14.2% bottom, calc(81.1% + 0.00px) calc(100% - 52px), 81.1% bottom, calc(96.1% + 0.00px) calc(100% - 52px), 96.1% bottom, calc(69.2% - 3.46px) calc(100% - 52px), 69.2% bottom;
   background-repeat: no-repeat;
 }
 [data-bg='neon'] .bg-l2 {
   inset: 0 -22%;
   opacity: calc(var(--city-win-alpha) * 0.7);
   animation: city-far 74s linear infinite;
-  background-image: repeating-linear-gradient(to top, color-mix(in srgb, var(--city-win) 4%, transparent) 0px, color-mix(in srgb, var(--city-win) 8%, transparent) 4px, color-mix(in srgb, var(--city-win) 18%, transparent) 7px, color-mix(in srgb, var(--city-win) 38%, transparent) 9px, color-mix(in srgb, var(--city-win) 82%, transparent) 10px 14px, color-mix(in srgb, var(--city-win) 38%, transparent) 15px, color-mix(in srgb, var(--city-win) 18%, transparent) 17px, color-mix(in srgb, var(--city-win) 8%, transparent) 20px, color-mix(in srgb, var(--city-win) 4%, transparent) 24px);
-  background-size: 100% 24px;
+  background-image: repeating-linear-gradient(to top, color-mix(in srgb, var(--city-win) 4%, transparent) 0px, color-mix(in srgb, var(--city-win) 8%, transparent) 2px, color-mix(in srgb, var(--city-win) 18%, transparent) 4px, color-mix(in srgb, var(--city-win) 38%, transparent) 4px, color-mix(in srgb, var(--city-win) 82%, transparent) 5px 8px, color-mix(in srgb, var(--city-win) 38%, transparent) 9px, color-mix(in srgb, var(--city-win) 18%, transparent) 9px, color-mix(in srgb, var(--city-win) 8%, transparent) 11px, color-mix(in srgb, var(--city-win) 4%, transparent) 12px);
+  background-size: 100% 12px;
   background-position: 0 bottom;
   background-repeat: repeat;
   -webkit-mask-image:
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px);
-  -webkit-mask-size: 12px 240px, 12px 312px, 12px 216px, 12px 144px, 12px 264px, 12px 216px, 12px 168px, 12px 144px, 12px 168px, 12px 216px, 12px 240px, 12px 192px, 12px 264px, 12px 264px, 12px 168px, 12px 168px, 12px 312px, 12px 312px, 12px 192px, 12px 288px;
+    repeating-linear-gradient(to right, transparent 0 0.30px, rgba(0,0,0,0.12) 0.72px, rgba(0,0,0,0.45) 1.68px, #000 2.16px 3.84px, rgba(0,0,0,0.45) 4.32px, rgba(0,0,0,0.12) 5.28px, transparent 5.70px 6.00px),
+    repeating-linear-gradient(to right, transparent 0 0.28px, rgba(0,0,0,0.12) 0.68px, rgba(0,0,0,0.45) 1.59px, #000 2.04px 3.63px, rgba(0,0,0,0.45) 4.08px, rgba(0,0,0,0.12) 4.99px, transparent 5.38px 5.67px),
+    repeating-linear-gradient(to right, transparent 0 0.30px, rgba(0,0,0,0.12) 0.72px, rgba(0,0,0,0.45) 1.68px, #000 2.16px 3.84px, rgba(0,0,0,0.45) 4.32px, rgba(0,0,0,0.12) 5.28px, transparent 5.70px 6.00px),
+    repeating-linear-gradient(to right, transparent 0 0.23px, rgba(0,0,0,0.12) 0.56px, rgba(0,0,0,0.45) 1.31px, #000 1.68px 2.99px, rgba(0,0,0,0.45) 3.36px, rgba(0,0,0,0.12) 4.11px, transparent 4.43px 4.67px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.20px, rgba(0,0,0,0.12) 0.48px, rgba(0,0,0,0.45) 1.12px, #000 1.44px 2.56px, rgba(0,0,0,0.45) 2.88px, rgba(0,0,0,0.12) 3.52px, transparent 3.80px 4.00px),
+    repeating-linear-gradient(to right, transparent 0 0.14px, rgba(0,0,0,0.12) 0.33px, rgba(0,0,0,0.45) 0.77px, #000 0.99px 1.76px, rgba(0,0,0,0.45) 1.98px, rgba(0,0,0,0.12) 2.42px, transparent 2.61px 2.75px),
+    repeating-linear-gradient(to right, transparent 0 0.21px, rgba(0,0,0,0.12) 0.51px, rgba(0,0,0,0.45) 1.19px, #000 1.53px 2.72px, rgba(0,0,0,0.45) 3.06px, rgba(0,0,0,0.12) 3.74px, transparent 4.04px 4.25px),
+    repeating-linear-gradient(to right, transparent 0 0.18px, rgba(0,0,0,0.12) 0.42px, rgba(0,0,0,0.45) 0.98px, #000 1.26px 2.24px, rgba(0,0,0,0.45) 2.52px, rgba(0,0,0,0.12) 3.08px, transparent 3.32px 3.50px),
+    repeating-linear-gradient(to right, transparent 0 0.13px, rgba(0,0,0,0.12) 0.31px, rgba(0,0,0,0.45) 0.73px, #000 0.94px 1.66px, rgba(0,0,0,0.45) 1.87px, rgba(0,0,0,0.12) 2.29px, transparent 2.47px 2.60px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.41px, rgba(0,0,0,0.45) 0.95px, #000 1.22px 2.18px, rgba(0,0,0,0.45) 2.45px, rgba(0,0,0,0.12) 2.99px, transparent 3.23px 3.40px),
+    repeating-linear-gradient(to right, transparent 0 0.14px, rgba(0,0,0,0.12) 0.33px, rgba(0,0,0,0.45) 0.77px, #000 0.99px 1.76px, rgba(0,0,0,0.45) 1.98px, rgba(0,0,0,0.12) 2.42px, transparent 2.61px 2.75px),
+    repeating-linear-gradient(to right, transparent 0 0.16px, rgba(0,0,0,0.12) 0.39px, rgba(0,0,0,0.45) 0.91px, #000 1.17px 2.08px, rgba(0,0,0,0.45) 2.34px, rgba(0,0,0,0.12) 2.86px, transparent 3.09px 3.25px),
+    repeating-linear-gradient(to right, transparent 0 0.20px, rgba(0,0,0,0.12) 0.48px, rgba(0,0,0,0.45) 1.12px, #000 1.44px 2.56px, rgba(0,0,0,0.45) 2.88px, rgba(0,0,0,0.12) 3.52px, transparent 3.80px 4.00px),
+    repeating-linear-gradient(to right, transparent 0 0.15px, rgba(0,0,0,0.12) 0.36px, rgba(0,0,0,0.45) 0.84px, #000 1.08px 1.92px, rgba(0,0,0,0.45) 2.16px, rgba(0,0,0,0.12) 2.64px, transparent 2.85px 3.00px),
+    repeating-linear-gradient(to right, transparent 0 0.18px, rgba(0,0,0,0.12) 0.44px, rgba(0,0,0,0.45) 1.03px, #000 1.32px 2.35px, rgba(0,0,0,0.45) 2.64px, rgba(0,0,0,0.12) 3.23px, transparent 3.48px 3.67px),
+    repeating-linear-gradient(to right, transparent 0 0.14px, rgba(0,0,0,0.12) 0.33px, rgba(0,0,0,0.45) 0.77px, #000 0.99px 1.76px, rgba(0,0,0,0.45) 1.98px, rgba(0,0,0,0.12) 2.42px, transparent 2.61px 2.75px),
+    repeating-linear-gradient(to right, transparent 0 0.25px, rgba(0,0,0,0.12) 0.60px, rgba(0,0,0,0.45) 1.40px, #000 1.80px 3.20px, rgba(0,0,0,0.45) 3.60px, rgba(0,0,0,0.12) 4.40px, transparent 4.75px 5.00px),
+    repeating-linear-gradient(to right, transparent 0 0.13px, rgba(0,0,0,0.12) 0.31px, rgba(0,0,0,0.45) 0.73px, #000 0.94px 1.66px, rgba(0,0,0,0.45) 1.87px, rgba(0,0,0,0.12) 2.29px, transparent 2.47px 2.60px),
+    repeating-linear-gradient(to right, transparent 0 0.28px, rgba(0,0,0,0.12) 0.68px, rgba(0,0,0,0.45) 1.59px, #000 2.04px 3.63px, rgba(0,0,0,0.45) 4.08px, rgba(0,0,0,0.12) 4.99px, transparent 5.38px 5.67px);
+  -webkit-mask-size: 18px 240px, 17px 324px, 18px 204px, 14px 132px, 10px 264px, 20px 216px, 11px 168px, 17px 156px, 14px 156px, 13px 228px, 17px 240px, 11px 192px, 13px 252px, 20px 252px, 15px 168px, 11px 168px, 11px 300px, 20px 300px, 13px 192px, 17px 288px;
   -webkit-mask-position: 13.6% bottom, 69.3% bottom, 38.6% bottom, 6.1% bottom, 27.1% bottom, 43.6% bottom, 62.7% bottom, 0.1% bottom, 95.8% bottom, 75.3% bottom, 83.2% bottom, 22% bottom, 59.3% bottom, 88.5% bottom, 35% bottom, 54.9% bottom, 48.5% bottom, 84.6% bottom, 30.8% bottom, 78.8% bottom;
   -webkit-mask-repeat: no-repeat;
   mask-image:
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px);
-  mask-size: 12px 240px, 12px 312px, 12px 216px, 12px 144px, 12px 264px, 12px 216px, 12px 168px, 12px 144px, 12px 168px, 12px 216px, 12px 240px, 12px 192px, 12px 264px, 12px 264px, 12px 168px, 12px 168px, 12px 312px, 12px 312px, 12px 192px, 12px 288px;
+    repeating-linear-gradient(to right, transparent 0 0.30px, rgba(0,0,0,0.12) 0.72px, rgba(0,0,0,0.45) 1.68px, #000 2.16px 3.84px, rgba(0,0,0,0.45) 4.32px, rgba(0,0,0,0.12) 5.28px, transparent 5.70px 6.00px),
+    repeating-linear-gradient(to right, transparent 0 0.28px, rgba(0,0,0,0.12) 0.68px, rgba(0,0,0,0.45) 1.59px, #000 2.04px 3.63px, rgba(0,0,0,0.45) 4.08px, rgba(0,0,0,0.12) 4.99px, transparent 5.38px 5.67px),
+    repeating-linear-gradient(to right, transparent 0 0.30px, rgba(0,0,0,0.12) 0.72px, rgba(0,0,0,0.45) 1.68px, #000 2.16px 3.84px, rgba(0,0,0,0.45) 4.32px, rgba(0,0,0,0.12) 5.28px, transparent 5.70px 6.00px),
+    repeating-linear-gradient(to right, transparent 0 0.23px, rgba(0,0,0,0.12) 0.56px, rgba(0,0,0,0.45) 1.31px, #000 1.68px 2.99px, rgba(0,0,0,0.45) 3.36px, rgba(0,0,0,0.12) 4.11px, transparent 4.43px 4.67px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.20px, rgba(0,0,0,0.12) 0.48px, rgba(0,0,0,0.45) 1.12px, #000 1.44px 2.56px, rgba(0,0,0,0.45) 2.88px, rgba(0,0,0,0.12) 3.52px, transparent 3.80px 4.00px),
+    repeating-linear-gradient(to right, transparent 0 0.14px, rgba(0,0,0,0.12) 0.33px, rgba(0,0,0,0.45) 0.77px, #000 0.99px 1.76px, rgba(0,0,0,0.45) 1.98px, rgba(0,0,0,0.12) 2.42px, transparent 2.61px 2.75px),
+    repeating-linear-gradient(to right, transparent 0 0.21px, rgba(0,0,0,0.12) 0.51px, rgba(0,0,0,0.45) 1.19px, #000 1.53px 2.72px, rgba(0,0,0,0.45) 3.06px, rgba(0,0,0,0.12) 3.74px, transparent 4.04px 4.25px),
+    repeating-linear-gradient(to right, transparent 0 0.18px, rgba(0,0,0,0.12) 0.42px, rgba(0,0,0,0.45) 0.98px, #000 1.26px 2.24px, rgba(0,0,0,0.45) 2.52px, rgba(0,0,0,0.12) 3.08px, transparent 3.32px 3.50px),
+    repeating-linear-gradient(to right, transparent 0 0.13px, rgba(0,0,0,0.12) 0.31px, rgba(0,0,0,0.45) 0.73px, #000 0.94px 1.66px, rgba(0,0,0,0.45) 1.87px, rgba(0,0,0,0.12) 2.29px, transparent 2.47px 2.60px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.41px, rgba(0,0,0,0.45) 0.95px, #000 1.22px 2.18px, rgba(0,0,0,0.45) 2.45px, rgba(0,0,0,0.12) 2.99px, transparent 3.23px 3.40px),
+    repeating-linear-gradient(to right, transparent 0 0.14px, rgba(0,0,0,0.12) 0.33px, rgba(0,0,0,0.45) 0.77px, #000 0.99px 1.76px, rgba(0,0,0,0.45) 1.98px, rgba(0,0,0,0.12) 2.42px, transparent 2.61px 2.75px),
+    repeating-linear-gradient(to right, transparent 0 0.16px, rgba(0,0,0,0.12) 0.39px, rgba(0,0,0,0.45) 0.91px, #000 1.17px 2.08px, rgba(0,0,0,0.45) 2.34px, rgba(0,0,0,0.12) 2.86px, transparent 3.09px 3.25px),
+    repeating-linear-gradient(to right, transparent 0 0.20px, rgba(0,0,0,0.12) 0.48px, rgba(0,0,0,0.45) 1.12px, #000 1.44px 2.56px, rgba(0,0,0,0.45) 2.88px, rgba(0,0,0,0.12) 3.52px, transparent 3.80px 4.00px),
+    repeating-linear-gradient(to right, transparent 0 0.15px, rgba(0,0,0,0.12) 0.36px, rgba(0,0,0,0.45) 0.84px, #000 1.08px 1.92px, rgba(0,0,0,0.45) 2.16px, rgba(0,0,0,0.12) 2.64px, transparent 2.85px 3.00px),
+    repeating-linear-gradient(to right, transparent 0 0.18px, rgba(0,0,0,0.12) 0.44px, rgba(0,0,0,0.45) 1.03px, #000 1.32px 2.35px, rgba(0,0,0,0.45) 2.64px, rgba(0,0,0,0.12) 3.23px, transparent 3.48px 3.67px),
+    repeating-linear-gradient(to right, transparent 0 0.14px, rgba(0,0,0,0.12) 0.33px, rgba(0,0,0,0.45) 0.77px, #000 0.99px 1.76px, rgba(0,0,0,0.45) 1.98px, rgba(0,0,0,0.12) 2.42px, transparent 2.61px 2.75px),
+    repeating-linear-gradient(to right, transparent 0 0.25px, rgba(0,0,0,0.12) 0.60px, rgba(0,0,0,0.45) 1.40px, #000 1.80px 3.20px, rgba(0,0,0,0.45) 3.60px, rgba(0,0,0,0.12) 4.40px, transparent 4.75px 5.00px),
+    repeating-linear-gradient(to right, transparent 0 0.13px, rgba(0,0,0,0.12) 0.31px, rgba(0,0,0,0.45) 0.73px, #000 0.94px 1.66px, rgba(0,0,0,0.45) 1.87px, rgba(0,0,0,0.12) 2.29px, transparent 2.47px 2.60px),
+    repeating-linear-gradient(to right, transparent 0 0.28px, rgba(0,0,0,0.12) 0.68px, rgba(0,0,0,0.45) 1.59px, #000 2.04px 3.63px, rgba(0,0,0,0.45) 4.08px, rgba(0,0,0,0.12) 4.99px, transparent 5.38px 5.67px);
+  mask-size: 18px 240px, 17px 324px, 18px 204px, 14px 132px, 10px 264px, 20px 216px, 11px 168px, 17px 156px, 14px 156px, 13px 228px, 17px 240px, 11px 192px, 13px 252px, 20px 252px, 15px 168px, 11px 168px, 11px 300px, 20px 300px, 13px 192px, 17px 288px;
   mask-position: 13.6% bottom, 69.3% bottom, 38.6% bottom, 6.1% bottom, 27.1% bottom, 43.6% bottom, 62.7% bottom, 0.1% bottom, 95.8% bottom, 75.3% bottom, 83.2% bottom, 22% bottom, 59.3% bottom, 88.5% bottom, 35% bottom, 54.9% bottom, 48.5% bottom, 84.6% bottom, 30.8% bottom, 78.8% bottom;
   mask-repeat: no-repeat;
 }
@@ -923,44 +1009,44 @@
   inset: 0 -22%;
   opacity: calc(var(--city-win-alpha) * 0.85);
   animation: city-mid 47s linear infinite;
-  background-image: repeating-linear-gradient(to top, color-mix(in srgb, var(--city-win) 4%, transparent) 0px, color-mix(in srgb, var(--city-win) 8%, transparent) 4px, color-mix(in srgb, var(--city-win) 18%, transparent) 7px, color-mix(in srgb, var(--city-win) 38%, transparent) 9px, color-mix(in srgb, var(--city-win) 82%, transparent) 10px 14px, color-mix(in srgb, var(--city-win) 38%, transparent) 15px, color-mix(in srgb, var(--city-win) 18%, transparent) 17px, color-mix(in srgb, var(--city-win) 8%, transparent) 20px, color-mix(in srgb, var(--city-win) 4%, transparent) 24px);
-  background-size: 100% 24px;
+  background-image: repeating-linear-gradient(to top, color-mix(in srgb, var(--city-win) 4%, transparent) 0px, color-mix(in srgb, var(--city-win) 8%, transparent) 3px, color-mix(in srgb, var(--city-win) 18%, transparent) 5px, color-mix(in srgb, var(--city-win) 38%, transparent) 6px, color-mix(in srgb, var(--city-win) 82%, transparent) 7px 12px, color-mix(in srgb, var(--city-win) 38%, transparent) 13px, color-mix(in srgb, var(--city-win) 18%, transparent) 14px, color-mix(in srgb, var(--city-win) 8%, transparent) 16px, color-mix(in srgb, var(--city-win) 4%, transparent) 18px);
+  background-size: 100% 18px;
   background-position: 0 bottom;
   background-repeat: repeat;
   -webkit-mask-image:
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px);
-  -webkit-mask-size: 36px 120px, 36px 144px, 36px 192px, 18px 216px, 18px 168px, 36px 192px, 18px 144px, 36px 168px, 18px 216px, 36px 240px, 36px 144px, 18px 120px, 18px 168px, 18px 192px;
+    repeating-linear-gradient(to right, transparent 0 0.58px, rgba(0,0,0,0.12) 1.40px, rgba(0,0,0,0.45) 3.27px, #000 4.20px 7.47px, rgba(0,0,0,0.45) 8.40px, rgba(0,0,0,0.12) 10.27px, transparent 11.08px 11.67px),
+    repeating-linear-gradient(to right, transparent 0 0.23px, rgba(0,0,0,0.12) 0.54px, rgba(0,0,0,0.45) 1.26px, #000 1.62px 2.88px, rgba(0,0,0,0.45) 3.24px, rgba(0,0,0,0.12) 3.96px, transparent 4.27px 4.50px),
+    repeating-linear-gradient(to right, transparent 0 0.30px, rgba(0,0,0,0.12) 0.72px, rgba(0,0,0,0.45) 1.68px, #000 2.16px 3.84px, rgba(0,0,0,0.45) 4.32px, rgba(0,0,0,0.12) 5.28px, transparent 5.70px 6.00px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.41px, rgba(0,0,0,0.12) 0.99px, rgba(0,0,0,0.45) 2.31px, #000 2.97px 5.28px, rgba(0,0,0,0.45) 5.94px, rgba(0,0,0,0.12) 7.26px, transparent 7.84px 8.25px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.32px, rgba(0,0,0,0.12) 0.77px, rgba(0,0,0,0.45) 1.79px, #000 2.30px 4.10px, rgba(0,0,0,0.45) 4.61px, rgba(0,0,0,0.12) 5.63px, transparent 6.08px 6.40px),
+    repeating-linear-gradient(to right, transparent 0 0.24px, rgba(0,0,0,0.12) 0.57px, rgba(0,0,0,0.45) 1.33px, #000 1.71px 3.04px, rgba(0,0,0,0.45) 3.42px, rgba(0,0,0,0.12) 4.18px, transparent 4.51px 4.75px),
+    repeating-linear-gradient(to right, transparent 0 0.29px, rgba(0,0,0,0.12) 0.70px, rgba(0,0,0,0.45) 1.63px, #000 2.10px 3.73px, rgba(0,0,0,0.45) 4.20px, rgba(0,0,0,0.12) 5.13px, transparent 5.54px 5.83px),
+    repeating-linear-gradient(to right, transparent 0 0.55px, rgba(0,0,0,0.12) 1.32px, rgba(0,0,0,0.45) 3.08px, #000 3.96px 7.04px, rgba(0,0,0,0.45) 7.92px, rgba(0,0,0,0.12) 9.68px, transparent 10.45px 11.00px),
+    repeating-linear-gradient(to right, transparent 0 0.16px, rgba(0,0,0,0.12) 0.38px, rgba(0,0,0,0.45) 0.89px, #000 1.14px 2.03px, rgba(0,0,0,0.45) 2.28px, rgba(0,0,0,0.12) 2.79px, transparent 3.01px 3.17px),
+    repeating-linear-gradient(to right, transparent 0 0.28px, rgba(0,0,0,0.12) 0.66px, rgba(0,0,0,0.45) 1.54px, #000 1.98px 3.52px, rgba(0,0,0,0.45) 3.96px, rgba(0,0,0,0.12) 4.84px, transparent 5.22px 5.50px),
+    repeating-linear-gradient(to right, transparent 0 0.35px, rgba(0,0,0,0.12) 0.84px, rgba(0,0,0,0.45) 1.96px, #000 2.52px 4.48px, rgba(0,0,0,0.45) 5.04px, rgba(0,0,0,0.12) 6.16px, transparent 6.65px 7.00px);
+  -webkit-mask-size: 35px 126px, 27px 144px, 30px 180px, 20px 234px, 20px 162px, 33px 180px, 20px 126px, 32px 162px, 19px 234px, 35px 234px, 33px 162px, 19px 126px, 22px 180px, 21px 180px;
   -webkit-mask-position: 12.9% bottom, 29.6% bottom, 19.9% bottom, 50.4% bottom, 77.1% bottom, 88.5% bottom, 97.2% bottom, 63.2% bottom, 82.6% bottom, 56.2% bottom, 39.7% bottom, 70.2% bottom, 2.8% bottom, 28.5% bottom;
   -webkit-mask-repeat: no-repeat;
   mask-image:
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px);
-  mask-size: 36px 120px, 36px 144px, 36px 192px, 18px 216px, 18px 168px, 36px 192px, 18px 144px, 36px 168px, 18px 216px, 36px 240px, 36px 144px, 18px 120px, 18px 168px, 18px 192px;
+    repeating-linear-gradient(to right, transparent 0 0.58px, rgba(0,0,0,0.12) 1.40px, rgba(0,0,0,0.45) 3.27px, #000 4.20px 7.47px, rgba(0,0,0,0.45) 8.40px, rgba(0,0,0,0.12) 10.27px, transparent 11.08px 11.67px),
+    repeating-linear-gradient(to right, transparent 0 0.23px, rgba(0,0,0,0.12) 0.54px, rgba(0,0,0,0.45) 1.26px, #000 1.62px 2.88px, rgba(0,0,0,0.45) 3.24px, rgba(0,0,0,0.12) 3.96px, transparent 4.27px 4.50px),
+    repeating-linear-gradient(to right, transparent 0 0.30px, rgba(0,0,0,0.12) 0.72px, rgba(0,0,0,0.45) 1.68px, #000 2.16px 3.84px, rgba(0,0,0,0.45) 4.32px, rgba(0,0,0,0.12) 5.28px, transparent 5.70px 6.00px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.41px, rgba(0,0,0,0.12) 0.99px, rgba(0,0,0,0.45) 2.31px, #000 2.97px 5.28px, rgba(0,0,0,0.45) 5.94px, rgba(0,0,0,0.12) 7.26px, transparent 7.84px 8.25px),
+    repeating-linear-gradient(to right, transparent 0 0.17px, rgba(0,0,0,0.12) 0.40px, rgba(0,0,0,0.45) 0.93px, #000 1.20px 2.13px, rgba(0,0,0,0.45) 2.40px, rgba(0,0,0,0.12) 2.93px, transparent 3.17px 3.33px),
+    repeating-linear-gradient(to right, transparent 0 0.32px, rgba(0,0,0,0.12) 0.77px, rgba(0,0,0,0.45) 1.79px, #000 2.30px 4.10px, rgba(0,0,0,0.45) 4.61px, rgba(0,0,0,0.12) 5.63px, transparent 6.08px 6.40px),
+    repeating-linear-gradient(to right, transparent 0 0.24px, rgba(0,0,0,0.12) 0.57px, rgba(0,0,0,0.45) 1.33px, #000 1.71px 3.04px, rgba(0,0,0,0.45) 3.42px, rgba(0,0,0,0.12) 4.18px, transparent 4.51px 4.75px),
+    repeating-linear-gradient(to right, transparent 0 0.29px, rgba(0,0,0,0.12) 0.70px, rgba(0,0,0,0.45) 1.63px, #000 2.10px 3.73px, rgba(0,0,0,0.45) 4.20px, rgba(0,0,0,0.12) 5.13px, transparent 5.54px 5.83px),
+    repeating-linear-gradient(to right, transparent 0 0.55px, rgba(0,0,0,0.12) 1.32px, rgba(0,0,0,0.45) 3.08px, #000 3.96px 7.04px, rgba(0,0,0,0.45) 7.92px, rgba(0,0,0,0.12) 9.68px, transparent 10.45px 11.00px),
+    repeating-linear-gradient(to right, transparent 0 0.16px, rgba(0,0,0,0.12) 0.38px, rgba(0,0,0,0.45) 0.89px, #000 1.14px 2.03px, rgba(0,0,0,0.45) 2.28px, rgba(0,0,0,0.12) 2.79px, transparent 3.01px 3.17px),
+    repeating-linear-gradient(to right, transparent 0 0.28px, rgba(0,0,0,0.12) 0.66px, rgba(0,0,0,0.45) 1.54px, #000 1.98px 3.52px, rgba(0,0,0,0.45) 3.96px, rgba(0,0,0,0.12) 4.84px, transparent 5.22px 5.50px),
+    repeating-linear-gradient(to right, transparent 0 0.35px, rgba(0,0,0,0.12) 0.84px, rgba(0,0,0,0.45) 1.96px, #000 2.52px 4.48px, rgba(0,0,0,0.45) 5.04px, rgba(0,0,0,0.12) 6.16px, transparent 6.65px 7.00px);
+  mask-size: 35px 126px, 27px 144px, 30px 180px, 20px 234px, 20px 162px, 33px 180px, 20px 126px, 32px 162px, 19px 234px, 35px 234px, 33px 162px, 19px 126px, 22px 180px, 21px 180px;
   mask-position: 12.9% bottom, 29.6% bottom, 19.9% bottom, 50.4% bottom, 77.1% bottom, 88.5% bottom, 97.2% bottom, 63.2% bottom, 82.6% bottom, 56.2% bottom, 39.7% bottom, 70.2% bottom, 2.8% bottom, 28.5% bottom;
   mask-repeat: no-repeat;
 }
@@ -968,36 +1054,36 @@
   inset: 0 -22%;
   opacity: var(--city-win-alpha);
   animation: city-near 29s linear infinite;
-  background-image: repeating-linear-gradient(to top, color-mix(in srgb, var(--city-win) 4%, transparent) 0px, color-mix(in srgb, var(--city-win) 8%, transparent) 5px, color-mix(in srgb, var(--city-win) 18%, transparent) 9px, color-mix(in srgb, var(--city-win) 38%, transparent) 11px, color-mix(in srgb, var(--city-win) 82%, transparent) 12px 18px, color-mix(in srgb, var(--city-win) 38%, transparent) 19px, color-mix(in srgb, var(--city-win) 18%, transparent) 21px, color-mix(in srgb, var(--city-win) 8%, transparent) 25px, color-mix(in srgb, var(--city-win) 4%, transparent) 30px);
-  background-size: 100% 30px;
+  background-image: repeating-linear-gradient(to top, color-mix(in srgb, var(--city-win) 4%, transparent) 0px, color-mix(in srgb, var(--city-win) 8%, transparent) 4px, color-mix(in srgb, var(--city-win) 18%, transparent) 7px, color-mix(in srgb, var(--city-win) 38%, transparent) 9px, color-mix(in srgb, var(--city-win) 82%, transparent) 10px 17px, color-mix(in srgb, var(--city-win) 38%, transparent) 18px, color-mix(in srgb, var(--city-win) 18%, transparent) 20px, color-mix(in srgb, var(--city-win) 8%, transparent) 23px, color-mix(in srgb, var(--city-win) 4%, transparent) 26px);
+  background-size: 100% 26px;
   background-position: 0 bottom;
   background-repeat: repeat;
   -webkit-mask-image:
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px);
-  -webkit-mask-size: 48px 90px, 48px 90px, 48px 90px, 48px 120px, 48px 120px, 48px 90px, 24px 60px, 72px 60px, 48px 60px, 48px 60px;
+    repeating-linear-gradient(to right, transparent 0 0.56px, rgba(0,0,0,0.12) 1.34px, rgba(0,0,0,0.45) 3.14px, #000 4.03px 7.17px, rgba(0,0,0,0.45) 8.06px, rgba(0,0,0,0.12) 9.86px, transparent 10.64px 11.20px),
+    repeating-linear-gradient(to right, transparent 0 0.40px, rgba(0,0,0,0.12) 0.96px, rgba(0,0,0,0.45) 2.24px, #000 2.88px 5.12px, rgba(0,0,0,0.45) 5.76px, rgba(0,0,0,0.12) 7.04px, transparent 7.60px 8.00px),
+    repeating-linear-gradient(to right, transparent 0 0.43px, rgba(0,0,0,0.12) 1.02px, rgba(0,0,0,0.45) 2.38px, #000 3.06px 5.44px, rgba(0,0,0,0.45) 6.12px, rgba(0,0,0,0.12) 7.48px, transparent 8.07px 8.50px),
+    repeating-linear-gradient(to right, transparent 0 0.59px, rgba(0,0,0,0.12) 1.41px, rgba(0,0,0,0.45) 3.29px, #000 4.23px 7.52px, rgba(0,0,0,0.45) 8.46px, rgba(0,0,0,0.12) 10.34px, transparent 11.16px 11.75px),
+    repeating-linear-gradient(to right, transparent 0 0.50px, rgba(0,0,0,0.12) 1.20px, rgba(0,0,0,0.45) 2.80px, #000 3.60px 6.40px, rgba(0,0,0,0.45) 7.20px, rgba(0,0,0,0.12) 8.80px, transparent 9.50px 10.00px),
+    repeating-linear-gradient(to right, transparent 0 0.48px, rgba(0,0,0,0.12) 1.14px, rgba(0,0,0,0.45) 2.66px, #000 3.42px 6.08px, rgba(0,0,0,0.45) 6.84px, rgba(0,0,0,0.12) 8.36px, transparent 9.03px 9.50px),
+    repeating-linear-gradient(to right, transparent 0 0.40px, rgba(0,0,0,0.12) 0.96px, rgba(0,0,0,0.45) 2.24px, #000 2.88px 5.12px, rgba(0,0,0,0.45) 5.76px, rgba(0,0,0,0.12) 7.04px, transparent 7.60px 8.00px),
+    repeating-linear-gradient(to right, transparent 0 0.51px, rgba(0,0,0,0.12) 1.22px, rgba(0,0,0,0.45) 2.85px, #000 3.66px 6.51px, rgba(0,0,0,0.45) 7.32px, rgba(0,0,0,0.12) 8.95px, transparent 9.66px 10.17px),
+    repeating-linear-gradient(to right, transparent 0 0.60px, rgba(0,0,0,0.12) 1.44px, rgba(0,0,0,0.45) 3.36px, #000 4.32px 7.68px, rgba(0,0,0,0.45) 8.64px, rgba(0,0,0,0.12) 10.56px, transparent 11.40px 12.00px),
+    repeating-linear-gradient(to right, transparent 0 0.37px, rgba(0,0,0,0.12) 0.89px, rgba(0,0,0,0.45) 2.07px, #000 2.66px 4.74px, rgba(0,0,0,0.45) 5.33px, rgba(0,0,0,0.12) 6.51px, transparent 7.03px 7.40px);
+  -webkit-mask-size: 56px 78px, 40px 78px, 51px 104px, 47px 104px, 40px 130px, 38px 104px, 32px 78px, 61px 52px, 48px 52px, 37px 52px;
   -webkit-mask-position: 93.2% bottom, 65.6% bottom, 49.5% bottom, 1.6% bottom, 26.4% bottom, 40.3% bottom, 14.2% bottom, 81.1% bottom, 96.1% bottom, 69.2% bottom;
   -webkit-mask-repeat: no-repeat;
   mask-image:
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px),
-    repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px);
-  mask-size: 48px 90px, 48px 90px, 48px 90px, 48px 120px, 48px 120px, 48px 90px, 24px 60px, 72px 60px, 48px 60px, 48px 60px;
+    repeating-linear-gradient(to right, transparent 0 0.56px, rgba(0,0,0,0.12) 1.34px, rgba(0,0,0,0.45) 3.14px, #000 4.03px 7.17px, rgba(0,0,0,0.45) 8.06px, rgba(0,0,0,0.12) 9.86px, transparent 10.64px 11.20px),
+    repeating-linear-gradient(to right, transparent 0 0.40px, rgba(0,0,0,0.12) 0.96px, rgba(0,0,0,0.45) 2.24px, #000 2.88px 5.12px, rgba(0,0,0,0.45) 5.76px, rgba(0,0,0,0.12) 7.04px, transparent 7.60px 8.00px),
+    repeating-linear-gradient(to right, transparent 0 0.43px, rgba(0,0,0,0.12) 1.02px, rgba(0,0,0,0.45) 2.38px, #000 3.06px 5.44px, rgba(0,0,0,0.45) 6.12px, rgba(0,0,0,0.12) 7.48px, transparent 8.07px 8.50px),
+    repeating-linear-gradient(to right, transparent 0 0.59px, rgba(0,0,0,0.12) 1.41px, rgba(0,0,0,0.45) 3.29px, #000 4.23px 7.52px, rgba(0,0,0,0.45) 8.46px, rgba(0,0,0,0.12) 10.34px, transparent 11.16px 11.75px),
+    repeating-linear-gradient(to right, transparent 0 0.50px, rgba(0,0,0,0.12) 1.20px, rgba(0,0,0,0.45) 2.80px, #000 3.60px 6.40px, rgba(0,0,0,0.45) 7.20px, rgba(0,0,0,0.12) 8.80px, transparent 9.50px 10.00px),
+    repeating-linear-gradient(to right, transparent 0 0.48px, rgba(0,0,0,0.12) 1.14px, rgba(0,0,0,0.45) 2.66px, #000 3.42px 6.08px, rgba(0,0,0,0.45) 6.84px, rgba(0,0,0,0.12) 8.36px, transparent 9.03px 9.50px),
+    repeating-linear-gradient(to right, transparent 0 0.40px, rgba(0,0,0,0.12) 0.96px, rgba(0,0,0,0.45) 2.24px, #000 2.88px 5.12px, rgba(0,0,0,0.45) 5.76px, rgba(0,0,0,0.12) 7.04px, transparent 7.60px 8.00px),
+    repeating-linear-gradient(to right, transparent 0 0.51px, rgba(0,0,0,0.12) 1.22px, rgba(0,0,0,0.45) 2.85px, #000 3.66px 6.51px, rgba(0,0,0,0.45) 7.32px, rgba(0,0,0,0.12) 8.95px, transparent 9.66px 10.17px),
+    repeating-linear-gradient(to right, transparent 0 0.60px, rgba(0,0,0,0.12) 1.44px, rgba(0,0,0,0.45) 3.36px, #000 4.32px 7.68px, rgba(0,0,0,0.45) 8.64px, rgba(0,0,0,0.12) 10.56px, transparent 11.40px 12.00px),
+    repeating-linear-gradient(to right, transparent 0 0.37px, rgba(0,0,0,0.12) 0.89px, rgba(0,0,0,0.45) 2.07px, #000 2.66px 4.74px, rgba(0,0,0,0.45) 5.33px, rgba(0,0,0,0.12) 6.51px, transparent 7.03px 7.40px);
+  mask-size: 56px 78px, 40px 78px, 51px 104px, 47px 104px, 40px 130px, 38px 104px, 32px 78px, 61px 52px, 48px 52px, 37px 52px;
   mask-position: 93.2% bottom, 65.6% bottom, 49.5% bottom, 1.6% bottom, 26.4% bottom, 40.3% bottom, 14.2% bottom, 81.1% bottom, 96.1% bottom, 69.2% bottom;
   mask-repeat: no-repeat;
 }
