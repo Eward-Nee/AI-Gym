@@ -1,5 +1,5 @@
 {
-  "version": "0.7.3",
+  "version": "0.7.4",
   "name": "AI-Gym",
-  "notes": "The city: each row of towers now carries its own windows, and the row in front is painted over both. The lit windows of a tower behind no longer show through the tower in front of it."
+  "notes": "The city: walls are nearly as dark as the night sky and each window throws a smooth pool of light onto them — bright beside the glass, dim a step away, almost nothing between floors."
 }

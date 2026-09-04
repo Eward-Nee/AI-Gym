@@ -63,7 +63,7 @@ const NEAR = [
    ink instead of into nothing. The wall itself is now the DARK part of the
    picture and the windows are the only light on it, which is what makes the
    falloff below read as light thrown from the glass. */
-const TINT = 0.34;
+const TINT = 0.25;
 
 /* Column pitch, row pitch, and the column mask for each band. The mask's
    first and last stops are the margins — which is what keeps a window off the
@@ -72,26 +72,27 @@ const TINT = 0.34;
 const BANDS = {
   far: {
     towers: FAR, col: 12, row: 24, ink: 'var(--city-ink-far)', bottom: 'var(--c3)', top: 'var(--c3)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 2px, transparent 3px, rgba(0,0,0,0.30) 4px, #000 5px 7px, rgba(0,0,0,0.30) 8px, transparent 9px, transparent 10px 12px)'
+    mask: 'repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 4px, #000 5px 7px, rgba(0,0,0,0.45) 8px, rgba(0,0,0,0.15) 10px, transparent 11px 12px)'
   },
   mid: {
     towers: MID, col: 18, row: 24, ink: 'var(--city-ink)', bottom: 'var(--c4)', top: 'var(--c4)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 3px, transparent 4px, rgba(0,0,0,0.32) 6px, #000 7px 11px, rgba(0,0,0,0.32) 12px, transparent 14px, transparent 15px 18px)'
+    mask: 'repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.45) 5px, #000 7px 11px, rgba(0,0,0,0.45) 13px, rgba(0,0,0,0.15) 16px, transparent 17px 18px)'
   },
   near: {
     towers: NEAR, col: 24, row: 30, ink: 'var(--city-ink)', bottom: 'var(--c4)', top: 'var(--c3)',
-    mask: 'repeating-linear-gradient(to right, transparent 0 4px, transparent 5px, rgba(0,0,0,0.32) 8px, #000 9px 15px, rgba(0,0,0,0.32) 16px, transparent 19px, transparent 20px 24px)'
+    mask: 'repeating-linear-gradient(to right, transparent 0 1px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.45) 7px, #000 9px 15px, rgba(0,0,0,0.45) 17px, rgba(0,0,0,0.15) 21px, transparent 23px 24px)'
   }
 };
 
-/* Rows: gap, a four-step ramp, the lit core, the ramp again, gap — the
-   vertical half of the glow. THE FURTHER FROM A WINDOW, THE DARKER: the ramp
-   runs 72% -> 26% -> 8% -> 2% -> nothing, so the wall immediately beside the
-   glass is lit, a step away is dim, and the middle of the wall between two
-   windows is the bare tower colour with no light on it at all. */
+/* Rows: a continuous ramp from the lit core down to a 4% floor and back —
+   the vertical half of the glow. THE FURTHER FROM A WINDOW, THE DARKER: the
+   wall right beside the glass is lit, a step away is dim, and the middle of
+   the wall between two floors is nearly the bare tower colour, which is
+   itself nearly the night sky. There is no fully dark stop on purpose: real
+   light does not end, it fades, and a hard edge read as a stripe. */
 const ROWS = {
-  24: 'repeating-linear-gradient(to top, transparent 0 7px, W10 8px, W40 9px, W95 10px 14px, W40 15px, W10 16px, transparent 17px 24px)',
-  30: 'repeating-linear-gradient(to top, transparent 0 9px, W10 10px, W40 11px, W95 12px 18px, W40 19px, W10 20px, transparent 21px 30px)'
+  24: 'repeating-linear-gradient(to top, W04 0px, W08 4px, W18 7px, W40 9px, W95 10px 14px, W40 15px, W18 17px, W08 20px, W04 24px)',
+  30: 'repeating-linear-gradient(to top, W04 0px, W08 5px, W18 9px, W40 11px, W95 12px 18px, W40 19px, W18 21px, W08 25px, W04 30px)'
 };
 
 function snap(v, unit) { return Math.max(unit, Math.round(v / unit) * unit); }
@@ -123,10 +124,11 @@ function towerLayer(sel, band, extra) {
 
 function rows(pitch) {
   return ROWS[pitch]
-    .replace(/W95/g, 'color-mix(in srgb, var(--city-win) 72%, transparent)')
-    .replace(/W40/g, 'color-mix(in srgb, var(--city-win) 26%, transparent)')
-    .replace(/W10/g, 'color-mix(in srgb, var(--city-win) 8%, transparent)')
-    .replace(/W02/g, 'color-mix(in srgb, var(--city-win) 2%, transparent)');
+    .replace(/W95/g, 'color-mix(in srgb, var(--city-win) 82%, transparent)')
+    .replace(/W40/g, 'color-mix(in srgb, var(--city-win) 38%, transparent)')
+    .replace(/W18/g, 'color-mix(in srgb, var(--city-win) 18%, transparent)')
+    .replace(/W08/g, 'color-mix(in srgb, var(--city-win) 8%, transparent)')
+    .replace(/W04/g, 'color-mix(in srgb, var(--city-win) 4%, transparent)');
 }
 
 function windowLayer(sel, bands, extra) {
@@ -176,7 +178,7 @@ const LIGHTING = `/* CITY LIGHTING — shared by Skyline and Neon.
   --city-ink: #161b27;
   --city-ink-far: #3a4256;
   --city-win: var(--c5);
-  --city-win-alpha: 0.3;
+  --city-win-alpha: 0.4;
   --city-glow-alpha: 0.08;
   --city-sky:
     radial-gradient(circle at 20% 11%, #fff9dc 0 26px, rgba(255, 236, 170, 0.75) 30px,
@@ -188,7 +190,7 @@ const LIGHTING = `/* CITY LIGHTING — shared by Skyline and Neon.
 [data-mode='dark'] {
   --city-ink: #05070d;
   --city-ink-far: #171c2b;
-  --city-win-alpha: 0.5;
+  --city-win-alpha: 0.68;
   --city-glow-alpha: 0.04;
   --city-sky:
     radial-gradient(circle at 77% 13%, rgba(216, 224, 238, 0.82) 0 13px, rgba(216, 224, 238, 0.22) 15px,
@@ -200,7 +202,7 @@ const LIGHTING = `/* CITY LIGHTING — shared by Skyline and Neon.
 [data-mode='amoled'] {
   --city-ink: #000000;
   --city-ink-far: #121626;
-  --city-win-alpha: 0.45;
+  --city-win-alpha: 0.62;
   --city-glow-alpha: 0.03;
   --city-sky:
     radial-gradient(circle at 77% 13%, rgba(200, 210, 228, 0.7) 0 13px, rgba(200, 210, 228, 0.16) 15px,
