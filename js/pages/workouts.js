@@ -1825,37 +1825,14 @@
 
          The band says how sure this is: narrow near today, wider with every
          week out, and wider still when the fit was poor. */
-      const DAY = 86400000;
       const series = [{ name: 'Average of all workouts', accent: true, area: true, points: avgSeries }];
       const bands = [];
-      let forecastKind = null;
-      if (fit && fit.n >= 3) {
-        const last = avgSeries[avgSeries.length - 1];
-        const horizon = 60 * DAY;
-        const perMonth = fit.slope * DAY * 30;
-        const rising = perMonth >= 1;
-        forecastKind = rising ? 'trend' : 'response';
-        const LAG = 14, TAU = 26, GAIN = 6;
-        const fc = [];
-        const band = [];
-        for (let i = 0; i <= 12; i++) {
-          const x = last.x + (horizon * i) / 12;
-          const days = (x - last.x) / DAY;
-          let y;
-          if (rising) {
-            y = fit.at(x);
-          } else {
-            const t = Math.max(0, days - LAG);
-            y = last.y + GAIN * (1 - Math.exp(-t / TAU));
-          }
-          fc.push({ x: x, y: y });
-          /* widen with distance, as a projection should */
-          const spread = (fit.se || Math.abs(y) * 0.03) * (1 + i * 0.25);
-          band.push({ x: x, lo: y - spread, hi: y + spread });
-        }
-        series.push({ name: rising ? 'Forecast (60d)' : 'Expected with training (60d)',
-          dash: true, dots: false, points: fc });
-        bands.push({ points: band });
+      const proj = projection(avgSeries, fit);
+      let forecastKind = proj ? proj.kind : null;
+      if (proj) {
+        series.push(proj.series);
+        bands.push(proj.band);
+        if (proj.turn) series.push(proj.turn);
       }
 
       setTimeout(function () {
@@ -1873,8 +1850,14 @@
             chartEl.appendChild(U.h('.u-xs.u-muted', { style: { marginTop: '4px' },
               text: 'The trend so far is ' + (fit.slope < 0 ? 'falling' : 'flat') +
                 '. A straight line would carry that on, but you are training now, ' +
-                'so the projection assumes the slide stops, holds for about two ' +
-                'weeks, and then growth resumes — a modest +6% over the two months.' }));
+                'so the projection assumes the slide stops and growth resumes. ' +
+                'Turning point: ' + U.fmtDate(proj.turnDate) + ' — ' +
+                (proj.fromToday > 0
+                  ? 'in ' + proj.fromToday + ' day' + (proj.fromToday === 1 ? '' : 's')
+                  : 'which should already be under way') +
+                ', ' + proj.turnDays + ' days after your last session; the steeper the ' +
+                'slide, the longer it takes to turn — then a modest +' + proj.gain +
+                '% over the two months.' }));
           }
         }
       }, 0);
@@ -1894,6 +1877,7 @@
         const wfit = App.Charts.regress(l.points.map(function (p) {
           return { x: p.x, y: p.y };
         }));
+        const wproj = projection(l.points, wfit);
         const cell = U.h('.card', { style: { padding: 'var(--sp-4)' } }, [
           U.h('.card-head', { style: { marginBottom: '8px' } }, [
             U.h('div', { style: { minWidth: 0 } }, [
@@ -1914,6 +1898,8 @@
             xType: 'date', height: 150, legend: false, yMin: lo, yMax: hi,
             yFormat: function (v) { return U.num(v, 0) + '%'; },
             series: [{ name: l.name, accent: true, area: true, points: l.points }]
+              .concat(wproj ? [wproj.series].concat(wproj.turn ? [wproj.turn] : []) : []),
+            bands: wproj ? [wproj.band] : []
           });
         }, 0);
       });
@@ -2020,6 +2006,75 @@
     const top = scored.slice(0, 3).map(function (s) { return s.exerciseId; });
     const low = scored.slice(-3).map(function (s) { return s.exerciseId; });
     return top.concat(low);
+  }
+
+  /**
+   * THE FORECAST, sixty days past the last point.
+   *
+   * A straight line through the past is only a forecast while the past is
+   * going somewhere. When the trend is flat or falling, carrying it on says
+   * "you will keep getting weaker" — and the person reading the chart is
+   * training, which is the one thing a regression on old sessions cannot
+   * see. So the projection has two shapes:
+   *
+   *   rising trend    the least-squares line
+   *   flat or falling the TRAINING RESPONSE: the slide stops, holds, and
+   *                   growth resumes along a saturating curve to a modest
+   *                   +6 index points over the horizon — an ordinary
+   *                   intermediate's two months
+   *
+   * THE TURNING POINT is calculated, not assumed. A slide has momentum — the
+   * loads have to be relearned before they move — so the hold lasts a week
+   * for a flat trend and grows with how steep the fall was: a 13%-a-month
+   * slide turns after about sixteen days, and the worst case is capped at
+   * four weeks. It is drawn as a marked point on the chart and dated in the
+   * note beneath it.
+   *
+   * The band says how sure this is: narrow near today, wider with every week
+   * out, and wider still when the fit was poor.
+   *
+   * @returns {Object|null} {kind, series, band, turn, turnDate, turnDays, gain}
+   */
+  function projection(points, fit) {
+    if (!fit || fit.n < 3 || !points.length) return null;
+    const DAY = 86400000;
+    const last = points[points.length - 1];
+    const horizon = 60 * DAY;
+    const perMonth = fit.slope * DAY * 30;
+    const rising = perMonth >= 1;
+    const GAIN = 6, TAU = 26;
+    const lag = rising ? 0 : Math.min(28, Math.round(7 + Math.max(0, -perMonth) * 0.7));
+    const fc = [], band = [];
+    for (let i = 0; i <= 12; i++) {
+      const x = last.x + (horizon * i) / 12;
+      const days = (x - last.x) / DAY;
+      const y = rising
+        ? fit.at(x)
+        : last.y + GAIN * (1 - Math.exp(-Math.max(0, days - lag) / TAU));
+      fc.push({ x: x, y: y });
+      const spread = (fit.se || Math.abs(y) * 0.03) * (1 + i * 0.25);
+      band.push({ x: x, lo: y - spread, hi: y + spread });
+    }
+    /* The curve must pass through the turning point exactly, so it is a
+       point of its own — dotted in at the lag — as well as a marker. */
+    const turnX = last.x + lag * DAY;
+    if (!rising) {
+      fc.push({ x: turnX, y: last.y });
+      fc.sort(function (a, b) { return a.x - b.x; });
+    }
+    const turnDate = new Date(turnX).toISOString().slice(0, 10);
+    return {
+      kind: rising ? 'trend' : 'response',
+      series: { name: rising ? 'Forecast (60d)' : 'Expected with training (60d)',
+        dash: true, dots: false, points: fc },
+      band: { points: band },
+      turn: rising ? null : { name: 'Turning point · ' + U.fmtDate(turnDate, 'short'),
+        dots: true, points: [{ x: turnX, y: last.y }] },
+      turnDate: turnDate,
+      turnDays: lag,
+      fromToday: Math.ceil((turnX - Date.now()) / DAY),
+      gain: GAIN
+    };
   }
 
   /** "+3.2% / month" as a chip, tinted when the direction is up. */

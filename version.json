@@ -1,5 +1,5 @@
 {
-  "version": "0.7.6",
+  "version": "0.7.7",
   "name": "AI-Gym",
-  "notes": "Exercise pictures are shown whole in their tile instead of cropped to fill it — a picture that is not square was losing its edges. The progress forecast: when the trend is flat or falling, the projection no longer carries the slide on; it assumes the slide stops, holds for about two weeks, and growth resumes — because the person reading it is training."
+  "notes": "The exercise list on a phone: rows are tall enough for a two-line name, so a long name no longer pushes the picture and the details out of the row. The progress forecast: a flat or falling trend is never carried on — the projection turns and grows, the turning point is calculated from how steep the slide was, marked on the chart and dated beneath it, and every per-workout chart gets the same projection."
 }

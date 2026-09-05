@@ -1360,6 +1360,13 @@ body.is-reordering [data-drag-item]:not(.is-dragging) { pointer-events: none; }
 
   .ex-row { grid-template-columns: 40px minmax(0, 1fr) auto; gap: var(--sp-2);
     padding: 9px var(--sp-2); }
+  /* A windowed list has a fixed row height, and 64px is one line of name. A
+     name that wraps to two lines — and on a phone the long ones do, more so
+     with the system font scaled up — pushed the details and the picture past
+     the bottom of the row, where overflow: hidden cut them off. Tall enough
+     for two lines plus the details at a large font; a one-line row simply
+     gets more air. */
+  .ex-list { --ex-row-h: 88px; }
   .ex-thumb { width: 40px; height: 40px; }
   .ex-meta { gap: 6px; }
   /* The strip is a decorative preview and the detail view shows the real
