@@ -1,5 +1,5 @@
 {
-  "version": "0.7.5",
+  "version": "0.7.6",
   "name": "AI-Gym",
-  "notes": "The city: every tower has three to six windows across, however small it is drawn — far towers have shorter floors and narrower windows instead of one window per row — and each tower has a roof: set-back, sloped, gabled, a mast, a dome, or flat."
+  "notes": "Exercise pictures are shown whole in their tile instead of cropped to fill it — a picture that is not square was losing its edges. The progress forecast: when the trend is flat or falling, the projection no longer carries the slide on; it assumes the slide stops, holds for about two weeks, and growth resumes — because the person reading it is training."
 }

@@ -1807,23 +1807,54 @@
         'lift counts equally.'));
       body.appendChild(chartEl);
 
-      /* forecast 60 days beyond the last point */
+      /* FORECAST, 60 days beyond the last point.
+
+         A straight line through the past is only a forecast while the past is
+         going somewhere. When the trend is flat or falling, carrying it on
+         says "you will keep getting weaker" — and a person looking at this
+         chart is training, which is the one thing a regression on old
+         sessions cannot see. So the projection has two shapes:
+
+           rising trend    the least-squares line, as before
+           flat or falling the TRAINING RESPONSE: the slide stops, the number
+                           holds for about two weeks (nothing changes faster
+                           than that — the first weeks of a block are learning
+                           the loads), then growth resumes along a saturating
+                           curve to a modest +6 index points over the horizon,
+                           which is an ordinary intermediate's two months
+
+         The band says how sure this is: narrow near today, wider with every
+         week out, and wider still when the fit was poor. */
+      const DAY = 86400000;
       const series = [{ name: 'Average of all workouts', accent: true, area: true, points: avgSeries }];
       const bands = [];
+      let forecastKind = null;
       if (fit && fit.n >= 3) {
-        const lastX = avgSeries[avgSeries.length - 1].x;
-        const horizon = 60 * 86400000;
+        const last = avgSeries[avgSeries.length - 1];
+        const horizon = 60 * DAY;
+        const perMonth = fit.slope * DAY * 30;
+        const rising = perMonth >= 1;
+        forecastKind = rising ? 'trend' : 'response';
+        const LAG = 14, TAU = 26, GAIN = 6;
         const fc = [];
         const band = [];
-        for (let i = 0; i <= 6; i++) {
-          const x = lastX + (horizon * i) / 6;
-          const y = fit.at(x);
+        for (let i = 0; i <= 12; i++) {
+          const x = last.x + (horizon * i) / 12;
+          const days = (x - last.x) / DAY;
+          let y;
+          if (rising) {
+            y = fit.at(x);
+          } else {
+            const t = Math.max(0, days - LAG);
+            y = last.y + GAIN * (1 - Math.exp(-t / TAU));
+          }
           fc.push({ x: x, y: y });
           /* widen with distance, as a projection should */
-          const spread = fit.se * (1 + i * 0.5) || Math.abs(y) * 0.04 * (1 + i);
+          const spread = (fit.se || Math.abs(y) * 0.03) * (1 + i * 0.25);
           band.push({ x: x, lo: y - spread, hi: y + spread });
         }
-        series.push({ name: 'Forecast (60d)', dash: true, dots: false, points: fc });
+        series.push({ name: rising ? 'Forecast (60d)' : 'Expected with training (60d)',
+          dash: true, dots: false, points: fc });
         bands.push({ points: band });
       }
 
@@ -1838,6 +1869,13 @@
               U.num(fit.r2, 2) + (fit.r2 < 0.3
                 ? ' — a weak fit, so treat the projection as a rough direction only.'
                 : '') }));
+          if (forecastKind === 'response') {
+            chartEl.appendChild(U.h('.u-xs.u-muted', { style: { marginTop: '4px' },
+              text: 'The trend so far is ' + (fit.slope < 0 ? 'falling' : 'flat') +
+                '. A straight line would carry that on, but you are training now, ' +
+                'so the projection assumes the slide stops, holds for about two ' +
+                'weeks, and then growth resumes — a modest +6% over the two months.' }));
+          }
         }
       }, 0);
 

@@ -933,7 +933,11 @@ body.is-reordering [data-drag-item]:not(.is-dragging) { pointer-events: none; }
   overflow: hidden;
   color: var(--text-3);
 }
-.ex-thumb img { width: 100%; height: 100%; object-fit: cover; }
+/* contain, not cover: a lifter's own picture is rarely square, and cover
+   cropped the subject off the edge of the tile — a back extension became a
+   bench and half a person. The whole picture, letterboxed on the tile colour,
+   is the honest thumbnail. */
+.ex-thumb img { width: 100%; height: 100%; object-fit: contain; object-position: center; }
 .ex-thumb svg { width: 20px; height: 20px; }
 
 .ex-name { font-weight: 580; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
